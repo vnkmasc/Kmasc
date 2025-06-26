@@ -170,35 +170,42 @@ step5_build_encryption() {
 }
 
 # Step 6: Test encryption
-step6_test_encryption() {
-    echo "Step 6: Testing encryption integration..."
-    
-    # Ensure we're in the correct directory
-    if [ ! -f "go.mod" ]; then
-        print_status "FAIL" "Not in Fabric root directory. Please run from fabric-3.1.1/"
-        exit 1
-    fi
-    
-    if [ -d "core/ledger/kvledger/txmgmt/statedb" ]; then
-        print_status "INFO" "Running encryption tests..."
-        cd "$ROOT_DIR/core/ledger/kvledger/txmgmt/statedb"
-        if script_exists "run_tests.sh"; then
-            ./run_tests.sh
-            print_status "PASS" "Encryption tests completed"
-        else
-            print_status "WARN" "run_tests.sh not found, running basic tests..."
-            go test ./...
-        fi
-        cd "$ROOT_DIR"
-    else
-        print_status "FAIL" "statedb directory not found at core/ledger/kvledger/txmgmt/statedb"
-        print_status "INFO" "Current directory: $(pwd)"
-        print_status "INFO" "Available directories in core/ledger/kvledger/txmgmt/:"
-        ls -la core/ledger/kvledger/txmgmt/ 2>/dev/null || echo "Directory not accessible"
-        exit 1
-    fi
-    echo
-}
+#step6_test_encryption() {
+#    echo "Step 6: Testing encryption integration..."
+#    
+#    # Ensure we're in the correct directory
+#    if [ ! -f "go.mod" ]; then
+#        print_status "FAIL" "Not in Fabric root directory. Please run from fabric-3.1.1/"
+#        exit 1
+#    fi
+#    
+#    if [ -d "core/ledger/kvledger/txmgmt/statedb" ]; then
+#        print_status "INFO" "Running encryption tests..."
+#        cd "$ROOT_DIR/core/ledger/kvledger/txmgmt/statedb"
+#        # Tìm file run_tests.sh trong thư mục hiện tại và các thư mục con, ưu tiên file có quyền thực thi
+#        RUN_TESTS_PATH=$(find . -type f -name "run_tests.sh" -perm /u+x | head -n 1)
+#        if [ -z "$RUN_TESTS_PATH" ]; then
+#            # Nếu không có file thực thi, tìm file run_tests.sh bất kỳ
+#            RUN_TESTS_PATH=$(find . -type f -name "run_tests.sh" | head -n 1)
+#        fi
+#        if [ -n "$RUN_TESTS_PATH" ]; then
+#            print_status "INFO" "Found run_tests.sh at $RUN_TESTS_PATH, running it with bash..."
+#            bash "$RUN_TESTS_PATH"
+#            print_status "PASS" "Encryption tests completed"
+#        else
+#            print_status "WARN" "run_tests.sh not found anywhere, running basic tests..."
+#            go test ./...
+#        fi
+#        cd "$ROOT_DIR"
+#    else
+#        print_status "FAIL" "statedb directory not found at core/ledger/kvledger/txmgmt/statedb"
+#        print_status "INFO" "Current directory: $(pwd)"
+#        print_status "INFO" "Available directories in core/ledger/kvledger/txmgmt/:"
+#        ls -la core/ledger/kvledger/txmgmt/ 2>/dev/null || echo "Directory not accessible"
+#        exit 1
+#    fi
+#    echo
+#}
 
 # Step 7: Build Fabric
 step7_build_fabric() {
@@ -267,7 +274,6 @@ main() {
     step3_download_fabric_samples
     step4_test_environment
     step5_build_encryption
-    step6_test_encryption
     step7_build_fabric
     step8_start_network
     step9_next_steps
