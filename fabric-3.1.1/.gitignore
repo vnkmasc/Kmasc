@@ -1,0 +1,66 @@
+#SPDX-License-Identifier: Apache-2.0
+.#*
+*~
+*#
+/bin
+/build
+/.build
+*.cov
+/docs/build/*
+.DS_Store
+.*-dummy
+.gradle
+.idea
+*.iml
+*.log
+.project
+/release
+report.xml
+results.xml
+.settings
+.*.sw*
+tags
+.tags
+TESTS*.xml
+.tox/
+.vagrant/
+.vscode
+
+# Encryption implementation test filesAdd commentMore actions
+test_encryption*
+encryption_demo*
+statedb_simulation*
+verify_encryption
+simple_test
+hello
+test_peer
+manual_verify
+run_simple_test
+FINAL_SUMMARY
+
+# Development test binaries
+*_test
+*_demo
+*_simulation
+
+
+# Encryption test binary files (keep source files)
+test_encryption
+encryption_demo
+statedb_simulation
+verify_encryption
+simple_test
+hello
+test_peer
+
+# Keep source files but ignore binaries
+*.go.out
+simple_encryption_test
+
+# Fabric-samples
+fabric-3.1.1/fabric-samples/
+install-fabric.sh
+
+# Encryption test binary files (keep source files)
+libencryption.so
+encrypt.o
