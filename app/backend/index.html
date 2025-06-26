@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hệ thống Quản lý Văn bằng - Certificate Management System</title>
+    <style>
+      body {
+        font-family: "Times New Roman", serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        line-height: 1.6;
+        color: #333;
+        background-color: white;
+      }
+
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        font-size: 24px;
+        margin-bottom: 30px;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+      }
+
+      h2 {
+        color: #34495e;
+        font-size: 20px;
+        margin-top: 30px;
+        margin-bottom: 15px;
+        border-left: 4px solid #3498db;
+        padding-left: 15px;
+      }
+
+      h3 {
+        color: #2c3e50;
+        font-size: 16px;
+        margin-top: 25px;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+
+      h4 {
+        color: #34495e;
+        font-size: 14px;
+        margin-top: 20px;
+        margin-bottom: 8px;
+        font-weight: bold;
+      }
+
+      p {
+        margin-bottom: 12px;
+        text-align: justify;
+      }
+
+      ul,
+      ol {
+        margin-bottom: 15px;
+        padding-left: 20px;
+      }
+
+      li {
+        margin-bottom: 5px;
+      }
+
+      .highlight {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-left: 4px solid #17a2b8;
+        margin: 15px 0;
+      }
+
+      .tech-stack {
+        background-color: #e8f5e8;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+      }
+
+      .model-info {
+        background-color: #fff3cd;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        border: 1px solid #ffeaa7;
+      }
+
+      .api-section {
+        background-color: #f0f8ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+      }
+
+      code {
+        background-color: #f4f4f4;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+      }
+
+      .workflow {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin: 15px 0;
+      }
+
+      .print-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #3498db;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        z-index: 1000;
+      }
+
+      .print-button:hover {
+        background-color: #2980b9;
+      }
+
+      @media print {
+        .print-button {
+          display: none;
+        }
+        body {
+          font-size: 12px;
+          margin: 0;
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>HỆ THỐNG QUẢN LÝ VĂN BẰNG<br />CERTIFICATE MANAGEMENT SYSTEM</h1>
+
+    <h2>1. TỔNG QUAN</h2>
+    <p>
+      Hệ thống quản lý văn bằng, chứng chỉ và hồ sơ sinh viên, cho phép nhà
+      trường cấp phát, lưu trữ và xác minh văn bằng điện tử thông qua công nghệ
+      blockchain. Dự án được xây dựng với kiến trúc hiện đại, tích hợp các công
+      nghệ như Go, Next.js, Hyperledger Fabric và nhiều công cụ khác để đảm bảo
+      tính bảo mật, minh bạch và dễ sử dụng.
+    </p>
+
+    <h2>2. TÍNH NĂNG CHÍNH</h2>
+    <ul>
+      <li>
+        <strong>Quản lý văn bằng và chứng chỉ:</strong> Cấp phát, lưu trữ và xác
+        minh văn bằng điện tử
+      </li>
+      <li>
+        <strong>Tích hợp blockchain:</strong> Sử dụng Hyperledger Fabric để đảm
+        bảo tính bất biến và minh bạch của dữ liệu
+      </li>
+      <li>
+        <strong>Xác thực người dùng:</strong> Hỗ trợ đăng nhập/đăng ký với JWT
+        để quản lý authentication/authorization
+      </li>
+      <li>
+        <strong>Lưu trữ tệp:</strong> Sử dụng MinIO để lưu trữ tệp văn
+        bằng/chứng chỉ an toàn
+      </li>
+      <li>
+        <strong>Giao diện người dùng:</strong> Frontend được xây dựng bằng
+        NextJS, Shadcn và TailwindCSS
+      </li>
+      <li>
+        <strong>Quản lý khoa và trường:</strong> Hỗ trợ quản lý thông tin khoa
+        và trường đại học
+      </li>
+      <li>
+        <strong>Xác minh mã:</strong> Tạo và xác minh mã xác thực cho văn
+        bằng/chứng chỉ
+      </li>
+    </ul>
+
+    <h2>3. KIẾN TRÚC CƠ SỞ DỮ LIỆU</h2>
+
+    <h3>3.1. Model Account (Tài khoản)</h3>
+    <div class="model-info">
+      <p><strong>Mô tả:</strong> Quản lý thông tin đăng nhập của người dùng</p>
+      <p><strong>Bảng:</strong> <code>accounts</code></p>
+      <p><strong>Trường chính:</strong></p>
+      <ul>
+        <li><code>_id</code>: ID tài khoản</li>
+        <li><code>student_id</code>: ID sinh viên (nếu là sinh viên)</li>
+        <li>
+          <code>university_id</code>: ID trường đại học (nếu là admin trường)
+        </li>
+        <li><code>student_email</code>: Email trường (@domain.edu.vn)</li>
+        <li><code>personal_email</code>: Email cá nhân (dùng để đăng nhập)</li>
+        <li><code>password_hash</code>: Mật khẩu đã mã hóa</li>
+        <li><code>role</code>: Vai trò (student, university_admin, admin)</li>
+      </ul>
+    </div>
+
+    <h3>3.2. Model User (Sinh viên)</h3>
+    <div class="model-info">
+      <p><strong>Mô tả:</strong> Thông tin chi tiết sinh viên</p>
+      <p><strong>Bảng:</strong> <code>users</code></p>
+      <p><strong>Trường chính:</strong></p>
+      <ul>
+        <li><code>_id</code>: ID sinh viên</li>
+        <li><code>student_code</code>: Mã sinh viên</li>
+        <li><code>full_name</code>: Họ tên đầy đủ</li>
+        <li><code>email</code>: Email sinh viên</li>
+        <li><code>faculty_id</code>: ID khoa</li>
+        <li><code>university_id</code>: ID trường đại học</li>
+        <li><code>course</code>: Khóa học (K47, K48, ...)</li>
+        <li>
+          <code>status</code>: Trạng thái tốt nghiệp (0: chưa, 1: cử nhân, 2: kỹ
+          sư, 3: thạc sĩ, 4: tiến sĩ)
+        </li>
+      </ul>
+    </div>
+
+    <h3>3.3. Model University (Trường Đại học)</h3>
+    <div class="model-info">
+      <p><strong>Mô tả:</strong> Thông tin các trường đại học</p>
+      <p><strong>Bảng:</strong> <code>universities</code></p>
+      <p><strong>Trường chính:</strong></p>
+      <ul>
+        <li><code>_id</code>: ID trường</li>
+        <li><code>university_name</code>: Tên trường</li>
+        <li><code>university_code</code>: Mã trường</li>
+        <li><code>address</code>: Địa chỉ</li>
+        <li><code>email_domain</code>: Tên miền email (@actvn.edu.vn)</li>
+        <li><code>status</code>: Trạng thái (pending, approved, rejected)</li>
+      </ul>
+    </div>
+
+    <h3>3.4. Model Faculty (Khoa)</h3>
+    <div class="model-info">
+      <p><strong>Mô tả:</strong> Thông tin các khoa trong trường</p>
+      <p><strong>Bảng:</strong> <code>faculties</code></p>
+      <p><strong>Trường chính:</strong></p>
+      <ul>
+        <li><code>_id</code>: ID khoa</li>
+        <li><code>faculty_code</code>: Mã khoa</li>
+        <li><code>faculty_name</code>: Tên khoa</li>
+        <li><code>university_id</code>: ID trường đại học</li>
+      </ul>
+    </div>
+
+    <h3>3.5. Model Certificate (Văn bằng/Chứng chỉ)</h3>
+    <div class="model-info">
+      <p><strong>Mô tả:</strong> Thông tin văn bằng và chứng chỉ</p>
+      <p><strong>Bảng:</strong> <code>certificates</code></p>
+      <p><strong>Trường chính:</strong></p>
+      <ul>
+        <li><code>_id</code>: ID văn bằng</li>
+        <li><code>user_id</code>: ID sinh viên</li>
+        <li><code>faculty_id</code>: ID khoa</li>
+        <li><code>university_id</code>: ID trường</li>
+        <li><code>student_code</code>: Mã sinh viên</li>
+        <li>
+          <code>is_degree</code>: Có phải văn bằng không (true: văn bằng, false:
+          chứng chỉ)
+        </li>
+        <li>
+          <code>certificate_type</code>: Loại văn bằng (Cử nhân, Kỹ sư, Thạc sĩ,
+          Tiến sĩ)
+        </li>
+        <li><code>name</code>: Tên chứng chỉ (nếu không phải văn bằng)</li>
+        <li><code>serial_number</code>: Số hiệu văn bằng</li>
+        <li><code>registration_number</code>: Số vào sổ</li>
+        <li><code>path</code>: Đường dẫn tệp PDF</li>
+        <li><code>issue_date</code>: Ngày cấp</li>
+        <li><code>signed</code>: Đã ký số hay chưa</li>
+      </ul>
+    </div>
+
+    <h3>3.6. Model VerificationCode (Mã xác thực)</h3>
+    <div class="model-info">
+      <p><strong>Mô tả:</strong> Mã xác thực để chia sẻ thông tin văn bằng</p>
+      <p><strong>Bảng:</strong> <code>verification_codes</code></p>
+      <p><strong>Trường chính:</strong></p>
+      <ul>
+        <li><code>_id</code>: ID mã xác thực</li>
+        <li><code>user_id</code>: ID sinh viên</li>
+        <li><code>code</code>: Mã xác thực (8 ký tự)</li>
+        <li><code>can_view_score</code>: Có thể xem điểm</li>
+        <li><code>can_view_data</code>: Có thể xem thông tin</li>
+        <li><code>can_view_file</code>: Có thể xem tệp</li>
+        <li><code>expired_at</code>: Thời gian hết hạn</li>
+      </ul>
+    </div>
+
+    <h3>3.7. Model OTP</h3>
+    <div class="model-info">
+      <p><strong>Mô tả:</strong> Mã OTP để xác thực email khi đăng ký</p>
+      <p><strong>Collection:</strong> <code>otps</code></p>
+      <p><strong>Trường chính:</strong></p>
+      <ul>
+        <li><code>email</code>: Email sinh viên</li>
+        <li><code>code</code>: Mã OTP (6 số)</li>
+        <li><code>expires_at</code>: Thời gian hết hạn</li>
+      </ul>
+    </div>
+
+    <h2>4. PHÂN QUYỀN VÀ CHỨC NĂNG API</h2>
+
+    <h3>4.1. ADMIN SYSTEM (Quản trị viên hệ thống)</h3>
+    <div class="api-section">
+      <h4>Quản lý Trường Đại học</h4>
+      <ul>
+        <li>
+          <code>POST /api/v1/universities</code> - Tạo yêu cầu đăng ký trường
+          mới
+        </li>
+        <li>
+          <code>GET /api/v1/universities</code> - Xem danh sách tất cả trường
+        </li>
+        <li>
+          <code>GET /api/v1/universities/status?status=pending</code> - Xem
+          trường theo trạng thái
+        </li>
+        <li>
+          <code>POST /api/v1/universities/approve-or-reject</code> - Phê
+          duyệt/từ chối trường
+        </li>
+      </ul>
+
+      <h4>Quản lý Tài khoản</h4>
+      <ul>
+        <li><code>GET /api/v1/auth/accounts</code> - Xem tất cả tài khoản</li>
+        <li><code>DELETE /api/v1/auth/accounts</code> - Xóa tài khoản</li>
+        <li>
+          <code>GET /api/v1/auth/university-admin-info</code> - Xem thông tin
+          admin trường
+        </li>
+        <li>
+          <code>GET /api/v1/auth/students-info</code> - Xem thông tin tài khoản
+          sinh viên
+        </li>
+      </ul>
+    </div>
+
+    <h3>4.2. UNIVERSITY ADMIN (Quản trị viên Trường)</h3>
+    <div class="api-section">
+      <h4>Quản lý Khoa</h4>
+      <ul>
+        <li><code>POST /api/v1/faculties</code> - Tạo khoa mới</li>
+        <li><code>GET /api/v1/faculties</code> - Xem danh sách khoa</li>
+        <li>
+          <code>PUT /api/v1/faculties/:id</code> - Cập nhật thông tin khoa
+        </li>
+        <li><code>DELETE /api/v1/faculties/:id</code> - Xóa khoa</li>
+        <li><code>GET /api/v1/faculties/:id</code> - Xem chi tiết khoa</li>
+      </ul>
+
+      <h4>Quản lý Sinh viên</h4>
+      <ul>
+        <li><code>POST /api/v1/users</code> - Tạo sinh viên mới</li>
+        <li>
+          <code>POST /api/v1/users/import-excel</code> - Import sinh viên từ
+          Excel
+        </li>
+        <li><code>GET /api/v1/users</code> - Xem danh sách sinh viên</li>
+        <li><code>GET /api/v1/users/search</code> - Tìm kiếm sinh viên</li>
+        <li><code>GET /api/v1/users/:id</code> - Xem chi tiết sinh viên</li>
+        <li>
+          <code>PUT /api/v1/users/:id</code> - Cập nhật thông tin sinh viên
+        </li>
+        <li><code>DELETE /api/v1/users/:id</code> - Xóa sinh viên</li>
+        <li>
+          <code>GET /api/v1/users/faculty/:faculty_code</code> - Xem sinh viên
+          theo khoa
+        </li>
+      </ul>
+
+      <h4>Quản lý Văn bằng/Chứng chỉ</h4>
+      <ul>
+        <li><code>POST /api/v1/certificates</code> - Tạo văn bằng/chứng chỉ</li>
+        <li>
+          <code>POST /api/v1/certificates/import-excel</code> - Import từ Excel
+        </li>
+        <li><code>GET /api/v1/certificates</code> - Xem danh sách văn bằng</li>
+        <li>
+          <code>GET /api/v1/certificates/search</code> - Tìm kiếm văn bằng
+        </li>
+        <li>
+          <code>GET /api/v1/certificates/:id</code> - Xem chi tiết văn bằng
+        </li>
+        <li>
+          <code>POST /api/v1/certificates/upload-pdf</code> - Upload tệp PDF
+        </li>
+        <li>
+          <code>GET /api/v1/certificates/tệp/:id</code> - Tải tệp văn bằng
+        </li>
+        <li><code>DELETE /api/v1/certificates/:id</code> - Xóa văn bằng</li>
+        <li>
+          <code>GET /api/v1/certificates/student/:id</code> - Xem văn bằng theo
+          sinh viên
+        </li>
+      </ul>
+    </div>
+
+    <h3>4.3. STUDENT (Sinh viên)</h3>
+    <div class="api-section">
+      <h4>Đăng ký và Xác thực</h4>
+      <ul>
+        <li><code>POST /api/v1/auth/request-otp</code> - Yêu cầu mã OTP</li>
+        <li><code>POST /api/v1/auth/verify-otp</code> - Xác thực OTP</li>
+        <li><code>POST /api/v1/auth/register</code> - Đăng ký tài khoản</li>
+      </ul>
+
+      <h4>Quản lý Tài khoản</h4>
+      <ul>
+        <li><code>POST /api/v1/auth/login</code> - Đăng nhập</li>
+        <li><code>POST /api/v1/auth/change-password</code> - Đổi mật khẩu</li>
+        <li><code>GET /api/v1/users/me</code> - Xem thông tin cá nhân</li>
+      </ul>
+
+      <h4>Quản lý Văn bằng</h4>
+      <ul>
+        <li>
+          <code>GET /api/v1/certificates/my-certificate</code> - Xem văn bằng
+          của mình
+        </li>
+        <li>
+          <code>GET /api/v1/certificates/simple</code> - Xem danh sách tên văn
+          bằng
+        </li>
+        <li>
+          <code>GET /api/v1/certificates/tệp/:id</code> - Tải tệp văn bằng
+        </li>
+      </ul>
+
+      <h4>Tạo Mã xác thực (Chia sẻ)</h4>
+      <ul>
+        <li>
+          <code>POST /api/v1/verification/create</code> - Tạo mã xác thực mới
+        </li>
+        <li>
+          <code>GET /api/v1/verification/my-codes</code> - Xem các mã đã tạo
+        </li>
+      </ul>
+    </div>
+
+    <h3>4.4. PUBLIC (Không cần đăng nhập)</h3>
+    <div class="api-section">
+      <h4>Xác thực Văn bằng</h4>
+      <ul>
+        <li>
+          <code>POST /api/v1/auth/verification</code> - Xác thực văn bằng bằng
+          mã
+        </li>
+      </ul>
+    </div>
+
+    <h2>5. QUY TRÌNH HOẠT ĐỘNG</h2>
+
+    <h3>5.1. Đăng ký Trường Đại học</h3>
+    <div class="workflow">
+      <ol>
+        <li>Trường gửi yêu cầu đăng ký đến Admin</li>
+        <li>Admin hệ thống phê duyệt</li>
+        <li>Hệ thống tự động tạo tài khoản admin cho trường</li>
+        <li>Gửi email thông báo tài khoản đến trường</li>
+      </ol>
+    </div>
+
+    <h3>5.2. Quản lý Sinh viên</h3>
+    <div class="workflow">
+      <ol>
+        <li>Admin trường tạo các khoa</li>
+        <li>Import danh sách sinh viên từ Excel hoặc tạo thủ công</li>
+        <li>Cấp văn bằng cho sinh viên với tên tệp là mã số hiệu</li>
+        <li>
+          Cấp chứng chỉ cho sinh viên cung cấp loại chứng chỉ và tên tệp là mã
+          sinh viên
+        </li>
+      </ol>
+    </div>
+
+    <h3>5.3. Cấp Văn bằng</h3>
+    <div class="workflow">
+      <ol>
+        <li>Admin trường tạo văn bằng/chứng chỉ cho sinh viên</li>
+        <li>Upload tệp PDF văn bằng/chứng chỉ</li>
+        <li>Đánh dấu đã ký số</li>
+        <li>Trường đẩy tệp lên blockchain (có thể không đẩy)</li>
+        <li>Có thể xem văn bằng/chứng chỉ và tải về</li>
+      </ol>
+    </div>
+
+    <h3>5.4. Sinh viên sử dụng hệ thống</h3>
+    <div class="workflow">
+      <ol>
+        <li>Nhập tài khoản bằng email trường để nhận yêu cầu OTP</li>
+        <li>Đăng ký tài khoản mới</li>
+        <li>
+          Xem thông tin cơ bản và thông tin chứng chỉ từ hệ thống học viện
+        </li>
+      </ol>
+    </div>
+
+    <h3>5.5. Xác thực Văn bằng</h3>
+    <div class="workflow">
+      <ol>
+        <li>Sinh viên tạo mã xác thực với thời hạn</li>
+        <li>Chia sẻ mã với bên thứ ba</li>
+        <li>Bên thứ ba sử dụng mã để xác thực thông tin</li>
+      </ol>
+    </div>
+
+    <h2>6. CÔNG NGHỆ SỬ DỤNG</h2>
+    <div class="tech-stack">
+      <ul>
+        <li><strong>Backend:</strong> Go (Gin Framework)</li>
+        <li><strong>Frontend:</strong> NextJS + TailwindCSS + shadcn/ui</li>
+        <li><strong>Database:</strong> MongoDB</li>
+        <li><strong>File Storage:</strong> MinIO</li>
+        <li><strong>Authentication:</strong> JWT</li>
+        <li><strong>Email:</strong> SMTP</li>
+        <li><strong>File Format:</strong> Excel import/export</li>
+        <li><strong>Docker:</strong> Khởi động MongoDB và MinIO</li>
+      </ul>
+    </div>
+
+    <h2>7. HƯỚNG DẪN CÀI ĐẶT DỰ ÁN</h2>
+
+    <h3>7.1. Yêu cầu Hệ thống</h3>
+    <div class="tech-stack">
+      <ul>
+        <li><strong>Go:</strong> version 1.24.3</li>
+        <li><strong>NodeJS:</strong> version 24.0.1</li>
+        <li><strong>Docker:</strong> version 28.2.2</li>
+        <li><strong>Docker Compose:</strong> version 2.36.2</li>
+      </ul>
+    </div>
+
+    <h3>7.2. Clone Dự án</h3>
+    <div class="highlight">
+      <p><strong>Clone frontend:</strong></p>
+      <code>git clone https://github.com/Tuienn/nextjs-common.git</code>
+      <br /><br />
+      <p><strong>Clone backend:</strong></p>
+      <code
+        >git clone
+        https://github.com/tuyenngduc/certificate-management-system.git</code
+      >
+    </div>
+
+    <h3>7.3. Cấu hình Environment Variables</h3>
+
+    <h4>Frontend (.env.local)</h4>
+    <div class="model-info">
+      <code>SESSION_SECRET=&lt;SECRET_KEY&gt;</code><br />
+      <code>NEXT_PUBLIC_API_URL=http://localhost:8080</code>
+    </div>
+
+    <h4>Backend (.env)</h4>
+    <div class="model-info">
+      <p><strong># Database</strong></p>
+      <code
+        >MONGODB_URI=mongodb://&lt;username&gt;:&lt;password&gt;@&lt;host&gt;:&lt;port&gt;</code
+      ><br />
+      <code>DB_NAME=&lt;database_name&gt;</code><br />
+      <code>MONGO_INITDB_ROOT_USERNAME=&lt;mongo_username&gt;</code><br />
+      <code>MONGO_INITDB_ROOT_PASSWORD=&lt;mongo_password&gt;</code><br /><br />
+
+      <p><strong># Admin Account</strong></p>
+      <code>ADMIN_EMAIL=&lt;admin_email&gt;</code><br />
+      <code>ADMIN_PASSWORD=&lt;admin_password&gt;</code><br /><br />
+
+      <p><strong># Email Configuration</strong></p>
+      <code>EMAIL_FROM=&lt;email_address&gt;</code><br />
+      <code>EMAIL_PASSWORD=&lt;email_password_or_app_password&gt;</code><br />
+      <code>EMAIL_HOST=&lt;smtp_host&gt;</code><br />
+      <code>EMAIL_PORT=&lt;smtp_port&gt;</code><br /><br />
+
+      <p><strong># JWT</strong></p>
+      <code>JWT_SECRET=&lt;random_secure_string&gt;</code><br /><br />
+
+      <p><strong># MinIO Configuration</strong></p>
+      <code>MINIO_ROOT_USER=&lt;minio_username&gt;</code><br />
+      <code>MINIO_ROOT_PASSWORD=&lt;minio_password&gt;</code><br />
+      <code>MINIO_ENDPOINT=&lt;minio_host&gt;:&lt;minio_port&gt;</code><br />
+      <code>MINIO_ACCESS_KEY=&lt;minio_access_key&gt;</code><br />
+      <code>MINIO_SECRET_KEY=&lt;minio_secret_key&gt;</code><br />
+      <code>MINIO_BUCKET=&lt;bucket_name&gt;</code><br />
+      <code>MINIO_USE_SSL=&lt;true_or_false&gt;</code>
+    </div>
+
+    <h3>7.4. Khởi động Dự án</h3>
+
+    <h4>Frontend</h4>
+    <div class="workflow">
+      <p><strong>Cài đặt dependencies (chỉ chạy lần đầu):</strong></p>
+      <code>npm install</code><br /><br />
+
+      <p><strong>Khởi động development server:</strong></p>
+      <code>npm run dev</code><br /><br />
+
+      <p>
+        <strong>Server NextJS sẽ chạy tại:</strong>
+        <code>http://localhost:3000</code>
+      </p>
+    </div>
+
+    <h4>Backend</h4>
+    <div class="workflow">
+      <p><strong>Khởi động MongoDB và MinIO với Docker:</strong></p>
+      <code>docker-compose up --build -d</code><br /><br />
+
+      <p><strong>Khởi động Go server:</strong></p>
+      <code>go run ./cmd/server</code><br /><br />
+
+      <p>
+        <strong>Server API sẽ chạy tại:</strong>
+        <code>http://localhost:8080</code>
+      </p>
+    </div>
+
+    <h3>7.5. Truy cập Ứng dụng</h3>
+    <div class="api-section">
+      <ul>
+        <li><strong>Frontend:</strong> <code>http://localhost:3000</code></li>
+        <li>
+          <strong>Backend API:</strong> <code>http://localhost:8080</code>
+        </li>
+        <li>
+          <strong>MinIO Console:</strong> <code>http://localhost:9001</code>
+        </li>
+      </ul>
+    </div>
+
+    <h2>8. BẢO MẬT</h2>
+    <div class="highlight">
+      <ul>
+        <li>Mã hóa mật khẩu bằng bcrypt</li>
+        <li>JWT token cho xác thức</li>
+        <li>Phân quyền theo role</li>
+        <li>OTP xác thực email</li>
+        <li>Mã xác thực có thời hạn</li>
+        <li>Upload tệp an toàn</li>
+      </ul>
+    </div>
+
+    <script>
+      // Tự động in khi trang được tải
+      window.onload = function () {
+        // Có thể bỏ comment dòng dưới nếu muốn tự động mở dialog in
+        // window.print();
+      };
+    </script>
+  </body>
+</html>

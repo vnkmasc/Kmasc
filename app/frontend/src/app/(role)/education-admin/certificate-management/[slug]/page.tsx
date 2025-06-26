@@ -1,3 +1,4 @@
+import Back from '@/components/common/back'
 import CertificateView from '@/components/common/certificate-view'
 
 interface Props {
@@ -9,7 +10,10 @@ const CertificateDetailPage = async ({ params }: Props) => {
 
   return (
     <>
-      <h2 className='mb-4'>Chi tiết thông tin</h2>
+      <div className='mb-4 flex items-center gap-2'>
+        <Back />
+        <h2>Chi tiết thông tin</h2>
+      </div>
       <CertificateView id={slug} />
     </>
   )

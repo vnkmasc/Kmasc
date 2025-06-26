@@ -4,6 +4,7 @@ import XrmSvg from '../../public/assets/svg/xrm.svg'
 import Image from 'next/image'
 import { getSession } from '@/lib/auth/session'
 import SearchVerifyCode from '@/components/common/search-verify-code'
+import { Footer7 } from '@/components/ui/footer7'
 const HomePage = async () => {
   const session = await getSession()
 
@@ -21,6 +22,7 @@ const HomePage = async () => {
         </p>
         <SearchVerifyCode />
       </div>
+      <Footer7 />
     </main>
   )
 }
