@@ -154,20 +154,20 @@ install_go() {
         GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
         print_status "PASS" "Go already installed: $GO_VERSION"
         
-        # Check if version is sufficient (1.21+)
+        # Check if version is sufficient (1.24.4)
         GO_MAJOR=$(echo $GO_VERSION | cut -d. -f1)
         GO_MINOR=$(echo $GO_VERSION | cut -d. -f2)
-        
-        if [ "$GO_MAJOR" -gt 1 ] || ([ "$GO_MAJOR" -eq 1 ] && [ "$GO_MINOR" -ge 21 ]); then
-            print_status "PASS" "Go version is sufficient"
+        GO_PATCH=$(echo $GO_VERSION | cut -d. -f3)
+        if [ "$GO_MAJOR" -gt 1 ] || ([ "$GO_MAJOR" -eq 1 ] && [ "$GO_MINOR" -ge 24 ] && [ "$GO_PATCH" -ge 4 ]); then
+            print_status "PASS" "Go version is sufficient (1.24.4+)"
         else
-            print_status "WARN" "Go version may be too old. Recommended: 1.21+"
+            print_status "WARN" "Go version may be too old. Recommended: 1.24.4+"
         fi
     else
         print_status "INFO" "Installing Go..."
         
         # Download and install Go
-        GO_VERSION="1.21.0"
+        GO_VERSION="1.24.4"
         GO_ARCH="linux-amd64"
         GO_URL="https://go.dev/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz"
         
