@@ -84,9 +84,54 @@ step2_setup_environment() {
     echo
 }
 
-# Step 3: Test environment
-step3_test_environment() {
-    echo "Step 3: Testing environment..."
+# Step 3: Download fabric-samples
+step3_download_fabric_samples() {
+    echo "Step 3: Downloading fabric-samples..."
+    
+    if [ -d "fabric-samples" ]; then
+        print_status "INFO" "fabric-samples directory already exists"
+        print_status "INFO" "Checking if it's the correct version..."
+        
+        # Check if it's the right version by looking for test-network
+        if [ -d "fabric-samples/test-network" ]; then
+            print_status "PASS" "fabric-samples with test-network found"
+        else
+            print_status "WARN" "fabric-samples exists but test-network not found"
+            print_status "INFO" "Removing old fabric-samples and downloading fresh copy..."
+            rm -rf fabric-samples
+        fi
+    fi
+    
+    if [ ! -d "fabric-samples" ]; then
+        print_status "INFO" "Downloading fabric-samples..."
+        
+        # Try to download fabric-samples
+        if command -v curl >/dev/null 2>&1; then
+            print_status "INFO" "Using curl to download fabric-samples..."
+            curl -sSL https://bit.ly/2ysbOFE | bash -s -- 3.1.1 1.5.1
+        elif command -v wget >/dev/null 2>&1; then
+            print_status "INFO" "Using wget to download fabric-samples..."
+            wget https://bit.ly/2ysbOFE -O - | bash -s -- 3.1.1 1.5.1
+        else
+            print_status "FAIL" "Neither curl nor wget found. Please install one of them."
+            print_status "INFO" "You can manually download fabric-samples from:"
+            print_status "INFO" "https://github.com/hyperledger/fabric-samples"
+            exit 1
+        fi
+        
+        if [ -d "fabric-samples" ]; then
+            print_status "PASS" "fabric-samples downloaded successfully"
+        else
+            print_status "FAIL" "Failed to download fabric-samples"
+            exit 1
+        fi
+    fi
+    echo
+}
+
+# Step 4: Test environment
+step4_test_environment() {
+    echo "Step 4: Testing environment..."
     if script_exists "test_environment.sh"; then
         print_status "INFO" "Running environment test..."
         export CGO_ENABLED=1
@@ -98,9 +143,9 @@ step3_test_environment() {
     echo
 }
 
-# Step 4: Build encryption library
-step4_build_encryption() {
-    echo "Step 4: Building encryption library..."
+# Step 5: Build encryption library
+step5_build_encryption() {
+    echo "Step 5: Building encryption library..."
     
     # Ensure we're in the correct directory
     if [ ! -f "go.mod" ]; then
@@ -124,9 +169,9 @@ step4_build_encryption() {
     echo
 }
 
-# Step 5: Test encryption
-step5_test_encryption() {
-    echo "Step 5: Testing encryption integration..."
+# Step 6: Test encryption
+step6_test_encryption() {
+    echo "Step 6: Testing encryption integration..."
     
     # Ensure we're in the correct directory
     if [ ! -f "go.mod" ]; then
@@ -155,9 +200,9 @@ step5_test_encryption() {
     echo
 }
 
-# Step 6: Build Fabric
-step6_build_fabric() {
-    echo "Step 6: Building Fabric..."
+# Step 7: Build Fabric
+step7_build_fabric() {
+    echo "Step 7: Building Fabric..."
     if script_exists "build-fabric.sh"; then
         print_status "INFO" "Building Fabric with encryption..."
         export CGO_ENABLED=1
@@ -170,9 +215,9 @@ step6_build_fabric() {
     echo
 }
 
-# Step 7: Start network
-step7_start_network() {
-    echo "Step 7: Starting test network..."
+# Step 8: Start network
+step8_start_network() {
+    echo "Step 8: Starting test network..."
     if script_exists "start-network.sh"; then
         print_status "INFO" "Starting test network..."
         ./start-network.sh
@@ -184,9 +229,9 @@ step7_start_network() {
     echo
 }
 
-# Step 8: Show next steps
-step8_next_steps() {
-    echo "Step 8: Next steps..."
+# Step 9: Show next steps
+step9_next_steps() {
+    echo "Step 9: Next steps..."
     print_status "INFO" "Setup completed successfully!"
     echo
     echo "🎉 Congratulations! Your Hyperledger Fabric with encryption is ready!"
@@ -200,6 +245,7 @@ step8_next_steps() {
     echo "🔍 To verify encryption is working:"
     echo "   docker logs -f peer0.org1.example.com | grep -i encrypt"
     echo "   docker logs -f peer0.org1.example.com | grep -i decrypt"
+    echo "   docker exec peer0.org1.example.com cat /root/state_encryption.log"
     echo
     echo "🧪 To test chaincode:"
     echo "   cd fabric-samples/test-network"
@@ -220,22 +266,25 @@ main() {
     ensure_correct_directory
     step1_fix_repositories
     step2_setup_environment
-    step3_test_environment
-    step4_build_encryption
-    step5_test_encryption
-    step6_build_fabric
-    step7_start_network
-    step8_next_steps
+    step3_download_fabric_samples
+    step4_test_environment
+    step5_build_encryption
+    step6_test_encryption
+    step7_build_fabric
+    step8_start_network
+    step9_next_steps
 }
 
 # Check if user wants to continue
 echo "This script will:"
 echo "1. Fix any repository issues"
 echo "2. Set up the environment (Go, OpenSSL, Docker)"
-echo "3. Build the encryption library"
-echo "4. Test the encryption integration"
-echo "5. Build Fabric with encryption"
-echo "6. Start the test network"
+echo "3. Download fabric-samples"
+echo "4. Test the environment"
+echo "5. Build the encryption library"
+echo "6. Test the encryption integration"
+echo "7. Build Fabric with encryption"
+echo "8. Start the test network"
 echo
 read -p "Do you want to continue? (y/N): " -n 1 -r
 echo
