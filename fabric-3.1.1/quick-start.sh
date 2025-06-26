@@ -57,6 +57,45 @@ ensure_correct_directory() {
 # Save root directory
 ROOT_DIR=$(pwd)
 
+# --- Go installation (auto-download Go 1.24.4 if not present or wrong version) ---
+GO_VERSION_REQUIRED="1.24.4"
+GO_TARBALL="go$GO_VERSION_REQUIRED.linux-amd64.tar.gz"
+GO_URL="https://go.dev/dl/$GO_TARBALL"
+
+check_go_version() {
+    if command -v go >/dev/null 2>&1; then
+        CURRENT_GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
+        if [ "$CURRENT_GO_VERSION" = "$GO_VERSION_REQUIRED" ]; then
+            print_status "PASS" "Go $GO_VERSION_REQUIRED is already installed."
+            return 0
+        else
+            print_status "WARN" "Go version $CURRENT_GO_VERSION found, but $GO_VERSION_REQUIRED is required."
+            return 1
+        fi
+    else
+        print_status "WARN" "Go is not installed."
+        return 1
+    fi
+}
+
+install_go() {
+    print_status "INFO" "Downloading Go $GO_VERSION_REQUIRED..."
+    wget -q "$GO_URL" -O "/tmp/$GO_TARBALL"
+    print_status "INFO" "Removing any previous Go installation in /usr/local/go..."
+    sudo rm -rf /usr/local/go
+    print_status "INFO" "Extracting Go $GO_VERSION_REQUIRED to /usr/local..."
+    sudo tar -C /usr/local -xzf "/tmp/$GO_TARBALL"
+    print_status "INFO" "Setting up Go environment variables..."
+    export PATH=/usr/local/go/bin:$PATH
+    if ! grep -q '/usr/local/go/bin' ~/.bashrc; then
+        echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
+    fi
+    print_status "PASS" "Go $GO_VERSION_REQUIRED installed successfully."
+    go version
+}
+
+check_go_version || install_go
+
 # Step 1: Fix repositories if needed
 step1_fix_repositories() {
     echo "Step 1: Checking repositories..."
