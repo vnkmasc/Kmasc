@@ -12,11 +12,19 @@ Dự án này tích hợp mã hóa/giải mã sử dụng OpenSSL thông qua CGO
 - ✅ Tương thích với Hyperledger Fabric 3.1.1
 - ✅ Test network hoạt động đầy đủ
 
+## Đã kiểm thử trên
+
+- **Hệ điều hành:** Ubuntu 24.04 LTS
+- **Go:** 1.24.4
+- **Docker:** 24.x (Docker Engine v24.x, Docker Compose v2.x)
+
+Dự án đã được xác nhận chạy thành công trên các phiên bản phần mềm trên.
+
 ## Yêu cầu hệ thống
 
-- Ubuntu 20.04+ hoặc tương đương
-- Docker và Docker Compose
-- Go 1.21+
+- Ubuntu 20.04+ hoặc tương đương (Khuyến nghị: Ubuntu 24.04)
+- Docker và Docker Compose (Khuyến nghị: Docker Engine 24.x, Docker Compose 2.x)
+- Go 1.21+ (Khuyến nghị: Go 1.24.4)
 - GCC và OpenSSL development libraries
 - Git
 
@@ -68,8 +76,8 @@ sudo apt-get update
 sudo apt-get install -y build-essential libssl-dev git curl
 
 # Cài đặt Go
-wget https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
 source ~/.bashrc
 
@@ -122,15 +130,15 @@ chmod +x run_tests.sh
 
 ### Kiểm tra logs encryption
 ```bash
+# Check log trên peer container
+docker exec peer0.org1.example.com cat /root/state_encryption.log
+
 # Xem logs peer với filter encryption
 docker logs -f peer0.org1.example.com | grep -i encrypt
 docker logs -f peer0.org1.example.com | grep -i decrypt
 
 # Hoặc xem toàn bộ logs
 docker logs -f peer0.org1.example.com
-
-# Check log trên peer container
-docker exec peer0.org1.example.com cat /root/state_encryption.log
 ```
 
 ### Test chaincode

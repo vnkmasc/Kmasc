@@ -243,8 +243,6 @@ step9_next_steps() {
     echo "   ✅ Test network running"
     echo
     echo "🔍 To verify encryption is working:"
-    echo "   docker logs -f peer0.org1.example.com | grep -i encrypt"
-    echo "   docker logs -f peer0.org1.example.com | grep -i decrypt"
     echo "   docker exec peer0.org1.example.com cat /root/state_encryption.log"
     echo
     echo "🧪 To test chaincode:"

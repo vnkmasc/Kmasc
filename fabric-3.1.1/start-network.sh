@@ -8,8 +8,8 @@ set -e
 
 echo "=== Hyperledger Fabric Test Network Startup Script ==="
 
-# Navigate to test network directory
-TEST_NETWORK_DIR="/home/phongnh/Kmasc/fabric-3.1.1/fabric-samples/test-network"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TEST_NETWORK_DIR="$SCRIPT_DIR/fabric-samples/test-network"
 cd "$TEST_NETWORK_DIR"
 
 echo "📁 Current directory: $(pwd)"
