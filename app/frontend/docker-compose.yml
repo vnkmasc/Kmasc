@@ -1,0 +1,14 @@
+services:
+  nextjs-app:
+    image: node:24-alpine3.21
+    container_name: certificate-system-fe
+    working_dir: /
+    user: node
+    volumes:
+      - .:/app
+    ports:
+      - '3000:3000'
+    command: >
+      sh -c "npm install &&
+             npm run build &&
+             npm run start"
