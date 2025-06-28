@@ -14,14 +14,14 @@ func main() {
 	const (
 		ns    = "testns"
 		key   = "testkey"
-		loops = 10
+		loops = 100
 	)
-	testValue := []byte("Sensitive data for no-encrypt test")
+	testValue := []byte("Sensitive data for encryption test")
 	putTimes := make([]float64, 0, loops)
 	getTimes := make([]float64, 0, loops)
 
 	// Tạo thư mục DB tạm để test
-	dbPath := "./testdb_noencrypt"
+	dbPath := "./testdb"
 	os.RemoveAll(dbPath)
 	defer os.RemoveAll(dbPath)
 
@@ -29,14 +29,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	vdb, err := db.GetDBHandle("testdb_noencrypt", nil)
+	vdb, err := db.GetDBHandle("testdb", nil)
 	if err != nil {
 		panic(err)
 	}
 
 	var ver = &version.Height{BlockNum: 1, TxNum: 1}
 
-	fmt.Println("Unit test cho 2 hàm put và get (CHƯA TÍCH HỢP MẬT MÃ)")
+	fmt.Println("Unit test cho 2 hàm put và get (ĐÃ TÍCH HỢP MẬT MÃ)")
 	fmt.Println("Lần\tHàm put (s)\tHàm get (s)")
 	for i := 1; i <= loops; i++ {
 		batch := statedb.NewUpdateBatch()

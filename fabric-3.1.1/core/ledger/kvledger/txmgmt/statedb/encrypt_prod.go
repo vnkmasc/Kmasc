@@ -9,6 +9,7 @@ package statedb
 import "C"
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -35,7 +36,11 @@ func logToFile(op, ns, key, status, errMsg string) {
 	}
 	logFileMu.Lock()
 	defer logFileMu.Unlock()
-	timestamp := time.Now().UTC().Format(time.RFC3339)
+	now := time.Now().UTC()
+	timestamp := fmt.Sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%06dZ",
+		now.Year(), now.Month(), now.Day(),
+		now.Hour(), now.Minute(), now.Second(),
+		now.Nanosecond()/1000) // Convert nanoseconds to microseconds
 	msg := timestamp + " " + op + " ns=" + ns + " key=" + key + " " + status
 	if errMsg != "" {
 		msg += " ERROR: " + errMsg

@@ -18,6 +18,7 @@ Dự án này tích hợp mã hóa/giải mã sử dụng OpenSSL thông qua CGO
 - **Hệ điều hành:** Ubuntu 24.04 LTS
 - **Go:** 1.24.4
 - **Docker:** 24.x (Docker Engine v24.x, Docker Compose v2.x)
+- **Docker hiện tại:** Docker Engine v28.2.2, Docker Compose v2.36.2
 
 Dự án đã được xác nhận chạy thành công trên các phiên bản phần mềm trên.
 
