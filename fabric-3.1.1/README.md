@@ -11,6 +11,7 @@ Dự án này tích hợp mã hóa/giải mã sử dụng OpenSSL thông qua CGO
 - ✅ Tích hợp CGO với thư viện C tùy chỉnh
 - ✅ Tương thích với Hyperledger Fabric 3.1.1
 - ✅ Test network hoạt động đầy đủ
+- ✅ Scripts modular và có thể chạy độc lập
 
 ## Đã kiểm thử trên
 
@@ -30,42 +31,34 @@ Dự án đã được xác nhận chạy thành công trên các phiên bản p
 
 ## Cài đặt nhanh
 
-### 1. Clone repository
+### Phương pháp 1: Setup tự động (Khuyến nghị)
 ```bash
 git clone <your-repo-url>
 cd fabric-3.1.1
-```
-
-### 2. Chạy script cài đặt tự động (Khuyến nghị)
-```bash
-chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-### 3. Hoặc chạy từng bước thủ công
-```bash
-# Fix repositories (nếu cần)
-chmod +x fix-repositories.sh
-./fix-repositories.sh
+### Phương pháp 2: Setup từng bước
+Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết chi tiết về các script có sẵn và cách sử dụng từng bước.
 
-# Setup environment
-chmod +x setup-environment.sh
-./setup-environment.sh
+## Scripts có sẵn
 
-# Build encryption library
-cd core/ledger/kvledger/txmgmt/statedb
-make clean && make
-cd ../../../../../..
+Dự án này bao gồm một bộ scripts modular để dễ dàng setup và quản lý:
 
-# Build Fabric với encryption
-export CGO_ENABLED=1
-chmod +x build-fabric.sh
-./build-fabric.sh
+### Scripts chính
+- `quick-start.sh` - Setup hoàn chỉnh từ đầu
+- `setup-environment.sh` - Cài đặt dependencies
+- `build-fabric.sh` - Build Fabric với encryption
+- `start-network.sh` - Khởi động test network
 
-# Khởi động test network
-chmod +x start-network.sh
-./start-network.sh
-```
+### Scripts tiện ích
+- `download-fabric-samples.sh` - Tải fabric-samples
+- `build-encryption.sh` - Build encryption library
+- `test-encryption.sh` - Test encryption integration
+- `check-environment.sh` - Kiểm tra môi trường
+- `list-scripts.sh` - Liệt kê tất cả scripts
+
+**📖 Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết chi tiết về tất cả scripts và cách sử dụng.**
 
 ## Cài đặt thủ công
 
@@ -89,7 +82,6 @@ sudo usermod -aG docker $USER
 
 ### Bước 2: Cài đặt Fabric samples
 ```bash
-chmod +x fabric-samples-install.sh
 ./fabric-samples-install.sh
 ```
 
@@ -102,6 +94,7 @@ cd ../../../../../..
 
 ### Bước 4: Build Fabric
 ```bash
+export CGO_ENABLED=1
 make clean
 make native
 ```
@@ -110,14 +103,12 @@ make native
 
 ### Kiểm tra môi trường
 ```bash
-chmod +x check-environment.sh
 ./check-environment.sh
 ```
 
 ### Test encryption integration
 ```bash
 cd core/ledger/kvledger/txmgmt/statedb
-chmod +x run_tests.sh
 ./run_tests.sh
 ```
 
@@ -161,24 +152,16 @@ fabric-3.1.1/
 │   ├── encrypt.h           # Header file
 │   ├── Makefile            # Build script
 │   └── README_ENCRYPTION.md # Chi tiết encryption
-├── build-fabric.sh         # Build script
-├── start-network.sh        # Network startup script
-├── setup-environment.sh    # Environment setup
-├── check-environment.sh    # Environment check
+├── *.sh                    # Scripts setup và quản lý
+├── README_SCRIPTS.md       # Hướng dẫn chi tiết scripts
 └── README.md              # Tài liệu này
 ```
 
 ## Troubleshooting
 
 ### Lỗi Repository (Ubuntu)
-Nếu gặp lỗi repository khi chạy `setup-environment.sh`:
 ```bash
-# Fix broken repositories
-chmod +x fix-repositories.sh
 ./fix-repositories.sh
-
-# Sau đó chạy lại setup
-./setup-environment.sh
 ```
 
 ### Lỗi CGO
@@ -206,6 +189,8 @@ make clean
 go mod tidy
 make native
 ```
+
+**🔍 Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết thêm chi tiết về troubleshooting và các script hỗ trợ.**
 
 ## Performance
 
@@ -238,3 +223,4 @@ Apache 2.0 License
 - Tạo issue trên GitHub
 - Kiểm tra README_ENCRYPTION.md cho chi tiết kỹ thuật
 - Chạy `./check-environment.sh` để debug môi trường
+- Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết chi tiết về scripts

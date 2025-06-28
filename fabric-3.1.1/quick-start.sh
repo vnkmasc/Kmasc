@@ -43,6 +43,23 @@ script_exists() {
     [ -f "$1" ] && [ -x "$1" ]
 }
 
+# Function to make script executable and run it
+run_script() {
+    local script_name=$1
+    local description=$2
+    
+    if script_exists "$script_name"; then
+        print_status "INFO" "Running $description..."
+        chmod +x "$script_name"
+        ./"$script_name"
+        print_status "PASS" "$description completed"
+    else
+        print_status "FAIL" "$script_name not found"
+        exit 1
+    fi
+    echo
+}
+
 # Function to ensure we're in the correct directory
 ensure_correct_directory() {
     if [ ! -f "go.mod" ] || [ ! -d "core/ledger/kvledger/txmgmt/statedb" ]; then
@@ -99,180 +116,49 @@ check_go_version || install_go
 # Step 1: Fix repositories if needed
 step1_fix_repositories() {
     echo "Step 1: Checking repositories..."
-    if script_exists "fix-repositories.sh"; then
-        print_status "INFO" "Running repository fix..."
-        ./fix-repositories.sh
-        print_status "PASS" "Repository fix completed"
-    else
-        print_status "WARN" "fix-repositories.sh not found, skipping"
-    fi
-    echo
+    run_script "fix-repositories.sh" "repository fix"
 }
 
 # Step 2: Setup environment
 step2_setup_environment() {
     echo "Step 2: Setting up environment..."
-    if script_exists "setup-environment.sh"; then
-        print_status "INFO" "Running environment setup..."
-        ./setup-environment.sh
-        print_status "PASS" "Environment setup completed"
-    else
-        print_status "FAIL" "setup-environment.sh not found"
-        exit 1
-    fi
-    echo
+    run_script "setup-environment.sh" "environment setup"
 }
 
 # Step 3: Download fabric-samples
 step3_download_fabric_samples() {
     echo "Step 3: Downloading fabric-samples..."
-    
-    if [ -d "fabric-samples" ]; then
-        print_status "INFO" "fabric-samples directory already exists"
-        print_status "INFO" "Checking if it's the correct version..."
-        
-        # Check if it's the right version by looking for test-network
-        if [ -d "fabric-samples/test-network" ]; then
-            print_status "PASS" "fabric-samples with test-network found"
-        else
-            print_status "WARN" "fabric-samples exists but test-network not found"
-            print_status "INFO" "Removing old fabric-samples and downloading fresh copy..."
-            rm -rf fabric-samples
-        fi
-    fi
-    
-    if [ ! -d "fabric-samples" ]; then
-        print_status "INFO" "Downloading fabric-samples..."
-        
-        # Try to download fabric-samples
-        if command -v curl >/dev/null 2>&1; then
-            print_status "INFO" "Using curl to download fabric-samples..."
-            curl -sSL https://bit.ly/2ysbOFE | bash -s -- 3.1.1 1.5.1
-        elif command -v wget >/dev/null 2>&1; then
-            print_status "INFO" "Using wget to download fabric-samples..."
-            wget https://bit.ly/2ysbOFE -O - | bash -s -- 3.1.1 1.5.1
-        else
-            print_status "FAIL" "Neither curl nor wget found. Please install one of them."
-            print_status "INFO" "You can manually download fabric-samples from:"
-            print_status "INFO" "https://github.com/hyperledger/fabric-samples"
-            exit 1
-        fi
-        
-        if [ -d "fabric-samples" ]; then
-            print_status "PASS" "fabric-samples downloaded successfully"
-        else
-            print_status "FAIL" "Failed to download fabric-samples"
-            exit 1
-        fi
-    fi
-    echo
+    run_script "download-fabric-samples.sh" "fabric-samples download"
 }
 
 # Step 4: Test environment
 step4_test_environment() {
     echo "Step 4: Testing environment..."
-    if script_exists "test_environment.sh"; then
-        print_status "INFO" "Running environment test..."
-        export CGO_ENABLED=1
-        ./test_environment.sh
-        print_status "PASS" "Environment test completed"
-    else
-        print_status "WARN" "test_environment.sh not found, skipping"
-    fi
-    echo
+    run_script "test_environment.sh" "environment test"
 }
 
 # Step 5: Build encryption library
 step5_build_encryption() {
     echo "Step 5: Building encryption library..."
-    
-    # Ensure we're in the correct directory
-    if [ ! -f "go.mod" ]; then
-        print_status "FAIL" "Not in Fabric root directory. Please run from fabric-3.1.1/"
-        exit 1
-    fi
-    
-    if [ -d "core/ledger/kvledger/txmgmt/statedb" ]; then
-        print_status "INFO" "Building encryption library..."
-        cd "$ROOT_DIR/core/ledger/kvledger/txmgmt/statedb"
-        make clean && make
-        cd "$ROOT_DIR"
-        print_status "PASS" "Encryption library built"
-    else
-        print_status "FAIL" "statedb directory not found at core/ledger/kvledger/txmgmt/statedb"
-        print_status "INFO" "Current directory: $(pwd)"
-        print_status "INFO" "Available directories in core/ledger/kvledger/txmgmt/:"
-        ls -la core/ledger/kvledger/txmgmt/ 2>/dev/null || echo "Directory not accessible"
-        exit 1
-    fi
-    echo
+    run_script "build-encryption.sh" "encryption library build"
 }
 
 # Step 6: Test encryption
-#step6_test_encryption() {
-#    echo "Step 6: Testing encryption integration..."
-#    
-#    # Ensure we're in the correct directory
-#    if [ ! -f "go.mod" ]; then
-#        print_status "FAIL" "Not in Fabric root directory. Please run from fabric-3.1.1/"
-#        exit 1
-#    fi
-#    
-#    if [ -d "core/ledger/kvledger/txmgmt/statedb" ]; then
-#        print_status "INFO" "Running encryption tests..."
-#        cd "$ROOT_DIR/core/ledger/kvledger/txmgmt/statedb"
-#        # Tìm file run_tests.sh trong thư mục hiện tại và các thư mục con, ưu tiên file có quyền thực thi
-#        RUN_TESTS_PATH=$(find . -type f -name "run_tests.sh" -perm /u+x | head -n 1)
-#        if [ -z "$RUN_TESTS_PATH" ]; then
-#            # Nếu không có file thực thi, tìm file run_tests.sh bất kỳ
-#            RUN_TESTS_PATH=$(find . -type f -name "run_tests.sh" | head -n 1)
-#        fi
-#        if [ -n "$RUN_TESTS_PATH" ]; then
-#            print_status "INFO" "Found run_tests.sh at $RUN_TESTS_PATH, running it with bash..."
-#            bash "$RUN_TESTS_PATH"
-#            print_status "PASS" "Encryption tests completed"
-#        else
-#            print_status "WARN" "run_tests.sh not found anywhere, running basic tests..."
-#            go test ./...
-#        fi
-#        cd "$ROOT_DIR"
-#    else
-#        print_status "FAIL" "statedb directory not found at core/ledger/kvledger/txmgmt/statedb"
-#        print_status "INFO" "Current directory: $(pwd)"
-#        print_status "INFO" "Available directories in core/ledger/kvledger/txmgmt/:"
-#        ls -la core/ledger/kvledger/txmgmt/ 2>/dev/null || echo "Directory not accessible"
-#        exit 1
-#    fi
-#    echo
-#}
+# step6_test_encryption() {
+#     echo "Step 6: Testing encryption integration..."
+#     run_script "test-encryption.sh" "encryption integration test"
+# }
 
 # Step 7: Build Fabric
 step7_build_fabric() {
     echo "Step 7: Building Fabric..."
-    if script_exists "build-fabric.sh"; then
-        print_status "INFO" "Building Fabric with encryption..."
-        export CGO_ENABLED=1
-        ./build-fabric.sh
-        print_status "PASS" "Fabric build completed"
-    else
-        print_status "FAIL" "build-fabric.sh not found"
-        exit 1
-    fi
-    echo
+    run_script "build-fabric.sh" "Fabric build"
 }
 
 # Step 8: Start network
 step8_start_network() {
     echo "Step 8: Starting test network..."
-    if script_exists "start-network.sh"; then
-        print_status "INFO" "Starting test network..."
-        ./start-network.sh
-        print_status "PASS" "Test network started"
-    else
-        print_status "FAIL" "start-network.sh not found"
-        exit 1
-    fi
-    echo
+    run_script "start-network.sh" "test network startup"
 }
 
 # Step 9: Show next steps
@@ -313,6 +199,7 @@ main() {
     step3_download_fabric_samples
     step4_test_environment
     step5_build_encryption
+    # step6_test_encryption
     step7_build_fabric
     step8_start_network
     step9_next_steps
@@ -325,7 +212,7 @@ echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
 echo "5. Build the encryption library"
-echo "6. Test the encryption integration"
+# echo "6. Test the encryption integration"
 echo "7. Build Fabric with encryption"
 echo "8. Start the test network"
 echo

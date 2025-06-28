@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# Build Hyperledger Fabric Binaries Script
+# Build Hyperledger Fabric Binaries & Docker Images Script
 # Author: Phong Ngo
-# Date: June 15, 2025
+# Date: June 28, 2025
 
 set -e
 
 echo "=== Hyperledger Fabric Build Script ==="
 echo "Starting build process..."
+echo
 
 # Navigate to fabric source directory
 FABRIC_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -19,89 +20,88 @@ echo "📁 Current directory: $(pwd)"
 echo "🔍 Checking Go version..."
 go version
 
-# Clean previous build artifacts
 echo "🧹 Cleaning previous build artifacts..."
 make clean
 
-# Build native binaries
-echo "🔨 Building native binaries..."
+echo "🔨 Building all native Fabric binaries..."
 make native
 
-# Check if build was successful
-if [ -d "build/bin" ] && [ "$(ls -A build/bin)" ]; then
-    echo "✅ Build completed successfully!"
-    echo "📦 Built binaries:"
-    ls -la build/bin/
-    
-    echo ""
-    echo "🔍 Binary versions:"
-    echo "Peer version:"
-    ./build/bin/peer version
-    echo ""
-    echo "Orderer version:"
-    ./build/bin/orderer version
-    echo ""
-    echo "ConfigTxGen help:"
-    ./build/bin/configtxgen --help | head -5
-    
-    # Copy binaries to fabric-samples/bin/
-    FABRIC_SAMPLES_DIR="$FABRIC_DIR/fabric-samples"
-    if [ -d "$FABRIC_SAMPLES_DIR/bin" ]; then
-        echo ""
-        echo "📋 Copying new binaries to fabric-samples/bin/..."
-        
-        # Backup existing binaries
-        BACKUP_DIR="$FABRIC_SAMPLES_DIR/bin.backup.$(date +%Y%m%d_%H%M%S)"
-        cp -r "$FABRIC_SAMPLES_DIR/bin" "$BACKUP_DIR"
-        echo "📁 Backed up old binaries to: $BACKUP_DIR"
-        
-        # Copy new binaries
-        cp build/bin/* "$FABRIC_SAMPLES_DIR/bin/"
-        echo "✅ New binaries copied successfully!"
-        
-        # Verify copied binaries
-        echo ""
-        echo "🔍 Verifying copied binaries:"
-        cd "$FABRIC_SAMPLES_DIR"
-        echo "Fabric-samples peer version:"
-        ./bin/peer version
-        echo "Fabric-samples orderer version:"
-        ./bin/orderer version
-        
-        cd "$FABRIC_DIR"
+# List of expected binaries
+BINARIES=(peer orderer configtxgen configtxlator discover cryptogen osnadmin ledgerutil)
+
+# Check if all binaries exist
+BIN_DIR="build/bin"
+ALL_BINARIES_OK=true
+echo "\n📦 Checking built binaries:"
+for bin in "${BINARIES[@]}"; do
+    if [ -f "$BIN_DIR/$bin" ]; then
+        echo "  ✅ $bin"
     else
-        echo "⚠️  fabric-samples/bin directory not found. Skipping copy."
+        echo "  ❌ $bin NOT FOUND!"
+        ALL_BINARIES_OK=false
     fi
-    
-else
-    echo "❌ Build failed! No binaries found in build/bin/"
+done
+
+if [ "$ALL_BINARIES_OK" = false ]; then
+    echo "❌ Some binaries are missing! Check the build logs above."
     exit 1
 fi
 
-echo ""
-echo "🎉 Fabric binaries build and copy completed successfully!"
-echo "📍 Source binaries: $FABRIC_DIR/build/bin/"
-echo "📍 Copied to: $FABRIC_SAMPLES_DIR/bin/"
-echo ""
-echo "Next steps:"
-echo "1. Run './start-network.sh' to start the test network with new binaries"
-echo "2. Or manually navigate to fabric-samples/test-network/"
-echo "3. Test network will now use your newly built binaries!"
+echo "\n✅ All required binaries built successfully!"
 
-echo ""
-echo "🐳 Building Docker image for peer (hyperledger/fabric-peer:latest) ..."
+# Copy binaries to fabric-samples/bin/
+FABRIC_SAMPLES_DIR="$FABRIC_DIR/fabric-samples"
+if [ -d "$FABRIC_SAMPLES_DIR" ]; then
+    mkdir -p "$FABRIC_SAMPLES_DIR/bin"
+    echo "\n📋 Copying new binaries to fabric-samples/bin/..."
+    for bin in "${BINARIES[@]}"; do
+        cp "$BIN_DIR/$bin" "$FABRIC_SAMPLES_DIR/bin/"
+    done
+    echo "✅ Binaries copied to fabric-samples/bin/"
+else
+    echo "⚠️  fabric-samples directory not found. Skipping copy."
+fi
 
-# Đặt các biến version từ Makefile hoặc lệnh hệ thống
+echo "\n🔍 Verifying copied binaries:"
+if [ -d "$FABRIC_SAMPLES_DIR/bin" ]; then
+    for bin in "${BINARIES[@]}"; do
+        if [ -f "$FABRIC_SAMPLES_DIR/bin/$bin" ]; then
+            echo -n "$bin version: "; "$FABRIC_SAMPLES_DIR/bin/$bin" version || true
+        fi
+    done
+fi
+
+echo "\n=== Building Docker images for Fabric components ==="
+DOCKER_IMAGES=(peer orderer tools ccenv baseos)
+DOCKERFILES=(images/peer/Dockerfile images/orderer/Dockerfile images/tools/Dockerfile images/ccenv/Dockerfile images/baseos/Dockerfile)
+
 UBUNTU_VER=${UBUNTU_VER:-24.04}
 GO_VER=$(go version | awk '{print $3}' | sed 's/go//')
 TARGETARCH=$(go env GOARCH)
 TARGETOS=$(go env GOOS)
 FABRIC_VER=${FABRIC_VER:-3.1.1}
 
-docker build --build-arg UBUNTU_VER=$UBUNTU_VER --build-arg GO_VER=$GO_VER --build-arg TARGETARCH=$TARGETARCH --build-arg TARGETOS=$TARGETOS --build-arg FABRIC_VER=$FABRIC_VER -t hyperledger/fabric-peer:latest -f images/peer/Dockerfile .
-if [ $? -eq 0 ]; then
-    echo "✅ Docker image hyperledger/fabric-peer:latest built successfully!"
-else
-    echo "❌ Failed to build Docker image hyperledger/fabric-peer:latest!"
-    exit 1
-fi
+for i in "${!DOCKER_IMAGES[@]}"; do
+    IMAGE="hyperledger/fabric-${DOCKER_IMAGES[$i]}:latest"
+    DOCKERFILE="${DOCKERFILES[$i]}"
+    echo "\n🐳 Building Docker image: $IMAGE ..."
+    docker build --build-arg UBUNTU_VER=$UBUNTU_VER --build-arg GO_VER=$GO_VER --build-arg TARGETARCH=$TARGETARCH --build-arg TARGETOS=$TARGETOS --build-arg FABRIC_VER=$FABRIC_VER -t $IMAGE -f $DOCKERFILE .
+    if [ $? -eq 0 ]; then
+        echo "✅ Docker image $IMAGE built successfully!"
+    else
+        echo "❌ Failed to build Docker image $IMAGE!"
+        exit 1
+    fi
+done
+
+echo "\n🎉 Fabric binaries and Docker images build completed successfully!"
+echo "📍 Source binaries: $FABRIC_DIR/build/bin/"
+echo "📍 Copied to: $FABRIC_SAMPLES_DIR/bin/"
+echo "📍 Docker images: hyperledger/fabric-{peer,orderer,tools,ccenv,baseos}:latest"
+echo
+
+echo "Next steps:"
+echo "1. Run './start-network.sh' to start the test network with new binaries and images"
+echo "2. Or manually navigate to fabric-samples/test-network/"
+echo "3. Test network will now use your newly built binaries and images!"
+echo

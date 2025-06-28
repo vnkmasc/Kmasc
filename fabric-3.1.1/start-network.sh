@@ -28,6 +28,21 @@ fi
 
 echo "✅ Docker is ready"
 
+# --- Tự động chuẩn bị config cho test-network ---
+CONFIG_DIR="$SCRIPT_DIR/fabric-samples/config"
+CORE_YAML_SRC="$SCRIPT_DIR/fabric-samples/test-network/addOrg3/compose/docker/peercfg/core.yaml"
+CORE_YAML_DEST="$CONFIG_DIR/core.yaml"
+
+if [ ! -d "$CONFIG_DIR" ]; then
+  mkdir -p "$CONFIG_DIR"
+  echo "[start-network] Đã tạo thư mục config."
+fi
+
+if [ ! -f "$CORE_YAML_DEST" ]; then
+  cp "$CORE_YAML_SRC" "$CORE_YAML_DEST"
+  echo "[start-network] Đã copy core.yaml mẫu vào config."
+fi
+
 # Stop any existing network
 echo "🛑 Stopping any existing network..."
 ./network.sh down
