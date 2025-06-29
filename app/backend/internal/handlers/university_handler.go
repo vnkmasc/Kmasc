@@ -3,11 +3,12 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/service"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
 )
 
 type UniversityHandler struct {
@@ -84,25 +85,14 @@ func (h *UniversityHandler) ApproveOrRejectUniversity(c *gin.Context) {
 }
 
 func (h *UniversityHandler) GetAllUniversities(c *gin.Context) {
-	universities, err := h.universityService.GetAllUniversities(c.Request.Context())
+	resp, err := h.universityService.GetAllUniversities(c.Request.Context())
 	if err != nil {
-		log.Printf("Error getting universities: %v", err)
-		c.JSON(500, gin.H{"error": "Lỗi hệ thống"})
+		log.Printf("[UniversityHandler] GetAllUniversities error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể lấy danh sách trường đại học"})
 		return
 	}
-	var resp []models.UniversityResponse
-	for _, u := range universities {
-		resp = append(resp, models.UniversityResponse{
-			ID:             u.ID.Hex(),
-			UniversityName: u.UniversityName,
-			UniversityCode: u.UniversityCode,
-			EmailDomain:    u.EmailDomain,
-			Address:        u.Address,
-			Status:         u.Status,
-		})
-	}
 
-	c.JSON(200, gin.H{"data": resp})
+	c.JSON(http.StatusOK, gin.H{"data": resp})
 }
 
 func (h *UniversityHandler) GetUniversities(c *gin.Context) {
@@ -115,6 +105,12 @@ func (h *UniversityHandler) GetUniversities(c *gin.Context) {
 		return
 	}
 
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		log.Printf("Error loading timezone Asia/Ho_Chi_Minh: %v. Using UTC instead.", err)
+		loc = time.UTC
+	}
+
 	var resp []models.UniversityResponse
 	for _, u := range universities {
 		resp = append(resp, models.UniversityResponse{
@@ -124,6 +120,9 @@ func (h *UniversityHandler) GetUniversities(c *gin.Context) {
 			EmailDomain:    u.EmailDomain,
 			Address:        u.Address,
 			Status:         u.Status,
+			Description:    u.Description,
+			CreatedAt:      u.CreatedAt.In(loc).Format("2006-01-02 15:04:05"),
+			UpdatedAt:      u.UpdatedAt.In(loc).Format("2006-01-02 15:04:05"),
 		})
 	}
 

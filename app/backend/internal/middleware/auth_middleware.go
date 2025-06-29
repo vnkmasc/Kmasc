@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 )
 
 func JWTAuthMiddleware() gin.HandlerFunc {

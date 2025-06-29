@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/repository"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -126,6 +127,11 @@ func (s *userService) SearchUsers(ctx context.Context, params models.SearchUserP
 	if err != nil {
 		return nil, 0, err
 	}
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		log.Printf("Error loading timezone Asia/Ho_Chi_Minh: %v. Using UTC instead.", err)
+		loc = time.UTC
+	}
 
 	var responses []models.UserResponse
 	for _, u := range users {
@@ -133,16 +139,27 @@ func (s *userService) SearchUsers(ctx context.Context, params models.SearchUserP
 		university, _ := s.universityRepo.FindByID(ctx, u.UniversityID)
 
 		resp := models.UserResponse{
-			ID:             u.ID,
-			StudentCode:    u.StudentCode,
-			FullName:       u.FullName,
-			Email:          u.Email,
-			Course:         u.Course,
-			Status:         u.Status,
-			FacultyCode:    "",
-			FacultyName:    "",
-			UniversityCode: "",
-			UniversityName: "",
+			ID:              u.ID,
+			StudentCode:     u.StudentCode,
+			FullName:        u.FullName,
+			Email:           u.Email,
+			Course:          u.Course,
+			Status:          u.Status,
+			FacultyCode:     "",
+			FacultyName:     "",
+			UniversityCode:  "",
+			UniversityName:  "",
+			CitizenIdNumber: u.CitizenIdNumber,
+			Gender:          u.Gender,
+			DateOfBirth:     u.DateOfBirth,
+			Ethnicity:       u.Ethnicity,
+			CurrentAddress:  u.CurrentAddress,
+			BirthAddress:    u.BirthAddress,
+			UnionJoinDate:   u.UnionJoinDate,
+			PartyJoinDate:   u.PartyJoinDate,
+			Description:     u.Description,
+			CreatedAt:       u.CreatedAt.In(loc).Format("2006-01-02 15:04:05"),
+			UpdatedAt:       u.UpdatedAt.In(loc).Format("2006-01-02 15:04:05"),
 		}
 
 		if faculty != nil {
@@ -193,16 +210,25 @@ func (s *userService) CreateUser(ctx context.Context, claims *utils.CustomClaims
 	}
 
 	user := &models.User{
-		ID:           primitive.NewObjectID(),
-		StudentCode:  req.StudentCode,
-		FullName:     req.FullName,
-		Email:        req.Email,
-		FacultyID:    faculty.ID,
-		UniversityID: universityID,
-		Course:       req.Course,
-		Status:       0,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:              primitive.NewObjectID(),
+		StudentCode:     req.StudentCode,
+		FullName:        req.FullName,
+		Email:           req.Email,
+		FacultyID:       faculty.ID,
+		UniversityID:    universityID,
+		Course:          req.Course,
+		Status:          0,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		CitizenIdNumber: req.CitizenIdNumber,
+		Gender:          req.Gender,
+		DateOfBirth:     req.DateOfBirth,
+		Ethnicity:       req.Ethnicity,
+		CurrentAddress:  req.CurrentAddress,
+		BirthAddress:    req.BirthAddress,
+		UnionJoinDate:   req.UnionJoinDate,
+		PartyJoinDate:   req.PartyJoinDate,
+		Description:     req.Description,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -210,16 +236,25 @@ func (s *userService) CreateUser(ctx context.Context, claims *utils.CustomClaims
 	}
 
 	resp := &models.UserResponse{
-		ID:             user.ID,
-		StudentCode:    user.StudentCode,
-		FullName:       user.FullName,
-		Email:          user.Email,
-		FacultyCode:    faculty.FacultyCode,
-		FacultyName:    faculty.FacultyName,
-		UniversityCode: university.UniversityCode,
-		UniversityName: university.UniversityName,
-		Course:         user.Course,
-		Status:         user.Status,
+		ID:              user.ID,
+		StudentCode:     user.StudentCode,
+		FullName:        user.FullName,
+		Email:           user.Email,
+		FacultyCode:     faculty.FacultyCode,
+		FacultyName:     faculty.FacultyName,
+		UniversityCode:  university.UniversityCode,
+		UniversityName:  university.UniversityName,
+		Course:          user.Course,
+		Status:          user.Status,
+		CitizenIdNumber: user.CitizenIdNumber,
+		Gender:          user.Gender,
+		DateOfBirth:     user.DateOfBirth,
+		Ethnicity:       user.Ethnicity,
+		CurrentAddress:  user.CurrentAddress,
+		BirthAddress:    user.BirthAddress,
+		UnionJoinDate:   user.UnionJoinDate,
+		PartyJoinDate:   user.PartyJoinDate,
+		Description:     user.Description,
 	}
 
 	return resp, nil

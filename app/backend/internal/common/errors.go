@@ -36,4 +36,26 @@ var (
 
 	ErrMissingRequiredFieldsForDegree      = errors.New("missing_required_fields_for_degree")
 	ErrMissingRequiredFieldsForCertificate = errors.New("missing_required_fields_for_certificate")
+
+	//RewardDiscipline
+	ErrDecisionNumberExists = errors.New("decision_number_exists")
+
+	//General
+	ErrNotFound = errors.New("not_found")
 )
+
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
+func NewValidationError(field, message string) *ValidationError {
+	return &ValidationError{
+		Field:   field,
+		Message: message,
+	}
+}

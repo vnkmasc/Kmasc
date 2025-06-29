@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,6 +13,7 @@ import (
 
 type CertificateRepository interface {
 	GetAllCertificates(ctx context.Context) ([]*models.Certificate, error)
+	UpdateCertificateByID(ctx context.Context, id primitive.ObjectID, update bson.M) error
 	FindOne(ctx context.Context, filter interface{}) (*models.Certificate, error)
 	GetCertificateByID(ctx context.Context, id primitive.ObjectID) (*models.Certificate, error)
 	FindCertificateByStudentCodeAndName(ctx context.Context, studentCode, name string, universityID primitive.ObjectID) (*models.Certificate, error)
@@ -21,13 +22,12 @@ type CertificateRepository interface {
 	DeleteCertificate(ctx context.Context, id primitive.ObjectID) error
 	DeleteCertificateByID(ctx context.Context, id primitive.ObjectID) error
 	CreateCertificate(ctx context.Context, cert *models.Certificate) error
-	UpdateCertificatePath(ctx context.Context, certificateID primitive.ObjectID, path string) error
 	FindBySerialNumber(ctx context.Context, serial string) (*models.Certificate, error)
 	FindLatestCertificateByUserID(ctx context.Context, userID primitive.ObjectID) (*models.Certificate, error)
 	FindCertificate(ctx context.Context, filter bson.M, page, pageSize int) ([]*models.Certificate, int64, error)
 	GetByUserID(ctx context.Context, userID primitive.ObjectID) ([]*models.Certificate, error)
 	ExistsCertificateByStudentCodeAndName(ctx context.Context, studentCode string, universityID primitive.ObjectID, name string) (bool, error)
-
+	UpdateCertificatePath(ctx context.Context, certificateID primitive.ObjectID, path string) error
 	ExistsDegreeByStudentCodeAndType(ctx context.Context, studentCode string, universityID primitive.ObjectID, certType string) (bool, error)
 	FindBySerialAndUniversity(ctx context.Context, serial string, universityID primitive.ObjectID) (*models.Certificate, error)
 }
@@ -42,6 +42,10 @@ func NewCertificateRepository(db *mongo.Database) CertificateRepository {
 
 func (r *certificateRepository) CreateCertificate(ctx context.Context, cert *models.Certificate) error {
 	_, err := r.col.InsertOne(ctx, cert)
+	return err
+}
+func (r *certificateRepository) UpdateCertificateByID(ctx context.Context, id primitive.ObjectID, update bson.M) error {
+	_, err := r.col.UpdateByID(ctx, id, update)
 	return err
 }
 
@@ -77,6 +81,7 @@ func (r *certificateRepository) DeleteCertificate(ctx context.Context, id primit
 	}
 	return nil
 }
+
 func (r *certificateRepository) UpdateCertificatePath(ctx context.Context, certificateID primitive.ObjectID, path string) error {
 	filter := bson.M{"_id": certificateID}
 	update := bson.M{

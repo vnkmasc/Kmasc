@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tuyenngduc/certificate-management-system/pkg/database"
+	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
 )
 
 type FileHandler struct {

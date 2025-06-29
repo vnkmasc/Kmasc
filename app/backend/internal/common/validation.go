@@ -11,6 +11,12 @@ func TranslateError(field, tag string) string {
 		"StudentID": {
 			"required": "Mã sinh viên không được để trống",
 		},
+		"StudentCode": {
+			"required": "Mã sinh viên không được để trống",
+		},
+		"FacultyCode": {
+			"required": "Mã khoa không được để trống",
+		},
 		"FullName": {
 			"required": "Họ tên không được để trống",
 		},
@@ -75,6 +81,26 @@ func TranslateError(field, tag string) string {
 			"required": "Mật khẩu mới không được để trống"},
 		"OldPassword": {
 			"required": "Yêu cầu nhập mật khẩu cũ",
+		},
+		"CitizenIdNumber": {
+			"required":  "Số căn cước công dân không được để trống",
+			"citizenid": "Số căn cước công dân phải có đúng 12 chữ số",
+		},
+		"DateOfBirth": {
+			"required":   "Ngày sinh không được để trống",
+			"dateformat": "Ngày sinh phải có định dạng dd/mm/yyyy",
+		},
+		"UnionJoinDate": {
+			"dateformat": "Ngày vào đoàn phải có định dạng dd/mm/yyyy",
+		},
+		"PartyJoinDate": {
+			"dateformat": "Ngày vào đảng phải có định dạng dd/mm/yyyy",
+		},
+		"DecisionNumber": {
+			"required": "Số quyết định không được để trống",
+		},
+		"DisciplineLevel": {
+			"disciplinelevel": "Mức độ kỷ luật phải từ 1 đến 4",
 		},
 	}
 

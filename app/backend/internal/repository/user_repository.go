@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -82,6 +82,9 @@ func (r *userRepository) SearchUsers(ctx context.Context, params models.SearchUs
 	}
 	if params.Status != 0 {
 		filter["status"] = params.Status
+	}
+	if params.CitizenIdNumber != "" {
+		filter["citizen_id_number"] = bson.M{"$regex": params.CitizenIdNumber, "$options": "i"}
 	}
 
 	if params.Faculty != "" {
