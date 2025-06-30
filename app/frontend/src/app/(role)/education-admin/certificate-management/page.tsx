@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE } from '@/constants/common'
+import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE, STUDENT_CODE_SEARCH_SETTING } from '@/constants/common'
 
 import {
   createCertificate,
@@ -30,7 +30,6 @@ import {
   uploadCertificate,
   uploadDegree
 } from '@/lib/api/certificate'
-import { searchStudentByCode } from '@/lib/api/student'
 import { formatResponseImportExcel, showNotification } from '@/lib/utils/common'
 import { formatCertificate, formatFacultyOptions } from '@/lib/utils/format-api'
 import { validateNoEmpty } from '@/lib/utils/validators'
@@ -253,11 +252,7 @@ const CertificateManagementPage = () => {
             type: 'query_select',
             placeholder: 'Nhập và chọn mã sinh viên',
             name: 'studentCode',
-            setting: {
-              querySelect: {
-                queryFn: (keyword: string) => searchStudentByCode(keyword)
-              }
-            }
+            setting: STUDENT_CODE_SEARCH_SETTING
           },
           {
             type: 'select',
@@ -377,11 +372,7 @@ const CertificateManagementPage = () => {
             type: 'query_select',
             placeholder: 'Nhập và chọn mã sinh viên',
             name: 'studentCode',
-            setting: {
-              querySelect: {
-                queryFn: (keyword: string) => searchStudentByCode(keyword)
-              }
-            },
+            setting: STUDENT_CODE_SEARCH_SETTING,
             label: 'Mã sinh viên',
             validator: validateNoEmpty('Mã sinh viên')
           },

@@ -1,5 +1,4 @@
 import { Button } from '../ui/button'
-import XrmSvg from '../../../public/assets/svg/xrm.svg'
 import ThemeSwitch from './theme-switch'
 import Image from 'next/image'
 import SignOutButton from './signout-button'
@@ -14,6 +13,7 @@ import {
 } from '../ui/navigation-menu'
 import Link from 'next/link'
 import ChangePassButton from './change-pass-button'
+import logoKmasc from '../../../public/assets/images/logoKMA.png'
 
 interface Props {
   role: 'student' | 'university_admin' | 'admin' | null
@@ -32,6 +32,10 @@ const educationAdminPages: { title: string; href: string }[] = [
   //   title: 'Quản lý điểm',
   //   href: '/education-admin/score-management'
   // },
+  {
+    title: 'Khen thưởng & Kỷ luật',
+    href: '/education-admin/reward-discipline-management'
+  },
   {
     title: 'Văn bằng & Chứng chỉ',
     href: '/education-admin/certificate-management'
@@ -97,8 +101,10 @@ const Header: React.FC<Props> = (props) => {
         ) : null}
 
         <Link href='/'>
-          {' '}
-          <Image src={XrmSvg} alt='xrm' width={100} height={100} />
+          <div className='flex items-center gap-1'>
+            <Image src={logoKmasc} alt='logoKmasc' width={30} height={30} />
+            <h1 className='text-lg font-semibold text-main sm:text-xl'>VnKmasc</h1>
+          </div>
         </Link>
 
         {props.role !== null ? (
