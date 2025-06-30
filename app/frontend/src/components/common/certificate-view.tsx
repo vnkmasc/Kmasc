@@ -130,7 +130,7 @@ const CertificateView: React.FC<Props> = (props) => {
           </div>{' '}
         </>
       ) : (
-        <p className='mt-4 text-center text-red-500'>Không có tệp PDF</p>
+        <p className='text-main mt-4 text-center'>Không có tệp PDF</p>
       )}
     </div>
   )
