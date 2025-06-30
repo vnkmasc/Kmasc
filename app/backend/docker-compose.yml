@@ -3,7 +3,7 @@ version: "3.8"
 services:
   mongodb:
     image: mongo:latest
-    container_name: vbcc_mongodb
+    container_name: vbcc_mongodb_kmasc
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
@@ -14,7 +14,7 @@ services:
 
   minio:
     image: quay.io/minio/minio:latest
-    container_name: vbcc_minio
+    container_name: vbcc_minio_kmasc
     ports:
       - "9000:9000"
       - "9001:9001"

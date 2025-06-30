@@ -11,6 +11,7 @@ type University struct {
 	UniversityName string             `bson:"university_name"`
 	UniversityCode string             `bson:"university_code"`
 	Address        string             `bson:"address"`
+	Description    string             `bson:"description"`
 	EmailDomain    string             `bson:"email_domain"`
 	Status         string             `bson:"status"` // "pending", "approved", "rejected"
 	CreatedAt      time.Time          `bson:"created_at"`
@@ -20,6 +21,7 @@ type CreateUniversityRequest struct {
 	UniversityName string `json:"university_name" binding:"required"`
 	UniversityCode string `json:"university_code" binding:"required"`
 	Address        string `json:"address" binding:"required"`
+	Description    string `json:"description"`
 	EmailDomain    string `json:"email_domain" binding:"required,email"`
 }
 type UniversityResponse struct {
@@ -28,6 +30,7 @@ type UniversityResponse struct {
 	UniversityCode string `json:"university_code"`
 	EmailDomain    string `json:"email_domain"`
 	Address        string `json:"address"`
+	Description    string `json:"description"`
 	Status         string `json:"status"`
 }
 

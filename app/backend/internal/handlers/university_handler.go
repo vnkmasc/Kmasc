@@ -98,6 +98,7 @@ func (h *UniversityHandler) GetAllUniversities(c *gin.Context) {
 			UniversityCode: u.UniversityCode,
 			EmailDomain:    u.EmailDomain,
 			Address:        u.Address,
+			Description:    u.Description,
 			Status:         u.Status,
 		})
 	}
@@ -123,6 +124,7 @@ func (h *UniversityHandler) GetUniversities(c *gin.Context) {
 			UniversityCode: u.UniversityCode,
 			EmailDomain:    u.EmailDomain,
 			Address:        u.Address,
+			Description:    u.Description,
 			Status:         u.Status,
 		})
 	}

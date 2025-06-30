@@ -69,6 +69,7 @@ func (s *universityService) CreateUniversity(ctx context.Context, req *models.Cr
 		ID:             primitive.NewObjectID(),
 		UniversityName: req.UniversityName,
 		Address:        req.Address,
+		Description:    req.Description,
 		EmailDomain:    req.EmailDomain,
 		UniversityCode: req.UniversityCode,
 		Status:         "pending",
