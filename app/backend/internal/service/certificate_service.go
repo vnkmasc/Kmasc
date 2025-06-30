@@ -368,24 +368,8 @@ func (s *certificateService) GetCertificateByUserID(ctx context.Context, userID 
 		}
 	}
 
-	return &models.CertificateResponse{
-		ID:              cert.ID.Hex(),
-		UserID:          cert.UserID.Hex(),
-		StudentCode:     cert.StudentCode,
-		StudentName:     user.FullName,
-		CertificateType: cert.CertificateType,
-		Name:            cert.Name,
-		SerialNumber:    cert.SerialNumber,
-		RegNo:           cert.RegNo,
-		Path:            cert.Path,
-		FacultyCode:     faculty.FacultyCode,
-		FacultyName:     faculty.FacultyName,
-		UniversityCode:  university.UniversityCode,
-		UniversityName:  university.UniversityName,
-		Signed:          cert.Signed,
-		CreatedAt:       cert.CreatedAt,
-		UpdatedAt:       cert.UpdatedAt,
-	}, nil
+	return mapper.MapCertificateToResponse(cert, user, faculty, university), nil
+
 }
 
 func (s *certificateService) SearchCertificates(ctx context.Context, params models.SearchCertificateParams) ([]*models.CertificateResponse, int64, error) {
@@ -464,39 +448,15 @@ func (s *certificateService) GetCertificatesByUserID(ctx context.Context, userID
 
 		faculty, _ := s.facultyRepo.FindByID(ctx, cert.FacultyID)
 		if faculty == nil {
-			faculty = &models.Faculty{
-				FacultyCode: "N/A",
-				FacultyName: "Không xác định",
-			}
+			faculty = &models.Faculty{FacultyCode: "N/A", FacultyName: "Không xác định"}
 		}
 
 		university, _ := s.universityRepo.FindByID(ctx, cert.UniversityID)
 		if university == nil {
-			university = &models.University{
-				UniversityCode: "N/A",
-				UniversityName: "Không xác định",
-			}
+			university = &models.University{UniversityCode: "N/A", UniversityName: "Không xác định"}
 		}
 
-		resp := &models.CertificateResponse{
-			ID:              cert.ID.Hex(),
-			UserID:          cert.UserID.Hex(),
-			StudentCode:     user.StudentCode,
-			StudentName:     user.FullName,
-			CertificateType: cert.CertificateType,
-			Name:            cert.Name,
-			SerialNumber:    cert.SerialNumber,
-			RegNo:           cert.RegNo,
-			Path:            cert.Path,
-			FacultyCode:     faculty.FacultyCode,
-			FacultyName:     faculty.FacultyName,
-			IssueDate:       cert.IssueDate.Format("02/01/2006"),
-			UniversityCode:  university.UniversityCode,
-			UniversityName:  university.UniversityName,
-			Signed:          cert.Signed,
-			CreatedAt:       cert.CreatedAt,
-			UpdatedAt:       cert.UpdatedAt,
-		}
+		resp := mapper.MapCertificateToResponse(cert, user, faculty, university)
 		responses = append(responses, resp)
 	}
 
