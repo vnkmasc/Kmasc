@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -84,4 +85,19 @@ func (m *MinioClient) GetFileURL(objectName string) string {
 		scheme = "https"
 	}
 	return scheme + "://" + endpoint + "/" + m.Bucket + "/" + objectName
+}
+func (m *MinioClient) DownloadFileStream(ctx context.Context, objectName string) (io.ReadCloser, string, error) {
+	object, err := m.Client.GetObject(ctx, m.Bucket, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Lấy metadata để lấy Content-Type
+	info, err := object.Stat()
+	if err != nil {
+		object.Close() // cần đóng lại nếu stat lỗi
+		return nil, "", err
+	}
+
+	return object, info.ContentType, nil
 }

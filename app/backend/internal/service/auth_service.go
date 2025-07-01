@@ -74,23 +74,23 @@ func (s *authService) RequestOTP(ctx context.Context, input models.RequestOTPInp
 func (s *authService) VerifyOTP(ctx context.Context, input *models.VerifyOTPRequest) (string, error) {
 	otpRecord, err := s.authRepo.FindLatestOTPByEmail(ctx, input.StudentEmail)
 	if err != nil {
-		return "", fmt.Errorf("Không tìm thấy mã OTP")
+		return "", fmt.Errorf("không tìm thấy mã OTP")
 	}
 
 	if otpRecord.Code != input.OTP {
-		return "", fmt.Errorf("Mã OTP không đúng")
+		return "", fmt.Errorf("mã OTP không đúng")
 	}
 
 	if time.Now().After(otpRecord.ExpiresAt) {
-		return "", fmt.Errorf("Mã OTP đã hết hạn")
+		return "", fmt.Errorf("mã OTP đã hết hạn")
 	}
 
 	user, err := s.userRepo.FindByEmail(ctx, input.StudentEmail)
 	if err != nil {
-		return "", fmt.Errorf("Lỗi khi tìm người dùng: %v", err)
+		return "", fmt.Errorf("lỗi khi tìm người dùng: %v", err)
 	}
 	if user == nil {
-		return "", fmt.Errorf("Người dùng không tồn tại")
+		return "", fmt.Errorf("người dùng không tồn tại")
 	}
 
 	return user.ID.Hex(), nil
