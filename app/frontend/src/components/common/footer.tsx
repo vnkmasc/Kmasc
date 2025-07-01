@@ -1,7 +1,6 @@
-import React from 'react'
 import Image from 'next/image'
 import logoKmasc from '../../../public/assets/images/logoKMA.png'
-import { Facebook, Github, GraduationCap, Instagram, MapPinned, Twitter } from 'lucide-react'
+import { Facebook, Github, GraduationCap, MapPinned } from 'lucide-react'
 import Link from 'next/link'
 
 // const defaultSections = [
