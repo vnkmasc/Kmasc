@@ -21,11 +21,11 @@ interface Props {
 
 const educationAdminPages: { title: string; href: string }[] = [
   {
-    title: 'Quản lý khoa',
+    title: 'Khoa',
     href: '/education-admin/faculty-management'
   },
   {
-    title: 'Quản lý sinh viên',
+    title: 'Sinh viên',
     href: '/education-admin/student-management'
   },
   // {
@@ -103,7 +103,7 @@ const Header: React.FC<Props> = (props) => {
         <Link href='/'>
           <div className='flex items-center gap-1'>
             <Image src={logoKmasc} alt='logoKmasc' width={30} height={30} />
-            <h1 className='text-lg font-semibold text-main sm:text-xl'>VnKmasc</h1>
+            <h1 className='text-lg font-semibold text-main sm:text-xl'>Kmasc</h1>
           </div>
         </Link>
 

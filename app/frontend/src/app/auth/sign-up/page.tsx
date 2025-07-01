@@ -8,7 +8,6 @@ import { Form } from '@/components/ui/form'
 import CustomFormItem from '@/components/common/ct-form-item'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
-import XrmSvg from '../../../../public/assets/svg/xrm.svg'
 import background from '../../../../public/assets/images/background.jpg'
 import { showNotification } from '@/lib/utils/common'
 import { validateEmail, validatePassword } from '@/lib/utils/validators'
@@ -21,7 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import useSWRMutation from 'swr/mutation'
 import { registerAccount, sendOTP, verifyOTP } from '@/lib/api/auth'
-
+import logoKMA from '../../../../public/assets/images/logoKMA.png'
 import { REGEXP_ONLY_DIGITS } from 'input-otp'
 import { signIn } from '@/lib/auth/auth'
 import { useRouter } from 'next/navigation'
@@ -98,11 +97,17 @@ const AuthPage = () => {
         <DialogContent className='rounded-lg sm:max-w-[450px] [&>button]:hidden'>
           <DialogHeader>
             <DialogTitle>
-              <div>
-                <Image src={XrmSvg} alt='xrm' width={150} height={150} className='mx-auto' />
-              </div>
-              Đăng ký
+              <span
+                className='flex cursor-pointer items-center justify-center gap-2'
+                onClick={() => {
+                  router.push('/')
+                }}
+              >
+                <Image src={logoKMA} alt='kmasc' width={50} height={50} />
+                <span className='text-xl font-semibold text-main md:text-2xl'>Kmasc</span>
+              </span>
             </DialogTitle>
+            <span className='text-xl font-semibold md:text-2xl'>Đăng ký</span>
             <DialogDescription>Chào mừng sinh viên đến với hệ thống</DialogDescription>
           </DialogHeader>
 

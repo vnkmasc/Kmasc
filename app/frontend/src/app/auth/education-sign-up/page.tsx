@@ -7,14 +7,18 @@ import { Form } from '@/components/ui/form'
 import CustomFormItem from '@/components/common/ct-form-item'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
-import XrmSvg from '../../../../public/assets/svg/xrm.svg'
+import logoKMA from '../../../../public/assets/images/logoKMA.png'
+
 import background from '../../../../public/assets/images/background.jpg'
+
 import Link from 'next/link'
 import { validateEmail, validateNoEmpty } from '@/lib/utils/validators'
 
 import { requestEducationSignUp } from '@/lib/api/auth'
 import { showNotification } from '@/lib/utils/common'
 import useSWRMutation from 'swr/mutation'
+import { useRouter } from 'next/navigation'
+import { Send } from 'lucide-react'
 const formSchma = z.object({
   email: validateEmail,
   name: validateNoEmpty('Tên của trường'),
@@ -23,6 +27,7 @@ const formSchma = z.object({
 })
 
 const EducationSignUpPage = () => {
+  const router = useRouter()
   const form = useForm<z.infer<typeof formSchma>>({
     resolver: zodResolver(formSchma),
     defaultValues: {
@@ -57,11 +62,17 @@ const EducationSignUpPage = () => {
         <DialogContent className='rounded-lg sm:max-w-[450px] [&>button]:hidden'>
           <DialogHeader>
             <DialogTitle>
-              <div>
-                <Image src={XrmSvg} alt='xrm' width={150} height={150} className='mx-auto' />
-              </div>
-              Đăng ký
+              <span
+                className='flex cursor-pointer items-center justify-center gap-2'
+                onClick={() => {
+                  router.push('/')
+                }}
+              >
+                <Image src={logoKMA} alt='kmasc' width={50} height={50} />
+                <span className='text-xl font-semibold text-main md:text-2xl'>Kmasc</span>
+              </span>
             </DialogTitle>
+            <span className='text-xl font-semibold md:text-2xl'>Đăng ký</span>
             <DialogDescription>Chào mừng quản lý đào tạo đến với hệ thống</DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -97,7 +108,7 @@ const EducationSignUpPage = () => {
                 placeholder='Nhập địa chỉ trường'
               />
               <Button type='submit' className='w-full' isLoading={mutateRequestEducationSignUp.isMutating}>
-                Gửi yêu cầu đăng ký
+                <Send /> Gửi yêu cầu đăng ký
               </Button>
             </form>
           </Form>

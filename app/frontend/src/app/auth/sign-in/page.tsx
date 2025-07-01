@@ -7,7 +7,6 @@ import { Form } from '@/components/ui/form'
 import CustomFormItem from '@/components/common/ct-form-item'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
-import XrmSvg from '../../../../public/assets/svg/xrm.svg'
 import background from '../../../../public/assets/images/background.jpg'
 import { signIn } from '@/lib/auth/auth'
 import { showNotification } from '@/lib/utils/common'
@@ -15,6 +14,7 @@ import Link from 'next/link'
 import { validateEmail, validatePassword } from '@/lib/utils/validators'
 import { useRouter } from 'next/navigation'
 import { LogInIcon, SchoolIcon, User } from 'lucide-react'
+import logoKMA from '../../../../public/assets/images/logoKMA.png'
 const formSchma = z.object({
   email: validateEmail,
   password: validatePassword
@@ -47,11 +47,17 @@ const SignInPage = () => {
         <DialogContent className='rounded-lg sm:max-w-[450px] [&>button]:hidden'>
           <DialogHeader>
             <DialogTitle>
-              <div>
-                <Image src={XrmSvg} alt='xrm' width={150} height={150} className='mx-auto' />
-              </div>
-              Đăng nhập
+              <span
+                className='flex cursor-pointer items-center justify-center gap-2'
+                onClick={() => {
+                  router.push('/')
+                }}
+              >
+                <Image src={logoKMA} alt='kmasc' width={50} height={50} />
+                <span className='text-xl font-semibold text-main md:text-2xl'>Kmasc</span>
+              </span>
             </DialogTitle>
+            <span className='text-xl font-semibold md:text-2xl'>Đăng nhập</span>
             <DialogDescription>Chào mừng bạn quay trở lại</DialogDescription>
           </DialogHeader>
           <Form {...form}>
