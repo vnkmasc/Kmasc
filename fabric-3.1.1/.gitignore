@@ -26,7 +26,20 @@ TESTS*.xml
 .vagrant/
 .vscode
 
-# Encryption implementation test filesAdd commentMore actions
+# Fabric-samples directory (very large, contains its own git repo)
+fabric-samples/
+
+# Build artifacts and binaries
+*.o
+*.so
+*.a
+*.exe
+*.dll
+*.dylib
+*.bin
+*.out
+
+# Encryption implementation test files and binaries
 test_encryption*
 encryption_demo*
 statedb_simulation*
@@ -37,30 +50,43 @@ test_peer
 manual_verify
 run_simple_test
 FINAL_SUMMARY
+test_encrypt*
+libencryption.so
+encrypt.o
+simple_encryption_test
 
 # Development test binaries
 *_test
 *_demo
 *_simulation
 
+# Temporary and backup files
+*.bak
+*.tmp
+*.temp
+*~
 
-# Encryption test binary files (keep source files)
-test_encryption
-encryption_demo
-statedb_simulation
-verify_encryption
-simple_test
-hello
-test_peer
-
-# Keep source files but ignore binaries
-*.go.out
-simple_encryption_test
-
-# Fabric-samples
-fabric-3.1.1/fabric-samples/
+# Script files (temporary)
+demo-encryption.sh
+fix-docker-permissions.sh
 install-fabric.sh
 
-# Encryption test binary files (keep source files)
-libencryption.so
-encrypt.o
+# Docker images (can be rebuilt)
+*.tar
+*.tar.gz
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
