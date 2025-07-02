@@ -94,3 +94,19 @@ export const getCertificatesNameByStudent = async () => {
   const res = await apiService('GET', 'certificates/simple')
   return res.data
 }
+
+export const pushCertificateIntoBlockchain = async (id: string) => {
+  const res = await apiService('POST', `blockchain/push-chain/${id}`)
+  return res
+}
+
+export const getBlockchainData = async (id: string) => {
+  const res = await apiService('GET', `blockchain/verify/${id}`, undefined, true, {}, true)
+
+  return formatCertificateView(res.certificate)
+}
+
+export const getBlockchainFile = async (id: string) => {
+  const res = await apiService('GET', `blockchain/verify-file/${id}`, undefined, true, {}, true)
+  return res
+}

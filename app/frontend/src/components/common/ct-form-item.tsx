@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Button } from '../ui/button'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
+import { Textarea } from '../ui/textarea'
 
 const CustomFormItem: React.FC<CustomFormItem> = (props) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -173,6 +174,23 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
       )
     case 'query_select':
       return <QuerySelect {...props} />
+    case 'textarea':
+      return (
+        <FormField
+          control={props.control}
+          name={props.name}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{props.label}</FormLabel>
+              <FormControl>
+                <Textarea {...field} placeholder={props.placeholder} disabled={props.disabled} rows={3} />
+              </FormControl>
+              {props.description && <FormDescription>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+            </FormItem>
+          )}
+        />
+      )
     // case 'date':
     //   return (
     //     <FormField

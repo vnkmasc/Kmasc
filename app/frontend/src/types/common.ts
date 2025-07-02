@@ -18,7 +18,7 @@ interface SelectGroup {
 }
 
 export interface CustomFormItem {
-  type: 'input' | 'select' | 'query_select' | 'search_select'
+  type: 'input' | 'select' | 'query_select' | 'search_select' | 'textarea'
   control: Control<any, any, any> | undefined
   name: string
   label?: string | ''
@@ -46,6 +46,7 @@ export interface CustomZodFormItem extends Omit<CustomFormItem, 'control'> {
 }
 
 export type CertificateType = {
+  id: string
   universityName: string
   universityCode: string
   facultyName: string

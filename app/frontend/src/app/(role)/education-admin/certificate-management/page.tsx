@@ -1,4 +1,5 @@
 'use client'
+import CertificateActionButton from '@/components/common/certificate-action-button'
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'
@@ -33,8 +34,7 @@ import {
 import { formatResponseImportExcel, showNotification } from '@/lib/utils/common'
 import { formatCertificate, formatFacultyOptions } from '@/lib/utils/format-api'
 import { validateNoEmpty } from '@/lib/utils/validators'
-import { EyeIcon, FileUpIcon, PlusIcon } from 'lucide-react'
-import Link from 'next/link'
+import { FileUpIcon, PlusIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { useCallback } from 'react'
@@ -250,7 +250,7 @@ const CertificateManagementPage = () => {
         items={[
           {
             type: 'query_select',
-            placeholder: 'Nhập và chọn mã sinh viên',
+            placeholder: 'Nhập và chọn MSV',
             name: 'studentCode',
             setting: STUDENT_CODE_SEARCH_SETTING
           },
@@ -348,13 +348,7 @@ const CertificateManagementPage = () => {
             header: 'Hành động',
             value: 'action',
 
-            render: (item) => (
-              <Link href={`/education-admin/certificate-management/${item.id}`}>
-                <Button size={'icon'} variant={'outline'}>
-                  <EyeIcon />
-                </Button>
-              </Link>
-            )
+            render: (item) => <CertificateActionButton id={item.id} />
           }
         ]}
         data={queryCertificates.data?.data || []}
@@ -370,7 +364,7 @@ const CertificateManagementPage = () => {
         items={[
           {
             type: 'query_select',
-            placeholder: 'Nhập và chọn mã sinh viên',
+            placeholder: 'Nhập và chọn MSV',
             name: 'studentCode',
             setting: STUDENT_CODE_SEARCH_SETTING,
             label: 'Mã sinh viên',
