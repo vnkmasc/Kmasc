@@ -13,9 +13,10 @@ type Certificate struct {
 	UserID         primitive.ObjectID `bson:"user_id" json:"user_id"`
 	FacultyID      primitive.ObjectID `bson:"faculty_id" json:"faculty_id"`
 	UniversityID   primitive.ObjectID `bson:"university_id" json:"university_id"`
+	IsDegree       bool               `bson:"is_degree" json:"is_degree"` // true: văn bằng, false: chứng chỉ
 
 	StudentCode     string    `bson:"student_code" json:"student_code"`
-	CertificateType string    `bson:"certificate_type" json:"certificate_type"`       // Cử nhân, Thạc sĩ, Chứng chỉ, ...
+	CertificateType string    `bson:"certificate_type" json:"certificate_type"`       // Cử nhân, Thạc sĩ,.....
 	Name            string    `bson:"name" json:"name"`                               // Tên văn bằng
 	SerialNumber    string    `bson:"serial_number" json:"serial_number"`             // Số hiệu
 	RegNo           string    `bson:"registration_number" json:"registration_number"` // Số vào sổ gốc
@@ -51,17 +52,18 @@ type CertificateOnChain struct {
 
 type CreateCertificateRequest struct {
 	StudentCode     string    `json:"student_code" binding:"required"`
-	CertificateType string    `json:"certificate_type" binding:"certtype"`
-	Course          string    `json:"course" binding:"required"` // Khóa học (VD: AT18)
-	GraduationRank  string    `json:"graduation_rank"`           // Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
-	EducationType   string    `json:"education_type"`            // Hệ đào tạo: Chính quy, Tại chức...
-	Description     string    `json:"description"`               // Mô tả thêm
-	Name            string    `json:"name"`
-	SerialNumber    string    `json:"serial_number"`
-	RegNo           string    `json:"reg_no"`
-	Major           string    `json:"major" binding:"required"` // Ngành đào tạo
-	GPA             float64   `json:"gpa"`
-	IssueDate       time.Time `json:"issue_date"`
+	IsDegree        bool      `json:"is_degree"`                 // true: văn bằng, false: chứng chỉ
+	CertificateType string    `json:"certificate_type"`          // Bắt buộc nếu là văn bằng
+	Course          string    `json:"course,omitempty"`          // Bắt buộc nếu là văn bằng
+	GraduationRank  string    `json:"graduation_rank,omitempty"` // Optional
+	EducationType   string    `json:"education_type,omitempty"`  // Optional
+	Description     string    `json:"description,omitempty"`
+	Name            string    `json:"name" binding:"required"`          // Tên văn bằng / chứng chỉ
+	SerialNumber    string    `json:"serial_number" binding:"required"` // Số hiệu
+	RegNo           string    `json:"reg_no" binding:"required"`        // Số vào sổ
+	Major           string    `json:"major,omitempty"`                  // Bắt buộc nếu là văn bằng
+	GPA             float64   `json:"gpa,omitempty"`                    // Optional
+	IssueDate       time.Time `json:"issue_date" binding:"required"`    // Ngày cấp
 }
 
 type CertificateResponse struct {
@@ -78,16 +80,15 @@ type CertificateResponse struct {
 	FacultyName     string  `json:"faculty_name,omitempty"`
 	UniversityCode  string  `json:"university_code,omitempty"`
 	UniversityName  string  `json:"university_name,omitempty"`
-	CertHash        string  `bson:"cert_hash" json:"cert_hash"`
-	HashFile        string  `bson:"hash_file,omitempty" json:"hash_file,omitempty"`
-	Major           string  `bson:"major" json:"major"`                     // Ngành đào tạo
-	Course          string  `bson:"course" json:"course"`                   //  Khóa học (VD: AT18)
-	GPA             float64 `bson:"gpa" json:"gpa"`                         //  GPA toàn khóa
-	GraduationRank  string  `bson:"graduation_rank" json:"graduation_rank"` //  Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
-	EducationType   string  `bson:"education_type" json:"education_type"`
+	HashFile        string  `json:"hash_file,omitempty"`
+	Major           string  `json:"major,omitempty"`           // Ngành đào tạo
+	Course          string  `json:"course,omitempty"`          // Khóa học (VD: AT18)
+	GPA             float64 `json:"gpa,omitempty"`             // GPA toàn khóa
+	GraduationRank  string  `json:"graduation_rank,omitempty"` // Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
+	EducationType   string  `json:"education_type,omitempty"`  // Hệ đào tạo
 	Signed          bool    `json:"signed"`
-	IssueDate       string  `json:"issue_date,omitempty"`
-	Description     string  `bson:"description,omitempty" json:"description,omitempty"` // Mô tả thêm
+	IssueDate       string  `json:"issue_date,omitempty"`  // Định dạng ISO hoặc "02/01/2006"
+	Description     string  `json:"description,omitempty"` // Mô tả thêm
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -106,17 +107,19 @@ type SearchCertificateParams struct {
 func ValidateCreateCertificateRequest(sl validator.StructLevel) {
 	req := sl.Current().Interface().(CreateCertificateRequest)
 
-	if req.CertificateType == "" {
-		sl.ReportError(req.CertificateType, "certificate_type", "CertificateType", "required_if_degree", "")
-	}
-	if req.SerialNumber == "" {
-		sl.ReportError(req.SerialNumber, "serial_number", "SerialNumber", "required_if_degree", "")
-	}
-	if req.RegNo == "" {
-		sl.ReportError(req.RegNo, "reg_no", "RegNo", "required_if_degree", "")
-	}
-	if req.IssueDate.IsZero() {
-		sl.ReportError(req.IssueDate, "issue_date", "IssueDate", "required_if_degree", "")
+	if req.IsDegree {
+		if req.CertificateType == "" {
+			sl.ReportError(req.CertificateType, "certificate_type", "CertificateType", "required_if_degree", "")
+		}
+		if req.SerialNumber == "" {
+			sl.ReportError(req.SerialNumber, "serial_number", "SerialNumber", "required_if_degree", "")
+		}
+		if req.RegNo == "" {
+			sl.ReportError(req.RegNo, "reg_no", "RegNo", "required_if_degree", "")
+		}
+		if req.IssueDate.IsZero() {
+			sl.ReportError(req.IssueDate, "issue_date", "IssueDate", "required_if_degree", "")
+		}
 	}
 }
 
@@ -133,6 +136,7 @@ func NewCertificate(req *CreateCertificateRequest, user *User, universityID prim
 		FacultyID:       user.FacultyID,
 		UniversityID:    universityID,
 		StudentCode:     user.StudentCode,
+		IsDegree:        req.IsDegree,
 		Name:            req.Name,
 		CertificateType: req.CertificateType,
 		SerialNumber:    req.SerialNumber,

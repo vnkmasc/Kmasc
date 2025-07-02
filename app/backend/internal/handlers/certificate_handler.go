@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -46,20 +47,31 @@ func NewCertificateHandler(
 func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 	var req models.CreateCertificateRequest
 
+	// Đọc raw body để debug input
+	bodyBytes, _ := io.ReadAll(c.Request.Body)
+	fmt.Println(">>> Raw request body:", string(bodyBytes))
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // reset lại body cho ShouldBindJSON
+
 	// Validate JSON đầu vào
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Println(">>> Binding error:", err) // In lỗi gốc
+
 		if validationErrs, ok := common.ParseValidationError(err); ok {
+			fmt.Println(">>> Validation errors:", validationErrs) // In lỗi từng field
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Dữ liệu không hợp lệ",
 				"details": validationErrs,
 			})
 			return
 		}
+
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Dữ liệu không hợp lệ",
 		})
 		return
 	}
+
+	fmt.Printf(">>> Parsed struct: %+v\n", req) // In request đã parse xong
 
 	// Lấy claims từ context
 	claims, ok := c.MustGet("claims").(*utils.CustomClaims)
@@ -105,7 +117,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 
 	// Trả về thành công
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Tạo văn bằng thành công",
+		"message": "Tạo chứng nhận thành công",
 	})
 }
 
@@ -156,6 +168,7 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
+	// Lấy file upload
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Vui lòng chọn file để tải lên"})
@@ -168,34 +181,37 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
+	// Parse query param
 	isDegree := c.Query("is_degree") == "true"
 	certificateName := c.Query("name")
 
+	// Lấy university ID từ token
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ (UniversityID không đúng định dạng)"})
 		return
 	}
+
 	university, err := h.universityService.GetUniversityByID(c.Request.Context(), universityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không lấy được thông tin trường đại học"})
 		return
 	}
 
-	filenameWithoutExt := strings.TrimSuffix(file.Filename, ext)
-	var certificate *models.Certificate
+	// Giả định tên file là mã sinh viên
+	studentCode := strings.TrimSuffix(file.Filename, ext)
 
+	// Truy vấn certificate
+	var certificate *models.Certificate
 	if isDegree {
-		serialNumber := filenameWithoutExt
-		certificate, err = h.certificateService.GetCertificateBySerialAndUniversity(
-			c.Request.Context(), serialNumber, university.ID)
+		// Mỗi sinh viên chỉ có 1 văn bằng
+		certificate, err = h.certificateService.GetDegreeCertificateByStudentCodeAndUniversity(
+			c.Request.Context(), studentCode, university.ID)
 	} else {
 		if certificateName == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Thiếu tên chứng chỉ (query param 'name')"})
 			return
 		}
-
-		studentCode := filenameWithoutExt
 		certificate, err = h.certificateService.GetCertificateByStudentCodeAndNameAndUniversity(
 			c.Request.Context(), studentCode, certificateName, university.ID)
 	}
@@ -205,6 +221,7 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
+	// Check permission
 	if certificate.UniversityID != university.ID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Bạn không được phép cập nhật văn bằng này"})
 		return
@@ -215,6 +232,7 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
+	// Đọc nội dung file
 	src, err := file.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể mở file"})
@@ -228,8 +246,20 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
+	// Tạo tên file lưu lên MinIO
+	var typeStr string
+	if certificate.IsDegree {
+		typeStr = "van-bang"
+	} else {
+		typeStr = certificate.Name
+	}
+
+	slug := utils.Slugify(typeStr)
+	finalFileName := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
+
+	// Upload và cập nhật
 	filePath, err := h.certificateService.UploadCertificateFile(
-		c.Request.Context(), certificate.ID, fileData, file.Filename, isDegree, certificateName)
+		c.Request.Context(), certificate.ID, fileData, finalFileName, isDegree, typeStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Tải lên thất bại: " + err.Error()})
 		return

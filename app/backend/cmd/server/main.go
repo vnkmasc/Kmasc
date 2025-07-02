@@ -76,7 +76,7 @@ func main() {
 	verificationService := service.NewVerificationService(verificationRepo, certificateService)
 	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)
 	blockchainSvc := service.NewBlockchainService(
-		certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient,
+		certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient,
 	)
 
 	// Handlers

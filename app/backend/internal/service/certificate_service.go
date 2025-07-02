@@ -21,6 +21,12 @@ import (
 )
 
 type CertificateService interface {
+	GetDegreeCertificateByStudentCodeAndUniversity(
+		ctx context.Context,
+		studentCode string,
+		universityID primitive.ObjectID,
+	) (*models.Certificate, error)
+	GetCertificateByStudentCodeAndTypeAndUniversity(ctx context.Context, studentCode string, certificateType string, universityID primitive.ObjectID) (*models.Certificate, error)
 	GetAllCertificates(ctx context.Context) ([]*models.CertificateResponse, error)
 	GetCertificateByStudentCodeAndNameAndUniversity(ctx context.Context, studentCode, name string, universityID primitive.ObjectID) (*models.Certificate, error)
 	DeleteCertificateByID(ctx context.Context, id primitive.ObjectID) error
@@ -73,10 +79,10 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 		return fmt.Errorf("người dùng chưa được gán khoa")
 	}
 
-	// Validate đầu vào
 	if err := s.validateDegreeRequest(ctx, req, universityID); err != nil {
 		return err
 	}
+
 	if err := s.checkDuplicateSerialAndRegNo(ctx, universityID, req); err != nil {
 		return err
 	}
@@ -90,17 +96,16 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 		return common.ErrUniversityNotFound
 	}
 
-	// Khởi tạo object văn bằng
 	cert := models.NewCertificate(req, user, universityID)
 	cert.CertHash = generateCertificateHash(cert, user, faculty, university)
 
-	// Lưu vào Mongo
 	if err := s.certificateRepo.CreateCertificate(ctx, cert); err != nil {
 		return err
 	}
 
-	// Cập nhật trạng thái sinh viên nếu cần
-	s.updateUserStatusIfNeeded(ctx, user, req.CertificateType)
+	if req.IsDegree {
+		s.updateUserStatusIfNeeded(ctx, user, req.CertificateType)
+	}
 
 	return nil
 }
@@ -111,7 +116,7 @@ func (s *certificateService) checkDuplicateSerialAndRegNo(
 	req *models.CreateCertificateRequest,
 ) error {
 	if req.SerialNumber != "" {
-		exists, err := s.certificateRepo.ExistsBySerial(ctx, universityID, req.SerialNumber, true)
+		exists, err := s.certificateRepo.ExistsBySerial(ctx, universityID, req.SerialNumber, req.IsDegree)
 		if err != nil {
 			return err
 		}
@@ -120,7 +125,7 @@ func (s *certificateService) checkDuplicateSerialAndRegNo(
 		}
 	}
 	if req.RegNo != "" {
-		exists, err := s.certificateRepo.ExistsByRegNo(ctx, universityID, req.RegNo, true)
+		exists, err := s.certificateRepo.ExistsByRegNo(ctx, universityID, req.RegNo, req.IsDegree)
 		if err != nil {
 			return err
 		}
@@ -129,6 +134,14 @@ func (s *certificateService) checkDuplicateSerialAndRegNo(
 		}
 	}
 	return nil
+}
+func (s *certificateService) GetCertificateByStudentCodeAndTypeAndUniversity(
+	ctx context.Context,
+	studentCode string,
+	certificateType string,
+	universityID primitive.ObjectID,
+) (*models.Certificate, error) {
+	return s.certificateRepo.FindOneByStudentCodeAndType(ctx, studentCode, certificateType, universityID)
 }
 
 func (s *certificateService) updateUserStatusIfNeeded(ctx context.Context, user *models.User, certType string) {
@@ -173,24 +186,33 @@ func generateCertificateHash(cert *models.Certificate, user *models.User, facult
 }
 
 func (s *certificateService) validateDegreeRequest(ctx context.Context, req *models.CreateCertificateRequest, universityID primitive.ObjectID) error {
-	if req.CertificateType == "" || req.SerialNumber == "" || req.RegNo == "" || req.IssueDate.IsZero() {
+	// Validate bắt buộc chung (với cả văn bằng và chứng chỉ)
+	if req.SerialNumber == "" || req.RegNo == "" || req.IssueDate.IsZero() || req.Name == "" {
 		return common.ErrMissingRequiredFieldsForDegree
 	}
 
-	singleDegreeTypes := map[string]bool{
-		"Cử nhân": true,
-		"Thạc sĩ": true,
-		"Tiến sĩ": true,
-		"Kỹ sư":   true,
-	}
-
-	if singleDegreeTypes[req.CertificateType] {
-		alreadyIssued, err := s.certificateRepo.ExistsDegreeByStudentCodeAndType(ctx, req.StudentCode, universityID, req.CertificateType)
-		if err != nil {
-			return err
+	// Nếu là văn bằng thì check thêm các trường đặc thù
+	if req.IsDegree {
+		if req.CertificateType == "" || req.Course == "" || req.Major == "" {
+			return common.ErrMissingRequiredFieldsForDegree
 		}
-		if alreadyIssued {
-			return common.ErrCertificateAlreadyExists
+
+		// Kiểm tra trùng loại văn bằng (Cử nhân, Thạc sĩ, v.v.)
+		singleDegreeTypes := map[string]bool{
+			"Cử nhân": true,
+			"Thạc sĩ": true,
+			"Tiến sĩ": true,
+			"Kỹ sư":   true,
+		}
+
+		if singleDegreeTypes[req.CertificateType] {
+			alreadyIssued, err := s.certificateRepo.ExistsDegreeByStudentCodeAndType(ctx, req.StudentCode, universityID, req.CertificateType)
+			if err != nil {
+				return err
+			}
+			if alreadyIssued {
+				return common.ErrCertificateAlreadyExists
+			}
 		}
 	}
 
@@ -284,8 +306,26 @@ func (s *certificateService) GetCertificateByID(ctx context.Context, id primitiv
 func (s *certificateService) DeleteCertificate(ctx context.Context, id primitive.ObjectID) error {
 	return s.certificateRepo.DeleteCertificate(ctx, id)
 }
+func (s *certificateService) GetDegreeCertificateByStudentCodeAndUniversity(
+	ctx context.Context,
+	studentCode string,
+	universityID primitive.ObjectID,
+) (*models.Certificate, error) {
+	return s.certificateRepo.FindOneByFilter(ctx, bson.M{
+		"student_code":  studentCode,
+		"university_id": universityID,
+		"is_degree":     true,
+	})
+}
 
-func (s *certificateService) UploadCertificateFile(ctx context.Context, certificateID primitive.ObjectID, fileData []byte, filename string, isDegree bool, certificateName string) (string, error) {
+func (s *certificateService) UploadCertificateFile(
+	ctx context.Context,
+	certificateID primitive.ObjectID,
+	fileData []byte,
+	_ string, // filename cũ bỏ qua
+	isDegree bool, // phân biệt văn bằng/chứng chỉ
+	_ string, // certificateName bỏ qua luôn
+) (string, error) {
 	certificate, err := s.certificateRepo.GetCertificateByID(ctx, certificateID)
 	if err != nil {
 		return "", fmt.Errorf("không tìm thấy certificate: %w", err)
@@ -296,27 +336,26 @@ func (s *certificateService) UploadCertificateFile(ctx context.Context, certific
 		return "", fmt.Errorf("không tìm thấy trường đại học: %w", err)
 	}
 
-	var objectKey string
+	ext := ".pdf"
+	var slug string
 	if isDegree {
-		objectKey = fmt.Sprintf("certificates/%s/diploma/%s", university.UniversityCode, filename)
+		slug = "van-bang"
 	} else {
-		cleanName := strings.ReplaceAll(strings.TrimSpace(certificateName), " ", "_")
-		objectKey = fmt.Sprintf("certificates/%s/%s/%s", university.UniversityCode, cleanName, filename)
+		slug = utils.Slugify(certificate.Name)
 	}
 
-	contentType := http.DetectContentType(fileData)
+	filename := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
+	objectKey := fmt.Sprintf("certificates/%s/%s", university.UniversityCode, filename)
 
+	contentType := http.DetectContentType(fileData)
 	err = s.minioClient.UploadFile(ctx, objectKey, fileData, contentType)
 	if err != nil {
 		return "", fmt.Errorf("lỗi upload file lên MinIO: %w", err)
 	}
 
-	err = s.certificateRepo.UpdateCertificatePath(ctx, certificateID, objectKey)
-	if err != nil {
-		return "", fmt.Errorf("lỗi cập nhật path vào MongoDB: %w", err)
-	}
 	hash := sha256.Sum256(fileData)
 	certHash := hex.EncodeToString(hash[:])
+
 	update := bson.M{
 		"$set": bson.M{
 			"path":       objectKey,
@@ -324,7 +363,6 @@ func (s *certificateService) UploadCertificateFile(ctx context.Context, certific
 			"updated_at": time.Now(),
 		},
 	}
-
 	if err := s.certificateRepo.UpdateCertificateByID(ctx, certificateID, update); err != nil {
 		return "", fmt.Errorf("lỗi cập nhật thông tin file vào MongoDB: %w", err)
 	}

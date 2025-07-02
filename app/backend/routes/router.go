@@ -115,6 +115,7 @@ func SetupRouter(
 	blockchainGroup.POST("/push-chain/:id", blockchainHandler.PushCertificateToChain)
 	blockchainGroup.GET("/certificate-on-chain/:id", blockchainHandler.GetCertificateByID)
 	blockchainGroup.GET("/verify/:id", blockchainHandler.VerifyCertificateIntegrity)
+	blockchainGroup.GET("/verify-file/:id", blockchainHandler.VerifyCertificateFile)
 
 	return r
 }

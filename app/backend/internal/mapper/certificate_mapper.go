@@ -20,7 +20,6 @@ func MapCertificateToResponse(cert *models.Certificate, user *models.User, facul
 		FacultyName:     faculty.FacultyName,
 		UniversityCode:  university.UniversityCode,
 		UniversityName:  university.UniversityName,
-		CertHash:        cert.CertHash,
 		HashFile:        cert.HashFile,
 		Major:           cert.Major,
 		Course:          cert.Course,

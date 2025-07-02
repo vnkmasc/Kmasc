@@ -52,7 +52,7 @@ func (h *BlockchainHandler) VerifyCertificateIntegrity(c *gin.Context) {
 		return
 	}
 
-	ok, msg, onChainCert, err := h.BlockchainSvc.VerifyCertificateIntegrity(c.Request.Context(), certID)
+	ok, msg, onChainCert, cert, err := h.BlockchainSvc.VerifyCertificateIntegrity(c.Request.Context(), certID)
 	if err != nil {
 		switch {
 		case strings.Contains(err.Error(), "certID không hợp lệ"):
@@ -70,16 +70,36 @@ func (h *BlockchainHandler) VerifyCertificateIntegrity(c *gin.Context) {
 
 	if !ok {
 		c.JSON(http.StatusConflict, gin.H{
-			"valid":    false,
-			"message":  msg,
-			"on_chain": onChainCert,
+			"valid":       false,
+			"message":     msg,
+			"on_chain":    onChainCert,
+			"certificate": cert,
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"valid":    true,
-		"message":  msg,
-		"on_chain": onChainCert,
+		"valid":       true,
+		"message":     msg,
+		"on_chain":    onChainCert,
+		"certificate": cert,
 	})
+}
+func (h *BlockchainHandler) VerifyCertificateFile(c *gin.Context) {
+	certIDHex := c.Param("id")
+	certID, err := primitive.ObjectIDFromHex(certIDHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID không hợp lệ"})
+		return
+	}
+
+	stream, contentType, err := h.BlockchainSvc.VerifyFileByID(c.Request.Context(), certID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	defer stream.Close()
+
+	// Trả file trực tiếp cho người dùng (xem được trong browser)
+	c.DataFromReader(http.StatusOK, -1, contentType, stream, nil)
 }

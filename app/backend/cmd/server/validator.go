@@ -1,8 +1,8 @@
 package main
 
 import (
+	"reflect"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin/binding"
@@ -12,51 +12,41 @@ import (
 
 func InitValidator() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		// 1. Khóa học 4 chữ số
 		_ = v.RegisterValidation("courseyear", func(fl validator.FieldLevel) bool {
-			re := regexp.MustCompile(`^\d{4}$`)
-			return re.MatchString(fl.Field().String())
+			return regexp.MustCompile(`^\d{4}$`).MatchString(fl.Field().String())
 		})
 
-		_ = v.RegisterValidation("certtype", func(fl validator.FieldLevel) bool {
-			val := strings.TrimSpace(fl.Field().String())
-			switch val {
-			case "Cử nhân", "Kỹ sư", "Thạc sĩ", "Tiến sĩ":
-				return true
-			default:
-				return false
-			}
-		})
-
-		// Add validator for date format dd/mm/yyyy
+		// 2. Định dạng ngày dd/mm/yyyy (chỉ dùng nếu ngày là string)
 		_ = v.RegisterValidation("dateformat", func(fl validator.FieldLevel) bool {
 			dateStr := fl.Field().String()
-			if dateStr == "" {
-				return false
-			}
 			_, err := time.Parse("02/01/2006", dateStr)
 			return err == nil
 		})
 
-		// Add validator for citizen ID number
+		// 3. CCCD: 12 chữ số
 		_ = v.RegisterValidation("citizenid", func(fl validator.FieldLevel) bool {
-			idStr := fl.Field().String()
-			if idStr == "" {
-				return false
-			}
-			// Check if the ID 12 digits (old and new format)
-			re := regexp.MustCompile(`^\d{12}$`)
-			return re.MatchString(idStr)
+			return regexp.MustCompile(`^\d{12}$`).MatchString(fl.Field().String())
 		})
 
-		// Add validator for discipline level
+		// 4. Mức độ kỷ luật 1–4
 		_ = v.RegisterValidation("disciplinelevel", func(fl validator.FieldLevel) bool {
-			if fl.Field().IsNil() {
+			field := fl.Field()
+			// Chỉ gọi IsNil nếu là con trỏ hoặc interface
+			if (field.Kind() == reflect.Ptr || field.Kind() == reflect.Interface) && field.IsNil() {
 				return false
 			}
-			level := int(fl.Field().Int())
+
+			// Nếu là con trỏ, lấy giá trị bên trong
+			if field.Kind() == reflect.Ptr {
+				field = field.Elem()
+			}
+
+			level := int(field.Int())
 			return level >= 1 && level <= 4
 		})
 
+		// 5. Struct-level validator cho CreateCertificateRequest
 		v.RegisterStructValidation(models.ValidateCreateCertificateRequest, models.CreateCertificateRequest{})
 	}
 }
