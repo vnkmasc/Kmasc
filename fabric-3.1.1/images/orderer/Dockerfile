@@ -20,7 +20,7 @@
 # Build image
 ###############################################################################
 
-ARG UBUNTU_VER
+ARG UBUNTU_VER=24.04
 FROM ubuntu:${UBUNTU_VER} AS builder
 
 ARG TARGETARCH
@@ -33,7 +33,8 @@ RUN apt update && apt install -y \
     git \
     gcc \
     curl \
-    make
+    make \
+    libssl-dev
 
 RUN curl -sL https://go.dev/dl/go${GO_VER}.${TARGETOS}-${TARGETARCH}.tar.gz | tar zxf - -C /usr/local
 ENV PATH="/usr/local/go/bin:$PATH"
@@ -47,7 +48,7 @@ RUN make orderer GO_TAGS=${GO_TAGS} FABRIC_VER=${FABRIC_VER}
 # Runtime image
 ###############################################################################
 
-ARG UBUNTU_VER
+ARG UBUNTU_VER=24.04
 FROM ubuntu:${UBUNTU_VER}
 
 ARG FABRIC_VER

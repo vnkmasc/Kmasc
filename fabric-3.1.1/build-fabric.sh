@@ -72,6 +72,10 @@ if [ -d "$FABRIC_SAMPLES_DIR/bin" ]; then
 fi
 
 echo "\n=== Building Docker images for Fabric components ==="
+
+# Đơn giản hóa: Luôn dùng docker, không kiểm tra quyền
+DOCKER_CMD="docker"
+
 DOCKER_IMAGES=(peer orderer tools ccenv baseos)
 DOCKERFILES=(images/peer/Dockerfile images/orderer/Dockerfile images/tools/Dockerfile images/ccenv/Dockerfile images/baseos/Dockerfile)
 
@@ -85,7 +89,7 @@ for i in "${!DOCKER_IMAGES[@]}"; do
     IMAGE="hyperledger/fabric-${DOCKER_IMAGES[$i]}:latest"
     DOCKERFILE="${DOCKERFILES[$i]}"
     echo "\n🐳 Building Docker image: $IMAGE ..."
-    docker build --build-arg UBUNTU_VER=$UBUNTU_VER --build-arg GO_VER=$GO_VER --build-arg TARGETARCH=$TARGETARCH --build-arg TARGETOS=$TARGETOS --build-arg FABRIC_VER=$FABRIC_VER -t $IMAGE -f $DOCKERFILE .
+    $DOCKER_CMD build --build-arg UBUNTU_VER=$UBUNTU_VER --build-arg GO_VER=$GO_VER --build-arg TARGETARCH=$TARGETARCH --build-arg TARGETOS=$TARGETOS --build-arg FABRIC_VER=$FABRIC_VER -t $IMAGE -f $DOCKERFILE .
     if [ $? -eq 0 ]; then
         echo "✅ Docker image $IMAGE built successfully!"
     else

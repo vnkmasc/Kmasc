@@ -20,7 +20,7 @@
 # Build image
 ###############################################################################
 
-ARG UBUNTU_VER
+ARG UBUNTU_VER=24.04
 FROM ubuntu:${UBUNTU_VER} as builder
 
 ARG TARGETARCH
@@ -33,7 +33,8 @@ RUN apt update && apt install -y \
     git \
     gcc \
     curl \
-    make
+    make \
+    libssl-dev
 
 RUN curl -sL https://go.dev/dl/go${GO_VER}.${TARGETOS}-${TARGETARCH}.tar.gz | tar zxf - -C /usr/local
 ENV PATH="/usr/local/go/bin:$PATH"
@@ -47,7 +48,7 @@ RUN make tools GO_TAGS=${GO_TAGS} FABRIC_VER=${FABRIC_VER}
 # Runtime image
 ###############################################################################
 
-ARG UBUNTU_VER
+ARG UBUNTU_VER=24.04
 FROM ubuntu:${UBUNTU_VER}
 
 ARG TARGETARCH
@@ -69,8 +70,8 @@ ENV PATH="/usr/local/go/bin:$PATH"
 # - docker run --rm debian:stretch grep '^hosts:' /etc/nsswitch.conf
 RUN echo 'hosts: files dns' > /etc/nsswitch.conf
 
-ENV     FABRIC_CFG_PATH /etc/hyperledger/fabric
-ENV     FABRIC_VER      ${FABRIC_VER}
+ENV FABRIC_CFG_PATH=/etc/hyperledger/fabric
+ENV FABRIC_VER=${FABRIC_VER}
 
 COPY    --from=builder  sampleconfig    ${FABRIC_CFG_PATH}
 COPY    --from=builder  build/bin       /usr/local/bin

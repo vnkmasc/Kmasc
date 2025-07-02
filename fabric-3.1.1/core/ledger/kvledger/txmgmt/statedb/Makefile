@@ -18,9 +18,16 @@ all: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
 
+
+
 # Compile C source files
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# Test target
+test: $(TARGET)
+	@echo "C library built successfully: $(TARGET)"
+	@echo "Run Go tests with: go test ./..."
 
 # Clean build artifacts
 clean:
@@ -36,4 +43,4 @@ uninstall:
 	sudo rm -f /usr/local/lib/$(TARGET)
 	sudo ldconfig
 
-.PHONY: all clean install uninstall 
+.PHONY: all clean install uninstall test 

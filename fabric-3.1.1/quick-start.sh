@@ -143,27 +143,21 @@ step5_build_encryption() {
     run_script "build-encryption.sh" "encryption library build"
 }
 
-# Step 6: Test encryption
-# step6_test_encryption() {
-#     echo "Step 6: Testing encryption integration..."
-#     run_script "test-encryption.sh" "encryption integration test"
-# }
-
-# Step 7: Build Fabric
-step7_build_fabric() {
-    echo "Step 7: Building Fabric..."
+# Step 6: Build Fabric
+step6_build_fabric() {
+    echo "Step 6: Building Fabric..."
     run_script "build-fabric.sh" "Fabric build"
 }
 
-# Step 8: Start network
-step8_start_network() {
-    echo "Step 8: Starting test network..."
+# Step 7: Start network
+step7_start_network() {
+    echo "Step 7: Starting test network..."
     run_script "start-network.sh" "test network startup"
 }
 
-# Step 9: Show next steps
-step9_next_steps() {
-    echo "Step 9: Next steps..."
+# Step 8: Show next steps
+step8_next_steps() {
+    echo "Step 8: Next steps..."
     print_status "INFO" "Setup completed successfully!"
     echo
     echo "🎉 Congratulations! Your Hyperledger Fabric with encryption is ready!"
@@ -199,10 +193,9 @@ main() {
     step3_download_fabric_samples
     step4_test_environment
     step5_build_encryption
-    # step6_test_encryption
-    step7_build_fabric
-    step8_start_network
-    step9_next_steps
+    step6_build_fabric
+    step7_start_network
+    step8_next_steps
 }
 
 # Check if user wants to continue
@@ -212,9 +205,8 @@ echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
 echo "5. Build the encryption library"
-# echo "6. Test the encryption integration"
-echo "7. Build Fabric with encryption"
-echo "8. Start the test network"
+echo "6. Build Fabric with encryption"
+echo "7. Start the test network"
 echo
 read -p "Do you want to continue? (y/N): " -n 1 -r
 echo

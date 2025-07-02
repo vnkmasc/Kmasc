@@ -4,6 +4,8 @@
 package statedb
 
 /*
+#cgo CFLAGS: -I.
+#cgo LDFLAGS: -L. -lencryption -lssl -lcrypto
 #include "encrypt.h"
 */
 import "C"
@@ -94,4 +96,4 @@ func DecryptValue(value []byte, ns, key string) []byte {
 	logToFile("DECRYPT", ns, key, "SUCCESS", "")
 	decryptedData := plaintext[:int(cPlaintextLen)]
 	return decryptedData
-}
+} 
