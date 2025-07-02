@@ -20,7 +20,7 @@
 # Build image
 ###############################################################################
 
-ARG UBUNTU_VER
+ARG UBUNTU_VER=24.04
 FROM ubuntu:${UBUNTU_VER} AS builder
 
 ARG TARGETARCH
@@ -49,7 +49,7 @@ RUN make ccaasbuilder
 # Runtime image
 ###############################################################################
 
-ARG UBUNTU_VER
+ARG UBUNTU_VER=24.04
 FROM ubuntu:${UBUNTU_VER}
 
 ARG TARGETOS

@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-ARG UBUNTU_VER
+ARG UBUNTU_VER=24.04
 FROM ubuntu:${UBUNTU_VER}
 
 ARG TARGETARCH
