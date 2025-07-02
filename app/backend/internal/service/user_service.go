@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/repository"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -22,8 +24,8 @@ type UserService interface {
 	CreateUser(ctx context.Context, claims *utils.CustomClaims, req *models.CreateUserRequest) (*models.UserResponse, error)
 	DeleteUser(ctx context.Context, id primitive.ObjectID) error
 	UpdateUser(ctx context.Context, id primitive.ObjectID, req models.UpdateUserRequest) error
-	GetUsersByFacultyCode(ctx context.Context, code string) ([]models.UserResponse, error)
 	GetMyProfile(ctx context.Context) (*models.UserResponse, error)
+	GetUsersByFacultyCode(ctx context.Context, code string) ([]models.UserResponse, error)
 }
 
 type userService struct {
@@ -95,18 +97,14 @@ func (s *userService) GetUserByID(ctx context.Context, id primitive.ObjectID) (*
 		return nil, common.ErrUniversityNotFound
 	}
 
-	return &models.UserResponse{
-		ID:             user.ID,
-		StudentCode:    user.StudentCode,
-		FullName:       user.FullName,
-		Email:          user.Email,
-		Course:         user.Course,
-		Status:         user.Status,
-		FacultyCode:    faculty.FacultyCode,
-		FacultyName:    faculty.FacultyName,
-		UniversityCode: university.UniversityCode,
-		UniversityName: university.UniversityName,
-	}, nil
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		log.Printf("Error loading timezone: %v. Fallback to UTC", err)
+		loc = time.UTC
+	}
+
+	resp := mapper.MapUserToResponse(user, faculty, university, loc)
+	return &resp, nil
 }
 
 func (s *userService) SearchUsers(ctx context.Context, params models.SearchUserParams) ([]models.UserResponse, int64, error) {
@@ -119,7 +117,6 @@ func (s *userService) SearchUsers(ctx context.Context, params models.SearchUserP
 	if err != nil {
 		return nil, 0, common.ErrInvalidToken
 	}
-
 	params.UniversityID = universityID
 
 	users, total, err := s.userRepo.SearchUsers(ctx, params)
@@ -127,33 +124,18 @@ func (s *userService) SearchUsers(ctx context.Context, params models.SearchUserP
 		return nil, 0, err
 	}
 
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		log.Printf("Error loading timezone Asia/Ho_Chi_Minh: %v. Using UTC instead.", err)
+		loc = time.UTC
+	}
+
 	var responses []models.UserResponse
 	for _, u := range users {
 		faculty, _ := s.facultyRepo.FindByID(ctx, u.FacultyID)
 		university, _ := s.universityRepo.FindByID(ctx, u.UniversityID)
 
-		resp := models.UserResponse{
-			ID:             u.ID,
-			StudentCode:    u.StudentCode,
-			FullName:       u.FullName,
-			Email:          u.Email,
-			Course:         u.Course,
-			Status:         u.Status,
-			FacultyCode:    "",
-			FacultyName:    "",
-			UniversityCode: "",
-			UniversityName: "",
-		}
-
-		if faculty != nil {
-			resp.FacultyCode = faculty.FacultyCode
-			resp.FacultyName = faculty.FacultyName
-		}
-		if university != nil {
-			resp.UniversityCode = university.UniversityCode
-			resp.UniversityName = university.UniversityName
-		}
-
+		resp := mapper.MapUserToResponse(u, faculty, university, loc)
 		responses = append(responses, resp)
 	}
 
@@ -193,36 +175,40 @@ func (s *userService) CreateUser(ctx context.Context, claims *utils.CustomClaims
 	}
 
 	user := &models.User{
-		ID:           primitive.NewObjectID(),
-		StudentCode:  req.StudentCode,
-		FullName:     req.FullName,
-		Email:        req.Email,
-		FacultyID:    faculty.ID,
-		UniversityID: universityID,
-		Course:       req.Course,
-		Status:       0,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:              primitive.NewObjectID(),
+		StudentCode:     req.StudentCode,
+		FullName:        req.FullName,
+		Email:           req.Email,
+		FacultyID:       faculty.ID,
+		UniversityID:    universityID,
+		Course:          req.Course,
+		Status:          0,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		CitizenIdNumber: req.CitizenIdNumber,
+		Gender:          req.Gender,
+		DateOfBirth:     req.DateOfBirth,
+		Ethnicity:       req.Ethnicity,
+		CurrentAddress:  req.CurrentAddress,
+		BirthAddress:    req.BirthAddress,
+		UnionJoinDate:   req.UnionJoinDate,
+		PartyJoinDate:   req.PartyJoinDate,
+		Description:     req.Description,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
-	resp := &models.UserResponse{
-		ID:             user.ID,
-		StudentCode:    user.StudentCode,
-		FullName:       user.FullName,
-		Email:          user.Email,
-		FacultyCode:    faculty.FacultyCode,
-		FacultyName:    faculty.FacultyName,
-		UniversityCode: university.UniversityCode,
-		UniversityName: university.UniversityName,
-		Course:         user.Course,
-		Status:         user.Status,
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		log.Printf("Error loading location: %v, fallback to UTC", err)
+		loc = time.UTC
 	}
 
-	return resp, nil
+	resp := mapper.MapUserToResponse(user, faculty, university, loc)
+	return &resp, nil
+
 }
 
 func (s *userService) UpdateUser(ctx context.Context, id primitive.ObjectID, req models.UpdateUserRequest) error {
@@ -318,24 +304,19 @@ func (s *userService) GetUsersByFacultyCode(ctx context.Context, code string) ([
 		return nil, err
 	}
 
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		log.Printf("Error loading timezone: %v. Fallback to UTC", err)
+		loc = time.UTC
+	}
+
 	var responses []models.UserResponse
 	for _, u := range users {
 		university, _ := s.universityRepo.FindByID(ctx, u.UniversityID)
-
-		resp := models.UserResponse{
-			ID:             u.ID,
-			StudentCode:    u.StudentCode,
-			FullName:       u.FullName,
-			Email:          u.Email,
-			Course:         u.Course,
-			Status:         u.Status,
-			FacultyCode:    faculty.FacultyCode,
-			FacultyName:    faculty.FacultyName,
-			UniversityCode: university.UniversityCode,
-			UniversityName: university.UniversityName,
-		}
+		resp := mapper.MapUserToResponse(u, faculty, university, loc)
 		responses = append(responses, resp)
 	}
+
 	return responses, nil
 }
 

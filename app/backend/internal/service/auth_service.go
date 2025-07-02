@@ -7,10 +7,10 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/repository"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -99,10 +99,10 @@ func (s *authService) VerifyOTP(ctx context.Context, input *models.VerifyOTPRequ
 func (s *authService) Register(ctx context.Context, req models.RegisterRequest) error {
 	exists, err := s.authRepo.IsPersonalEmailExist(ctx, req.PersonalEmail)
 	if err != nil {
-		return fmt.Errorf("lỗi kiểm tra email: %w", err)
+		return fmt.Errorf("Lỗi kiểm tra email: %w", err)
 	}
 	if exists {
-		return fmt.Errorf("email cá nhân đã được sử dụng")
+		return fmt.Errorf("Email cá nhân đã được sử dụng")
 	}
 
 	userObjID, err := primitive.ObjectIDFromHex(req.UserID)
@@ -112,12 +112,12 @@ func (s *authService) Register(ctx context.Context, req models.RegisterRequest) 
 
 	user, err := s.userRepo.GetUserByID(ctx, userObjID)
 	if err != nil {
-		return fmt.Errorf("không tìm thấy user: %v", err)
+		return fmt.Errorf("Không tìm thấy user: %v", err)
 	}
 
 	hash, err := utils.HashPassword(req.Password)
 	if err != nil {
-		return fmt.Errorf("lỗi hash mật khẩu: %w", err)
+		return fmt.Errorf("Lỗi hash mật khẩu: %w", err)
 	}
 
 	account := &models.Account{
@@ -139,11 +139,11 @@ func (s *authService) Register(ctx context.Context, req models.RegisterRequest) 
 func (s *authService) Login(ctx context.Context, email, password string) (*models.Account, error) {
 	account, err := s.authRepo.FindByPersonalEmail(ctx, email)
 	if err != nil {
-		return nil, errors.New("tài khoản không tồn tại")
+		return nil, errors.New("Tài khoản không tồn tại")
 	}
 
 	if !utils.ComparePassword(account.PasswordHash, password) {
-		return nil, errors.New("mật khẩu không đúng")
+		return nil, errors.New("Tài khoản hoặc mật khẩu không đúng")
 	}
 
 	return account, nil

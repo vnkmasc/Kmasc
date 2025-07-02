@@ -8,12 +8,13 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
-	"github.com/tuyenngduc/certificate-management-system/internal/handlers"
-	"github.com/tuyenngduc/certificate-management-system/internal/repository"
-	"github.com/tuyenngduc/certificate-management-system/internal/service"
-	"github.com/tuyenngduc/certificate-management-system/pkg/database"
-	"github.com/tuyenngduc/certificate-management-system/routes"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/handlers"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"github.com/vnkmasc/Kmasc/app/backend/pkg/blockchain"
+	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
+	"github.com/vnkmasc/Kmasc/app/backend/routes"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 )
 
 func main() {
@@ -25,6 +26,7 @@ func main() {
 		log.Fatalf("Lỗi khi kết nối MongoDB: %v", err)
 	}
 	db := database.DB
+	fabricCfg := blockchain.NewFabricConfigFromEnv()
 
 	InitValidator()
 	seedAdminAccount(db)
@@ -51,6 +53,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Không thể khởi tạo MinIO client: %v", err)
 	}
+	fabricClient, err := blockchain.NewFabricClient(fabricCfg)
+	if err != nil {
+		log.Fatalf("khởi tạo FabricClient thất bại: %v", err)
+	}
 
 	// Repository
 	userRepo := repository.NewUserRepository(db)
@@ -59,6 +65,7 @@ func main() {
 	certificateRepo := repository.NewCertificateRepository(db)
 	facultyRepo := repository.NewFacultyRepository(db)
 	verificationRepo := repository.NewVerificationRepository(db)
+	rewardDisciplineRepo := repository.NewRewardDisciplineRepository(db)
 
 	// Services
 	userService := service.NewUserService(userRepo, universityRepo, facultyRepo)
@@ -67,6 +74,10 @@ func main() {
 	certificateService := service.NewCertificateService(certificateRepo, userRepo, facultyRepo, universityRepo, minioClient)
 	facultyService := service.NewFacultyService(universityRepo, facultyRepo)
 	verificationService := service.NewVerificationService(verificationRepo, certificateService)
+	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)
+	blockchainSvc := service.NewBlockchainService(
+		certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient,
+	)
 
 	// Handlers
 	facultyHandler := handlers.NewFacultyHandler(facultyService)
@@ -80,9 +91,10 @@ func main() {
 		certificateService,
 		minioClient,
 	)
+	rewardDisciplineHandler := handlers.NewRewardDisciplineHandler(rewardDisciplineService)
 
 	fileHandler := handlers.NewFileHandler(minioClient)
-	// Repository
+	blockchainHandler := handlers.NewBlockchainHandler(blockchainSvc)
 
 	// Setup router
 	r := routes.SetupRouter(
@@ -93,6 +105,8 @@ func main() {
 		facultyHandler,
 		fileHandler,
 		verificationHandler,
+		rewardDisciplineHandler,
+		blockchainHandler,
 	)
 
 	// Xử lý tín hiệu dừng

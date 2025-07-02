@@ -2,14 +2,14 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/service"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -44,20 +44,23 @@ func (h *FacultyHandler) CreateFaculty(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.facultyService.CreateFaculty(c.Request.Context(), claims, &req)
+	err := h.facultyService.CreateFaculty(c.Request.Context(), claims, &req)
 	if err != nil {
 		switch err {
 		case common.ErrUniversityNotFound:
 			c.JSON(http.StatusNotFound, gin.H{"error": "Trường đại học không tồn tại"})
 		case common.ErrFacultyCodeExists:
 			c.JSON(http.StatusConflict, gin.H{"error": "Mã khoa đã tồn tại trong trường"})
+		case common.ErrInvalidToken:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ hoặc không chứa thông tin trường đại học"})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Internal server error when creating faculty: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau."})
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": resp})
+	c.JSON(http.StatusCreated, gin.H{"message": "Tạo khoa thành công!"})
 }
 
 func (h *FacultyHandler) GetAllFaculties(c *gin.Context) {
@@ -74,24 +77,15 @@ func (h *FacultyHandler) GetAllFaculties(c *gin.Context) {
 		return
 	}
 
-	faculties, err := h.facultyService.GetAllFaculties(c.Request.Context(), universityID)
+	resp, err := h.facultyService.GetAllFaculties(c.Request.Context(), universityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	var resp []models.FacultyResponse
-	for _, f := range faculties {
-		resp = append(resp, models.FacultyResponse{
-			ID:          f.ID,
-			FacultyCode: f.FacultyCode,
-			FacultyName: f.FacultyName,
-			CreatedAt:   f.CreatedAt.Format(time.RFC3339),
-		})
-	}
-
 	c.JSON(http.StatusOK, gin.H{"data": resp})
 }
+
 func (h *FacultyHandler) GetFacultyByID(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)

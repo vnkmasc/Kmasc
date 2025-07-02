@@ -71,22 +71,10 @@ demo-encryption.sh
 fix-docker-permissions.sh
 install-fabric.sh
 
-# Docker images (can be rebuilt)
-*.tar
-*.tar.gz
+# Encryption test binary files (keep source files)
+libencryption.so
+encrypt.o
 
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+crypto-config/
+fabric-samples/
+my-network/

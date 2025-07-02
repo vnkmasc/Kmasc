@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/service"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/go-playground/validator/v10"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"github.com/xuri/excelize/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,7 +24,9 @@ type UserHandler struct {
 }
 
 func NewUserHandler(s service.UserService) *UserHandler {
-	return &UserHandler{userService: s}
+	return &UserHandler{
+		userService: s,
+	}
 }
 
 func (h *UserHandler) GetAllUsers(c *gin.Context) {
@@ -274,12 +278,59 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 			continue
 		}
 
+		// Map Excel columns to proper field names for better validation
 		user := &models.CreateUserRequest{
-			StudentCode: row[0],
-			FullName:    row[1],
-			Email:       row[2],
-			FacultyCode: row[3],
-			Course:      row[4],
+			StudentCode:     strings.TrimSpace(row[0]),
+			FullName:        strings.TrimSpace(row[1]),
+			Email:           strings.TrimSpace(row[2]),
+			FacultyCode:     strings.TrimSpace(row[3]),
+			Course:          strings.TrimSpace(row[4]),
+			CitizenIdNumber: strings.TrimSpace(row[5]),
+			Gender:          row[6] == "Nam",
+		}
+
+		if len(row) > 7 && row[7] != "" {
+			user.DateOfBirth = row[7]
+		}
+
+		if len(row) > 8 && row[8] != "" {
+			user.Ethnicity = row[8]
+		}
+
+		if len(row) > 9 && row[9] != "" {
+			user.CurrentAddress = row[9]
+		}
+
+		if len(row) > 10 && row[10] != "" {
+			user.BirthAddress = row[10]
+		}
+
+		if len(row) > 11 && row[11] != "" {
+			user.UnionJoinDate = row[11]
+		}
+
+		if len(row) > 12 && row[12] != "" {
+			user.PartyJoinDate = row[12]
+		}
+
+		if len(row) > 13 && row[13] != "" {
+			user.Description = row[13]
+		}
+
+		// Validate the user data first
+		if err := validator.New().Struct(user); err != nil {
+			if errs, ok := common.ParseValidationError(err); ok {
+				// Combine all validation errors into a single message
+				var errorMsgs []string
+				for _, msg := range errs {
+					errorMsgs = append(errorMsgs, msg)
+				}
+				result["error"] = strings.Join(errorMsgs, "; ")
+			} else {
+				result["error"] = "Dữ liệu không hợp lệ"
+			}
+			errorResults = append(errorResults, result)
+			continue
 		}
 
 		_, err := h.userService.CreateUser(c.Request.Context(), claims, user)
@@ -297,6 +348,7 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 				result["error"] = "Không tìm thấy khoa"
 			case errors.Is(err, common.ErrUniversityNotFound):
 				result["error"] = "Không tìm thấy trường đại học"
+
 			default:
 				result["error"] = err.Error()
 			}

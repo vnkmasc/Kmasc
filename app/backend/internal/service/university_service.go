@@ -4,19 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/repository"
-	"github.com/tuyenngduc/certificate-management-system/utils"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UniversityService interface {
 	CreateUniversity(ctx context.Context, req *models.CreateUniversityRequest) error
 	ApproveOrRejectUniversity(ctx context.Context, idStr string, action string) error
-	GetAllUniversities(ctx context.Context) ([]*models.University, error)
+	GetAllUniversities(ctx context.Context) ([]models.UniversityResponse, error)
 	GetUniversitiesByStatus(ctx context.Context, status string) ([]*models.University, error)
 	GetUniversityByID(ctx context.Context, id primitive.ObjectID) (*models.University, error)
 	GetUniversityByCode(ctx context.Context, code string) (*models.University, error)
@@ -71,6 +72,7 @@ func (s *universityService) CreateUniversity(ctx context.Context, req *models.Cr
 		Address:        req.Address,
 		EmailDomain:    req.EmailDomain,
 		UniversityCode: req.UniversityCode,
+		Description:    req.Description,
 		Status:         "pending",
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -145,9 +147,34 @@ Trân trọng.`, university.UniversityName, account.PersonalEmail, rawPassword)
 	}
 }
 
-func (s *universityService) GetAllUniversities(ctx context.Context) ([]*models.University, error) {
-	return s.universityRepo.GetAllUniversities(ctx)
+func (s *universityService) GetAllUniversities(ctx context.Context) ([]models.UniversityResponse, error) {
+	universities, err := s.universityRepo.GetAllUniversities(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		log.Printf("Error loading timezone Asia/Ho_Chi_Minh: %v. Using UTC instead.", err)
+		loc = time.UTC
+	}
+
+	res := make([]models.UniversityResponse, 0, len(universities))
+	for _, u := range universities {
+		res = append(res, models.UniversityResponse{
+			ID:             u.ID.Hex(),
+			UniversityName: u.UniversityName,
+			UniversityCode: u.UniversityCode,
+			EmailDomain:    u.EmailDomain,
+			Address:        u.Address,
+			Status:         u.Status,
+			Description:    u.Description,
+			CreatedAt:      u.CreatedAt.In(loc).Format("2006-01-02 15:04:05"),
+			UpdatedAt:      u.UpdatedAt.In(loc).Format("2006-01-02 15:04:05"),
+		})
+	}
+	return res, nil
 }
+
 func (s *universityService) GetUniversitiesByStatus(ctx context.Context, status string) ([]*models.University, error) {
 	return s.universityRepo.GetUniversitiesByStatus(ctx, status)
 }

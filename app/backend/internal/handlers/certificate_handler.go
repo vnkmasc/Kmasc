@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -11,12 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
-	"github.com/tuyenngduc/certificate-management-system/internal/common"
-	"github.com/tuyenngduc/certificate-management-system/internal/models"
-	"github.com/tuyenngduc/certificate-management-system/internal/service"
-	"github.com/tuyenngduc/certificate-management-system/pkg/database"
-	"github.com/tuyenngduc/certificate-management-system/utils"
-	"github.com/xuri/excelize/v2"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -44,137 +42,11 @@ func NewCertificateHandler(
 		minioClient:        minioClient,
 	}
 }
-func (h *CertificateHandler) ImportCertificatesFromExcel(c *gin.Context) {
-	formFile, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Không thể đọc file",
-		})
-		return
-	}
-
-	file, err := formFile.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Lỗi khi mở file",
-		})
-		return
-	}
-	defer file.Close()
-
-	claims, _ := c.Get(string(utils.ClaimsContextKey))
-	userClaims := claims.(*utils.CustomClaims)
-
-	f, err := excelize.OpenReader(file)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "File không hợp lệ",
-		})
-		return
-	}
-
-	rows, err := f.GetRows("Sheet1")
-	if err != nil || len(rows) <= 1 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Sheet1 không có dữ liệu",
-		})
-		return
-	}
-
-	var (
-		successList = []map[string]interface{}{}
-		errorList   = []map[string]interface{}{}
-	)
-
-	for i := 1; i < len(rows); i++ {
-		rowIndex := i + 1
-
-		studentCode, _ := f.GetCellValue("Sheet1", fmt.Sprintf("A%d", rowIndex))
-		certType, _ := f.GetCellValue("Sheet1", fmt.Sprintf("B%d", rowIndex))
-		certName, _ := f.GetCellValue("Sheet1", fmt.Sprintf("C%d", rowIndex))
-		issueDateStr, _ := f.GetCellValue("Sheet1", fmt.Sprintf("D%d", rowIndex))
-		serialNumber, _ := f.GetCellValue("Sheet1", fmt.Sprintf("E%d", rowIndex))
-		regNo, _ := f.GetCellValue("Sheet1", fmt.Sprintf("F%d", rowIndex))
-		certDegreeType, _ := f.GetCellValue("Sheet1", fmt.Sprintf("G%d", rowIndex))
-
-		if strings.TrimSpace(studentCode) == "" || strings.TrimSpace(certType) == "" || strings.TrimSpace(certName) == "" || strings.TrimSpace(issueDateStr) == "" {
-			errorList = append(errorList, map[string]interface{}{
-				"row":   rowIndex,
-				"error": "Thiếu dữ liệu bắt buộc",
-			})
-			continue
-		}
-
-		issueDate, err := utils.ParseDate(issueDateStr)
-		if err != nil {
-			errorList = append(errorList, map[string]interface{}{
-				"row":   rowIndex,
-				"error": "Ngày cấp không hợp lệ: " + issueDateStr,
-			})
-			continue
-		}
-
-		isDegree := strings.ToLower(strings.TrimSpace(certType)) == "văn bằng"
-
-		req := &models.CreateCertificateRequest{
-			StudentCode:     strings.TrimSpace(studentCode),
-			IsDegree:        isDegree,
-			Name:            strings.TrimSpace(certName),
-			IssueDate:       issueDate,
-			SerialNumber:    strings.TrimSpace(serialNumber),
-			RegNo:           strings.TrimSpace(regNo),
-			CertificateType: strings.TrimSpace(certDegreeType),
-		}
-
-		_, err = h.certificateService.CreateCertificate(c.Request.Context(), userClaims, req)
-		if err != nil {
-			var errMsg string
-			switch {
-			case errors.Is(err, common.ErrUserNotExisted):
-				errMsg = "Sinh viên không tồn tại"
-			case errors.Is(err, common.ErrCertificateAlreadyExists):
-				errMsg = "Văn bằng/chứng chỉ đã tồn tại"
-			case errors.Is(err, common.ErrFacultyNotFound):
-				errMsg = "Không tìm thấy khoa"
-			case errors.Is(err, common.ErrUniversityNotFound):
-				errMsg = "Không tìm thấy trường"
-			case errors.Is(err, common.ErrSerialNumberExists):
-				errMsg = "Số hiệu văn bằng đã tồn tại"
-			case errors.Is(err, common.ErrRegNoExists):
-				errMsg = "Số vào sổ gốc đã tồn tại"
-			case errors.Is(err, common.ErrMissingRequiredFieldsForCertificate):
-				errMsg = "Thiếu thông tin bắt buộc cho chứng chỉ (Tên, Ngày cấp)"
-			case errors.Is(err, common.ErrMissingRequiredFieldsForDegree):
-				errMsg = "Thiếu thông tin bắt buộc cho văn bằng (Loại văn bằng, Số hiệu, Số vào sổ gốc, Ngày cấp)"
-			default:
-				errMsg = "Lỗi hệ thống: " + err.Error()
-			}
-
-			errorList = append(errorList, map[string]interface{}{
-				"row":   rowIndex,
-				"error": errMsg,
-			})
-			continue
-		}
-
-		successList = append(successList, map[string]interface{}{
-			"row":    rowIndex,
-			"status": "Thêm thành công",
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"data": gin.H{
-			"success": successList,
-			"error":   errorList,
-		},
-		"success_count": len(successList),
-	})
-}
 
 func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 	var req models.CreateCertificateRequest
 
+	// Validate JSON đầu vào
 	if err := c.ShouldBindJSON(&req); err != nil {
 		if validationErrs, ok := common.ParseValidationError(err); ok {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -189,6 +61,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 		return
 	}
 
+	// Lấy claims từ context
 	claims, ok := c.MustGet("claims").(*utils.CustomClaims)
 	if !ok || claims == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -197,56 +70,42 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 		return
 	}
 
-	res, err := h.certificateService.CreateCertificate(c.Request.Context(), claims, &req)
-	if err != nil {
+	// Gọi service
+	if err := h.certificateService.CreateCertificate(c.Request.Context(), claims, &req); err != nil {
 		switch {
 		case errors.Is(err, common.ErrInvalidToken):
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Token không hợp lệ",
-			})
-		case errors.Is(err, common.ErrUserNotExisted):
-			c.JSON(http.StatusNotFound, gin.H{
-				"message": "Sinh viên không tồn tại",
-			})
-		case errors.Is(err, common.ErrCertificateAlreadyExists):
-			c.JSON(http.StatusConflict, gin.H{
-				"message": "Văn bằng/chứng chỉ đã tồn tại",
-			})
-		case errors.Is(err, common.ErrFacultyNotFound):
-			c.JSON(http.StatusNotFound, gin.H{
-				"message": "Không tìm thấy khoa",
-			})
-		case errors.Is(err, common.ErrUniversityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{
-				"message": "Không tìm thấy trường",
-			})
-		case errors.Is(err, common.ErrSerialNumberExists):
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Số hiệu văn bằng đã tồn tại trong hệ thống",
-			})
-		case errors.Is(err, common.ErrRegNoExists):
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Số vào sổ gốc đã tồn tại trong hệ thống",
-			})
-		case errors.Is(err, common.ErrMissingRequiredFieldsForCertificate):
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Thiếu thông tin bắt buộc cho chứng chỉ (Tên, Ngày cấp)",
-			})
-		case errors.Is(err, common.ErrMissingRequiredFieldsForDegree):
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Thiếu thông tin bắt buộc cho văn bằng (Loại văn bằng, Số hiệu, Số vào sổ gốc, Ngày cấp)",
-			})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Lỗi hệ thống",
-			})
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Token không hợp lệ"})
 
+		case errors.Is(err, common.ErrUserNotExisted):
+			c.JSON(http.StatusNotFound, gin.H{"message": "Sinh viên không tồn tại"})
+
+		case errors.Is(err, common.ErrCertificateAlreadyExists):
+			c.JSON(http.StatusConflict, gin.H{"message": "Văn bằng đã tồn tại"})
+
+		case errors.Is(err, common.ErrFacultyNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"message": "Không tìm thấy khoa"})
+
+		case errors.Is(err, common.ErrUniversityNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"message": "Không tìm thấy trường"})
+
+		case errors.Is(err, common.ErrSerialNumberExists):
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Số hiệu văn bằng đã tồn tại"})
+
+		case errors.Is(err, common.ErrRegNoExists):
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Số vào sổ gốc đã tồn tại"})
+
+		case errors.Is(err, common.ErrMissingRequiredFieldsForDegree):
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Thiếu thông tin bắt buộc cho văn bằng"})
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Lỗi hệ thống"})
 		}
 		return
 	}
 
+	// Trả về thành công
 	c.JSON(http.StatusCreated, gin.H{
-		"data": res,
+		"message": "Tạo văn bằng thành công",
 	})
 }
 

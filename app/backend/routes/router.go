@@ -3,8 +3,8 @@ package routes
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/tuyenngduc/certificate-management-system/internal/handlers"
-	"github.com/tuyenngduc/certificate-management-system/internal/middleware"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/handlers"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/middleware"
 )
 
 func SetupRouter(
@@ -15,6 +15,9 @@ func SetupRouter(
 	facultyHandler *handlers.FacultyHandler,
 	fileHandler *handlers.FileHandler,
 	verificationHandler *handlers.VerificationHandler,
+	rewardDisciplineHandler *handlers.RewardDisciplineHandler,
+	blockchainHandler *handlers.BlockchainHandler,
+
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -68,7 +71,6 @@ func SetupRouter(
 	certificateGroup.GET("/student/:id", certificateHandler.GetCertificatesByStudentID)
 	certificateGroup.GET("/search", certificateHandler.SearchCertificates)
 	certificateGroup.GET("/my-certificate", certificateHandler.GetMyCertificates)
-	certificateGroup.POST("/import-excel", certificateHandler.ImportCertificatesFromExcel)
 	certificateGroup.DELETE("/:id", certificateHandler.DeleteCertificate)
 	certificateGroup.GET("/simple", certificateHandler.GetMyCertificateNames)
 
@@ -95,6 +97,25 @@ func SetupRouter(
 	auth := api.Group("/verification").Use(middleware.JWTAuthMiddleware())
 	auth.POST("/create", verificationHandler.CreateVerificationCode)
 	auth.GET("/my-codes", verificationHandler.GetMyCodes)
+
+	// Reward/Discipline routes
+	rdGroup := api.Group("/reward-disciplines")
+	rdGroup.Use(middleware.JWTAuthMiddleware())
+	rdGroup.POST("", rewardDisciplineHandler.CreateRewardDiscipline)
+	rdGroup.GET("", rewardDisciplineHandler.GetAllRewardDisciplines)
+	rdGroup.GET("/:id", rewardDisciplineHandler.GetRewardDisciplineByID)
+	rdGroup.PUT("/:id", rewardDisciplineHandler.UpdateRewardDiscipline)
+	rdGroup.DELETE("/:id", rewardDisciplineHandler.DeleteRewardDiscipline)
+	rdGroup.GET("/search", rewardDisciplineHandler.SearchRewardDisciplines)
+	rdGroup.GET("/my-reward-disciplines", rewardDisciplineHandler.GetMyRewardDisciplines)
+	rdGroup.POST("/import-excel", rewardDisciplineHandler.ImportRewardDisciplinesFromExcel)
+
+	//blockchain
+	blockchainGroup := api.Group("/blockchain")
+	blockchainGroup.POST("/push-chain/:id", blockchainHandler.PushCertificateToChain)
+	blockchainGroup.GET("/certificate-on-chain/:id", blockchainHandler.GetCertificateByID)
+	blockchainGroup.GET("/verify/:id", blockchainHandler.VerifyCertificateIntegrity)
+	blockchainGroup.GET("/verify-file/:id", blockchainHandler.VerifyCertificateFile)
 
 	return r
 }

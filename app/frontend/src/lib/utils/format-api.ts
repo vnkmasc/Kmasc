@@ -102,3 +102,22 @@ export const formatCertificateVerifyCode = (data: any, isSendToServer: boolean =
         status: data.expired_in_minutes !== 0
       }
 }
+
+export const formatRewardDiscipline = (data: any, isSendToServer: boolean = false) => {
+  return isSendToServer
+    ? {
+        student_code: data.studentCode,
+        name: data.name,
+        decision_number: data.decisionNumber,
+        is_discipline: Boolean(data.isDiscipline)
+      }
+    : {
+        id: data.id,
+        studentCode: data.student_code,
+        studentName: data.student_name,
+        faculty: data.faculty_code,
+        facultyName: data.faculty_name,
+        decisionNumber: data.decision_number,
+        isDiscipline: data.is_discipline
+      }
+}
