@@ -37,6 +37,11 @@ var (
 	ErrMissingRequiredFieldsForDegree      = errors.New("missing_required_fields_for_degree")
 	ErrMissingRequiredFieldsForCertificate = errors.New("missing_required_fields_for_certificate")
 
+	ErrCertificateNotSigned      = errors.New("certificate chưa được ký số")
+	ErrCertificateNoFile         = errors.New("certificate chưa có bản in văn bằng")
+	ErrCertificateAlreadyOnChain = errors.New("certificate đã được ghi lên blockchain")
+	ErrCertificateMissingHash    = errors.New("certificate chưa có cert_hash")
+
 	//RewardDiscipline
 	ErrDecisionNumberExists = errors.New("decision_number_exists")
 

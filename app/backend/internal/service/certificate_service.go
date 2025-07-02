@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -70,9 +71,11 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err != nil {
 		return common.ErrInvalidToken
 	}
+	fmt.Println(">>> Tìm sinh viên - code:", strings.TrimSpace(req.StudentCode), "universityID:", universityID.Hex())
 
-	user, err := s.userRepo.FindByStudentCodeAndUniversityID(ctx, req.StudentCode, universityID)
+	user, err := s.userRepo.FindByStudentCodeAndUniversityID(ctx, strings.TrimSpace(req.StudentCode), universityID)
 	if err != nil || user == nil {
+		fmt.Println(">>> Không tìm thấy sinh viên với code:", req.StudentCode)
 		return common.ErrUserNotExisted
 	}
 	if user.FacultyID.IsZero() {
@@ -323,8 +326,8 @@ func (s *certificateService) UploadCertificateFile(
 	certificateID primitive.ObjectID,
 	fileData []byte,
 	_ string, // filename cũ bỏ qua
-	isDegree bool, // phân biệt văn bằng/chứng chỉ
-	_ string, // certificateName bỏ qua luôn
+	isDegree bool,
+	_ string, // certificateName bỏ qua
 ) (string, error) {
 	certificate, err := s.certificateRepo.GetCertificateByID(ctx, certificateID)
 	if err != nil {
@@ -358,9 +361,10 @@ func (s *certificateService) UploadCertificateFile(
 
 	update := bson.M{
 		"$set": bson.M{
-			"path":       objectKey,
-			"hash_file":  certHash,
-			"updated_at": time.Now(),
+			"path":                 objectKey,
+			"hash_file":            certHash,
+			"physical_copy_issued": true,
+			"updated_at":           time.Now(),
 		},
 	}
 	if err := s.certificateRepo.UpdateCertificateByID(ctx, certificateID, update); err != nil {
@@ -422,9 +426,7 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 		return nil, 0, common.ErrInvalidToken
 	}
 
-	filter := bson.M{
-		"university_id": universityID,
-	}
+	filter := bson.M{"university_id": universityID}
 	if params.StudentCode != "" {
 		filter["student_code"] = bson.M{"$regex": params.StudentCode, "$options": "i"}
 	}
@@ -442,13 +444,60 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 		filter["faculty_id"] = faculty.ID
 	}
 
-	certs, total, err := s.certificateRepo.FindCertificate(ctx, filter, params.Page, params.PageSize)
+	// Lấy toàn bộ certificates để tự nhóm và phân trang
+	allCerts, _, err := s.certificateRepo.FindCertificate(ctx, filter, 0, 0)
 	if err != nil {
 		return nil, 0, err
 	}
 
+	// Gom theo userID
+	grouped := make(map[primitive.ObjectID][]*models.Certificate)
+	for _, cert := range allCerts {
+		grouped[cert.UserID] = append(grouped[cert.UserID], cert)
+	}
+
+	// Sắp xếp từng nhóm theo: Văn bằng trước, chứng chỉ sau → rồi theo IssueDate
+	for _, group := range grouped {
+		sort.SliceStable(group, func(i, j int) bool {
+			if group[i].IsDegree != group[j].IsDegree {
+				return group[i].IsDegree // văn bằng trước
+			}
+			return group[i].IssueDate.Before(group[j].IssueDate)
+		})
+	}
+
+	// Duyệt theo từng user để gom lại thứ tự mong muốn: sinh viên 1 -> sinh viên 2 -> ...
+	var sortedCerts []*models.Certificate
+	for userID := range grouped {
+		sortedCerts = append(sortedCerts, grouped[userID]...)
+	}
+
+	// Nếu có sort tổng thể (mới -> cũ), áp dụng sau khi đã gom nhóm
+	if strings.ToLower(params.SortOrder) == "desc" {
+		sort.SliceStable(sortedCerts, func(i, j int) bool {
+			return sortedCerts[i].CreatedAt.After(sortedCerts[j].CreatedAt)
+		})
+	} else if strings.ToLower(params.SortOrder) == "asc" {
+		sort.SliceStable(sortedCerts, func(i, j int) bool {
+			return sortedCerts[i].CreatedAt.Before(sortedCerts[j].CreatedAt)
+		})
+	}
+
+	// Phân trang thủ công
+	total := int64(len(sortedCerts))
+	start := (params.Page - 1) * params.PageSize
+	end := start + params.PageSize
+	if start > len(sortedCerts) {
+		start = len(sortedCerts)
+	}
+	if end > len(sortedCerts) {
+		end = len(sortedCerts)
+	}
+	pagedCerts := sortedCerts[start:end]
+
+	// Map sang response
 	var results []*models.CertificateResponse
-	for _, cert := range certs {
+	for _, cert := range pagedCerts {
 		user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
 		if err != nil || user == nil {
 			continue

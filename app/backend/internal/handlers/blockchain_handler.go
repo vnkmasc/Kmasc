@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -24,11 +27,36 @@ func (h *BlockchainHandler) PushCertificateToChain(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID không hợp lệ"})
 		return
 	}
+
 	txID, err := h.BlockchainSvc.PushCertificateToChain(c.Request.Context(), certID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể đưa lên blockchain", "detail": err.Error()})
-		return
+		switch {
+		case errors.Is(err, common.ErrCertificateNotSigned),
+			errors.Is(err, common.ErrCertificateNoFile),
+			errors.Is(err, common.ErrCertificateAlreadyOnChain),
+			errors.Is(err, common.ErrCertificateMissingHash):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":  "Không thể đưa lên blockchain",
+				"detail": err.Error(),
+			})
+			return
+
+		case errors.Is(err, common.ErrCertificateNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":  "Không tìm thấy văn bằng",
+				"detail": err.Error(),
+			})
+			return
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":  "Lỗi hệ thống khi đưa lên blockchain",
+				"detail": err.Error(),
+			})
+			return
+		}
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":        "Ghi văn bằng lên blockchain thành công",
 		"transaction_id": txID,
@@ -52,7 +80,7 @@ func (h *BlockchainHandler) VerifyCertificateIntegrity(c *gin.Context) {
 		return
 	}
 
-	ok, msg, onChainCert, cert, err := h.BlockchainSvc.VerifyCertificateIntegrity(c.Request.Context(), certID)
+	ok, msg, onChainCert, cert, user, faculty, university, err := h.BlockchainSvc.VerifyCertificateIntegrity(c.Request.Context(), certID)
 	if err != nil {
 		switch {
 		case strings.Contains(err.Error(), "certID không hợp lệ"):
@@ -68,12 +96,14 @@ func (h *BlockchainHandler) VerifyCertificateIntegrity(c *gin.Context) {
 		return
 	}
 
+	resp := mapper.MapCertificateToResponse(cert, user, faculty, university)
+
 	if !ok {
 		c.JSON(http.StatusConflict, gin.H{
 			"valid":       false,
 			"message":     msg,
 			"on_chain":    onChainCert,
-			"certificate": cert,
+			"certificate": resp,
 		})
 		return
 	}
@@ -82,9 +112,10 @@ func (h *BlockchainHandler) VerifyCertificateIntegrity(c *gin.Context) {
 		"valid":       true,
 		"message":     msg,
 		"on_chain":    onChainCert,
-		"certificate": cert,
+		"certificate": resp,
 	})
 }
+
 func (h *BlockchainHandler) VerifyCertificateFile(c *gin.Context) {
 	certIDHex := c.Param("id")
 	certID, err := primitive.ObjectIDFromHex(certIDHex)

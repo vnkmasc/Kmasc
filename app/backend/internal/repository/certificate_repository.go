@@ -134,14 +134,20 @@ func (r *certificateRepository) FindOne(ctx context.Context, filter interface{})
 }
 
 func (r *certificateRepository) FindCertificate(ctx context.Context, filter bson.M, page, pageSize int) ([]*models.Certificate, int64, error) {
-	skip := int64((page - 1) * pageSize)
-	limit := int64(pageSize)
+	findOpts := options.Find()
+	if page > 0 && pageSize > 0 {
+		skip := int64((page - 1) * pageSize)
+		limit := int64(pageSize)
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(limit)
+	}
+
 	total, err := r.col.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	cursor, err := r.col.Find(ctx, filter, options.Find().SetSkip(skip).SetLimit(limit))
+	cursor, err := r.col.Find(ctx, filter, findOpts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -153,6 +159,7 @@ func (r *certificateRepository) FindCertificate(ctx context.Context, filter bson
 	}
 	return certs, total, nil
 }
+
 func (r *certificateRepository) UpdateVerificationCode(ctx context.Context, id primitive.ObjectID, code string, expired time.Time) error {
 	update := bson.M{
 		"$set": bson.M{

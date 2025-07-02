@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
@@ -16,6 +18,7 @@ import (
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
 	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
 	"github.com/vnkmasc/Kmasc/app/backend/utils"
+	"github.com/xuri/excelize/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -377,11 +380,13 @@ func (h *CertificateHandler) SearchCertificates(c *gin.Context) {
 	if params.PageSize <= 0 {
 		params.PageSize = 10
 	}
+
 	certs, total, err := h.certificateService.SearchCertificates(c.Request.Context(), params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"data":       certs,
 		"total":      total,
@@ -463,4 +468,151 @@ func (h *CertificateHandler) GetMyCertificateNames(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": certificates})
+}
+
+func (h *CertificateHandler) ImportCertificatesFromExcel(c *gin.Context) {
+	val, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Bạn chưa đăng nhập hoặc token không hợp lệ"})
+		return
+	}
+	claims, ok := val.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ"})
+		return
+	}
+
+	// Đọc file
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Vui lòng upload file Excel"})
+		return
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Không thể mở file"})
+		return
+	}
+	defer src.Close()
+
+	f, err := excelize.OpenReader(src)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File không đúng định dạng Excel"})
+		return
+	}
+
+	rows, err := f.GetRows("Sheet1")
+	if err != nil || len(rows) <= 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Không tìm thấy dữ liệu trong Sheet1"})
+		return
+	}
+
+	var successResults []map[string]interface{}
+	var errorResults []map[string]interface{}
+
+	for i, row := range rows {
+		if i == 0 {
+			continue // Bỏ qua header
+		}
+
+		result := map[string]interface{}{"row": i + 1}
+		get := func(index int) string {
+			if index < len(row) {
+				return strings.TrimSpace(row[index])
+			}
+			return ""
+		}
+
+		isDegree := strings.ToLower(get(1)) == "văn bằng"
+
+		gpa := 0.0
+		if gpaStr := get(10); gpaStr != "" {
+			gpa, _ = strconv.ParseFloat(gpaStr, 64)
+		}
+		parsedDate, err := parseDateTime(get(11)) // Cột Ngày cấp
+		if err != nil {
+			result["error"] = fmt.Sprintf("Ngày cấp không hợp lệ: %v", err)
+			errorResults = append(errorResults, result)
+			continue
+		}
+
+		req := &models.CreateCertificateRequest{
+			StudentCode:     get(0),
+			IsDegree:        isDegree,
+			Name:            get(2),
+			CertificateType: get(3),
+			Course:          get(4),
+			GraduationRank:  get(5),
+			EducationType:   get(6),
+			SerialNumber:    get(7),
+			RegNo:           get(8),
+			Major:           get(9),
+			GPA:             gpa,
+			IssueDate:       parsedDate,
+			Description:     get(12),
+		}
+
+		// 👉 Debug log trước khi gọi service
+		fmt.Printf(">>> [ROW %d] Creating certificate for StudentCode: '%s', IsDegree: %v\n", i+1, req.StudentCode, req.IsDegree)
+		fmt.Printf(">>>        Name: %s | Serial: %s | RegNo: %s | Date: %s\n", req.Name, req.SerialNumber, req.RegNo, req.IssueDate.Format("2006-01-02"))
+		fmt.Printf(">>>        UniversityID: %s\n", claims.UniversityID)
+
+		err = h.certificateService.CreateCertificate(c.Request.Context(), claims, req)
+		if err != nil {
+			result["error"] = mapErrorToMessage(err)
+			errorResults = append(errorResults, result)
+		} else {
+			result["status"] = "Tạo thành công"
+			successResults = append(successResults, result)
+		}
+	}
+
+	// Trả về kết quả
+	if len(errorResults) == 0 {
+		c.JSON(http.StatusCreated, gin.H{
+			"message":       "Tất cả chứng nhận đã được tạo thành công",
+			"success_count": len(successResults),
+			"error_count":   0,
+			"data":          gin.H{"success": successResults},
+		})
+	} else {
+		c.JSON(http.StatusMultiStatus, gin.H{
+			"message":       "Một số chứng nhận không thể tạo",
+			"success_count": len(successResults),
+			"error_count":   len(errorResults),
+			"data": gin.H{
+				"success": successResults,
+				"error":   errorResults,
+			},
+		})
+	}
+}
+
+func mapErrorToMessage(err error) string {
+	switch {
+	case errors.Is(err, common.ErrInvalidToken):
+		return "Token không hợp lệ"
+	case errors.Is(err, common.ErrUserNotExisted):
+		return "Không tìm thấy sinh viên"
+	case errors.Is(err, common.ErrSerialNumberExists):
+		return "Số hiệu đã tồn tại"
+	case errors.Is(err, common.ErrRegNoExists):
+		return "Số vào sổ đã tồn tại"
+	case errors.Is(err, common.ErrMissingRequiredFieldsForDegree):
+		return "Thiếu thông tin bắt buộc cho văn bằng"
+	case errors.Is(err, common.ErrCertificateAlreadyExists):
+		return "Văn bằng/chứng chỉ này đã tồn tại"
+	default:
+		fmt.Printf(">>> mapErrorToMessage - Unknown error: %+v\n", err)
+		return "Lỗi hệ thống hoặc không xác định"
+	}
+}
+
+func parseDateTime(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse("02/01/2006", s)
 }
