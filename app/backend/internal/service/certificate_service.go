@@ -21,6 +21,11 @@ import (
 )
 
 type CertificateService interface {
+	GetDegreeCertificateByStudentCodeAndUniversity(
+		ctx context.Context,
+		studentCode string,
+		universityID primitive.ObjectID,
+	) (*models.Certificate, error)
 	GetCertificateByStudentCodeAndTypeAndUniversity(ctx context.Context, studentCode string, certificateType string, universityID primitive.ObjectID) (*models.Certificate, error)
 	GetAllCertificates(ctx context.Context) ([]*models.CertificateResponse, error)
 	GetCertificateByStudentCodeAndNameAndUniversity(ctx context.Context, studentCode, name string, universityID primitive.ObjectID) (*models.Certificate, error)
@@ -301,14 +306,25 @@ func (s *certificateService) GetCertificateByID(ctx context.Context, id primitiv
 func (s *certificateService) DeleteCertificate(ctx context.Context, id primitive.ObjectID) error {
 	return s.certificateRepo.DeleteCertificate(ctx, id)
 }
+func (s *certificateService) GetDegreeCertificateByStudentCodeAndUniversity(
+	ctx context.Context,
+	studentCode string,
+	universityID primitive.ObjectID,
+) (*models.Certificate, error) {
+	return s.certificateRepo.FindOneByFilter(ctx, bson.M{
+		"student_code":  studentCode,
+		"university_id": universityID,
+		"is_degree":     true,
+	})
+}
 
 func (s *certificateService) UploadCertificateFile(
 	ctx context.Context,
 	certificateID primitive.ObjectID,
 	fileData []byte,
-	_ string, // bỏ qua filename cũ
-	isDegree bool,
-	certificateName string,
+	_ string, // filename cũ bỏ qua
+	isDegree bool, // phân biệt văn bằng/chứng chỉ
+	_ string, // certificateName bỏ qua luôn
 ) (string, error) {
 	certificate, err := s.certificateRepo.GetCertificateByID(ctx, certificateID)
 	if err != nil {
@@ -320,19 +336,15 @@ func (s *certificateService) UploadCertificateFile(
 		return "", fmt.Errorf("không tìm thấy trường đại học: %w", err)
 	}
 
-	// Tên file: CT060344/<slug>.pdf
 	ext := ".pdf"
-	var typeStr string
+	var slug string
 	if isDegree {
-		typeStr = certificate.CertificateType
+		slug = "van-bang"
 	} else {
-		typeStr = certificate.Name
+		slug = utils.Slugify(certificate.Name)
 	}
 
-	slug := utils.Slugify(typeStr) // ví dụ: "Thạc sĩ" => "thac-si"
 	filename := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
-
-	// Đường dẫn đầy đủ: certificates/<university_code>/<student_code>/<slug>.pdf
 	objectKey := fmt.Sprintf("certificates/%s/%s", university.UniversityCode, filename)
 
 	contentType := http.DetectContentType(fileData)
@@ -341,11 +353,9 @@ func (s *certificateService) UploadCertificateFile(
 		return "", fmt.Errorf("lỗi upload file lên MinIO: %w", err)
 	}
 
-	// Tính hash
 	hash := sha256.Sum256(fileData)
 	certHash := hex.EncodeToString(hash[:])
 
-	// Cập nhật DB
 	update := bson.M{
 		"$set": bson.M{
 			"path":       objectKey,

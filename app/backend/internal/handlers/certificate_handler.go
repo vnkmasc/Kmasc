@@ -183,45 +183,30 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 
 	// Parse query param
 	isDegree := c.Query("is_degree") == "true"
-	certificateType := c.Query("certificate_type")
 	certificateName := c.Query("name")
 
-	fmt.Println("=== DEBUG UPLOAD START ===")
-	fmt.Println("Filename:", file.Filename)
-	fmt.Println("Extension:", ext)
-	fmt.Println("isDegree:", isDegree)
-	fmt.Println("certificate_type:", certificateType)
-	fmt.Println("certificate_name:", certificateName)
-
-	// Lấy university
+	// Lấy university ID từ token
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
-		fmt.Println("Lỗi universityID:", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ (UniversityID không đúng định dạng)"})
 		return
 	}
-	fmt.Println("UniversityID:", universityID.Hex())
 
 	university, err := h.universityService.GetUniversityByID(c.Request.Context(), universityID)
 	if err != nil {
-		fmt.Println("Lỗi lấy university:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không lấy được thông tin trường đại học"})
 		return
 	}
 
 	// Giả định tên file là mã sinh viên
 	studentCode := strings.TrimSuffix(file.Filename, ext)
-	fmt.Println("StudentCode từ filename:", studentCode)
 
 	// Truy vấn certificate
 	var certificate *models.Certificate
 	if isDegree {
-		if certificateType == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Thiếu loại văn bằng (query param 'certificate_type')"})
-			return
-		}
-		certificate, err = h.certificateService.GetCertificateByStudentCodeAndTypeAndUniversity(
-			c.Request.Context(), studentCode, certificateType, university.ID)
+		// Mỗi sinh viên chỉ có 1 văn bằng
+		certificate, err = h.certificateService.GetDegreeCertificateByStudentCodeAndUniversity(
+			c.Request.Context(), studentCode, university.ID)
 	} else {
 		if certificateName == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Thiếu tên chứng chỉ (query param 'name')"})
@@ -231,15 +216,10 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 			c.Request.Context(), studentCode, certificateName, university.ID)
 	}
 
-	if err != nil {
-		fmt.Println("Lỗi truy vấn certificate:", err)
-	}
-	if certificate == nil || certificate.ID.IsZero() {
-		fmt.Println("Certificate không tìm thấy hoặc ID rỗng")
+	if err != nil || certificate == nil || certificate.ID.IsZero() {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy văn bằng/chứng chỉ phù hợp"})
 		return
 	}
-	fmt.Println("Certificate tìm thấy:", certificate.ID.Hex())
 
 	// Check permission
 	if certificate.UniversityID != university.ID {
@@ -255,7 +235,6 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 	// Đọc nội dung file
 	src, err := file.Open()
 	if err != nil {
-		fmt.Println("Lỗi mở file:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể mở file"})
 		return
 	}
@@ -263,34 +242,28 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 
 	fileData, err := io.ReadAll(src)
 	if err != nil {
-		fmt.Println("Lỗi đọc file:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể đọc file"})
 		return
 	}
 
-	// Tạo tên file lưu lên MinIO: CT060344/thac-si.pdf hoặc CT060344/toeic-800+.pdf
+	// Tạo tên file lưu lên MinIO
 	var typeStr string
 	if certificate.IsDegree {
-		typeStr = certificate.CertificateType
+		typeStr = "van-bang"
 	} else {
 		typeStr = certificate.Name
 	}
 
 	slug := utils.Slugify(typeStr)
 	finalFileName := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
-	fmt.Println("File path lưu lên MinIO:", finalFileName)
 
-	// Upload file và lưu đường dẫn
+	// Upload và cập nhật
 	filePath, err := h.certificateService.UploadCertificateFile(
 		c.Request.Context(), certificate.ID, fileData, finalFileName, isDegree, typeStr)
 	if err != nil {
-		fmt.Println("Lỗi upload file:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Tải lên thất bại: " + err.Error()})
 		return
 	}
-
-	fmt.Println("Upload thành công. Đường dẫn:", filePath)
-	fmt.Println("=== DEBUG UPLOAD END ===")
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Tải file thành công",

@@ -12,6 +12,7 @@ import (
 )
 
 type CertificateRepository interface {
+	FindOneByFilter(ctx context.Context, filter bson.M) (*models.Certificate, error)
 	FindOneByStudentCodeAndType(ctx context.Context, studentCode string, certificateType string, universityID primitive.ObjectID) (*models.Certificate, error)
 	GetAllCertificates(ctx context.Context) ([]*models.Certificate, error)
 	UpdateCertificateByID(ctx context.Context, id primitive.ObjectID, update bson.M) error
@@ -48,6 +49,14 @@ func (r *certificateRepository) CreateCertificate(ctx context.Context, cert *mod
 func (r *certificateRepository) UpdateCertificateByID(ctx context.Context, id primitive.ObjectID, update bson.M) error {
 	_, err := r.col.UpdateByID(ctx, id, update)
 	return err
+}
+func (r *certificateRepository) FindOneByFilter(ctx context.Context, filter bson.M) (*models.Certificate, error) {
+	var cert models.Certificate
+	err := r.col.FindOne(ctx, filter).Decode(&cert)
+	if err != nil {
+		return nil, err
+	}
+	return &cert, nil
 }
 
 func (r *certificateRepository) GetAllCertificates(ctx context.Context) ([]*models.Certificate, error) {
