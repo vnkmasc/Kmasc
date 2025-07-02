@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"regexp"
 	"time"
 
@@ -30,10 +31,18 @@ func InitValidator() {
 
 		// 4. Mức độ kỷ luật 1–4
 		_ = v.RegisterValidation("disciplinelevel", func(fl validator.FieldLevel) bool {
-			if fl.Field().IsNil() {
+			field := fl.Field()
+			// Chỉ gọi IsNil nếu là con trỏ hoặc interface
+			if (field.Kind() == reflect.Ptr || field.Kind() == reflect.Interface) && field.IsNil() {
 				return false
 			}
-			level := int(fl.Field().Int())
+
+			// Nếu là con trỏ, lấy giá trị bên trong
+			if field.Kind() == reflect.Ptr {
+				field = field.Elem()
+			}
+
+			level := int(field.Int())
 			return level >= 1 && level <= 4
 		})
 
