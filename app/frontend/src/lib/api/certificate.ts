@@ -34,7 +34,9 @@ export const importCertificateExcel = async (data: any) => {
 export const getCertificateDataById = async (id: string) => {
   const res = await apiService('GET', `certificates/${id}`)
 
-  return formatCertificateView(res.data)
+  return {
+    certificate: formatCertificateView(res.data)
+  }
 }
 
 export const getCertificateFile = async (id: string) => {
@@ -103,7 +105,10 @@ export const pushCertificateIntoBlockchain = async (id: string) => {
 export const getBlockchainData = async (id: string) => {
   const res = await apiService('GET', `blockchain/verify/${id}`, undefined, true, {}, true)
 
-  return formatCertificateView(res.certificate)
+  return {
+    ...res,
+    certificate: formatCertificateView(res.certificate)
+  }
 }
 
 export const getBlockchainFile = async (id: string) => {

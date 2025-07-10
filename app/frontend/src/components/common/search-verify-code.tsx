@@ -3,13 +3,31 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PackageSearch } from 'lucide-react'
 import CertificateView from './certificate-view'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 const SearchVerifyCode = () => {
   const [verifyCode, setVerifyCode] = useState('')
   const [blockchainVerifyCode, setBlockchainVerifyCode] = useState('')
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (blockchainVerifyCode) {
+      router.push(`${pathname}?code=${blockchainVerifyCode}`)
+    }
+  }, [blockchainVerifyCode, pathname, router])
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (code) {
+      setBlockchainVerifyCode(code)
+      setVerifyCode(code)
+    }
+  }, [])
 
   return (
     <>

@@ -24,6 +24,7 @@ import { formatFacultyOptions, formatStudent } from '@/lib/utils/format-api'
 
 import { validateAcademicEmail, validateCitizenId, validateNoEmpty } from '@/lib/utils/validators'
 import { PlusIcon } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useState } from 'react'
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
@@ -228,7 +229,12 @@ const StudentManagementPage: React.FC = () => {
       <TableList
         data={queryStudents.data?.data || []}
         items={[
-          { header: 'Mã SV', value: 'code', className: 'min-w-[80px] font-semibold text-blue-500' },
+          {
+            header: 'Mã SV',
+            value: 'code',
+            className: 'min-w-[80px] font-semibold text-blue-500',
+            render: (item) => <Link href={`/education-admin/student-management/${item.id}`}>{item.code}</Link>
+          },
           { header: 'Họ và tên', value: 'name', className: 'min-w-[200px]' },
           { header: 'Email', value: 'email', className: 'min-w-[200px]' },
           { header: 'Tên khoa', value: 'facultyName', className: 'min-w-[200px]' },

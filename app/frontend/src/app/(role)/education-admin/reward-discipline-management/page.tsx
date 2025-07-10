@@ -178,12 +178,11 @@ const RewardDisciplineManagementPage: React.FC = () => {
             render: (item) =>
               item.isDiscipline && (
                 <Badge
-                  variant='destructive'
                   className={cn(
-                    item.disciplineLevel === '4' && 'bg-red-500',
-                    item.disciplineLevel === '3' && 'bg-orange-500',
-                    item.disciplineLevel === '2' && 'bg-yellow-500',
-                    item.disciplineLevel === '1' && 'bg-blue-500'
+                    item.disciplineLevel === '4' && 'bg-red-500 hover:bg-red-400',
+                    item.disciplineLevel === '3' && 'bg-orange-500 hover:bg-orange-400',
+                    item.disciplineLevel === '2' && 'bg-yellow-500 hover:bg-yellow-400',
+                    item.disciplineLevel === '1' && 'bg-blue-500 hover:bg-blue-400'
                   )}
                 >
                   {LEVEL_DISCIPLINE[Number(item.disciplineLevel) as keyof typeof LEVEL_DISCIPLINE]}

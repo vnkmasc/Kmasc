@@ -3,11 +3,28 @@
 import { getBlockchainData, getBlockchainFile, getCertificateDataById, getCertificateFile } from '@/lib/api/certificate'
 import useSWR from 'swr'
 import DecriptionView from './description-view'
-import { Book, Calendar, ChartAreaIcon, FileTextIcon, Key, Library, School, TagsIcon, Text, User } from 'lucide-react'
+import {
+  Blocks,
+  Book,
+  Calendar,
+  ChartAreaIcon,
+  CheckCircleIcon,
+  CircleX,
+  FileTextIcon,
+  Key,
+  Library,
+  School,
+  TagsIcon,
+  Text,
+  User
+} from 'lucide-react'
 import { Badge } from '../ui/badge'
 import PDFView from './pdf-view'
 import { Separator } from '../ui/separator'
 import CertificateBlankButton from './certificate-blank-button'
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
+import { showNotification } from '@/lib/utils/common'
+import { cn } from '@/lib/utils'
 
 interface Props {
   isBlockchain: boolean
@@ -15,16 +32,25 @@ interface Props {
 }
 
 const CertificateView: React.FC<Props> = (props) => {
-  const queryData = useSWR(props.isBlockchain ? undefined : `certificate-view-${props.id}`, () =>
-    getCertificateDataById(props.id)
+  const queryData = useSWR(
+    props.isBlockchain ? undefined : `certificate-view-${props.id}`,
+    () => getCertificateDataById(props.id),
+    {
+      onError: (error) => {
+        showNotification('error', error.message || 'Không tải được dữ liệu')
+      }
+    }
   )
-  const isDegree = queryData.data?.certificateType !== undefined
+  const isDegree = queryData.data?.certificate?.certificateType !== undefined
   const queryFile = useSWR(
     props.isBlockchain ? undefined : `certificate-file-${props.id}`,
     () => getCertificateFile(props.id),
     {
       revalidateOnFocus: false,
-      shouldRetryOnError: false
+      shouldRetryOnError: false,
+      onError: () => {
+        showNotification('error', 'Không tải được tệp PDF')
+      }
     }
   )
 
@@ -33,7 +59,10 @@ const CertificateView: React.FC<Props> = (props) => {
     () => getBlockchainData(props.id),
     {
       revalidateOnFocus: false,
-      shouldRetryOnError: false
+      shouldRetryOnError: false,
+      onError: (error) => {
+        showNotification('error', error.message || 'Không tải được dữ liệu')
+      }
     }
   )
   const queryBlockchainFile = useSWR(
@@ -41,26 +70,32 @@ const CertificateView: React.FC<Props> = (props) => {
     () => getBlockchainFile(props.id),
     {
       revalidateOnFocus: false,
-      shouldRetryOnError: false
+      shouldRetryOnError: false,
+      onError: () => {
+        showNotification('error', 'Không tải được tệp PDF')
+      }
     }
   )
+
+  const currentDataQuery = props.isBlockchain ? queryBlockchainData : queryData
+  const currentFileQuery = props.isBlockchain ? queryBlockchainFile : queryFile
 
   const getCertificateItems = (data: any) => {
     return [
       {
         icon: <School className='h-5 w-5 text-gray-500' />,
         title: 'Trường đại học/Học viện',
-        value: `${data?.universityCode ?? 'KMA'} - ${data?.universityName ?? 'Học viện Kỹ thuật Mật mã'}`
+        value: `${data?.universityCode} - ${data?.universityName}`
       },
       {
         icon: <User className='h-5 w-5 text-gray-500' />,
         title: 'Sinh viên',
-        value: `${data?.studentCode ?? '20200000'} - ${data?.studentName ?? 'Nguyễn Ngọc Tuyền'}`
+        value: `${data?.studentCode} - ${data?.studentName}`
       },
       {
         icon: <Library className='h-5 w-5 text-gray-500' />,
         title: 'Ngành học',
-        value: `${data?.facultyCode ?? 'CNTT'} - ${data?.facultyName ?? 'Công nghệ thông tin'}`
+        value: `${data?.facultyCode} - ${data?.facultyName}`
       },
 
       {
@@ -81,7 +116,7 @@ const CertificateView: React.FC<Props> = (props) => {
       {
         icon: <FileTextIcon className='h-5 w-5 text-gray-500' />,
         title: 'Số vào sổ gốc cấp văn bằng',
-        value: data?.regNo ?? 512
+        value: data?.regNo
       },
       {
         icon: <Text className='h-5 w-5 text-gray-500' />,
@@ -101,17 +136,17 @@ const CertificateView: React.FC<Props> = (props) => {
       {
         icon: <School className='h-5 w-5 text-gray-500' />,
         title: 'Trường đại học/Học viện',
-        value: `${data?.universityCode ?? 'KMA'} - ${data?.universityName ?? 'Học viện Kỹ thuật Mật mã'}`
+        value: `${data?.universityCode} - ${data?.universityName}`
       },
       {
         icon: <User className='h-5 w-5 text-gray-500' />,
         title: 'Sinh viên',
-        value: `${data?.studentCode} - ${data?.studentName ?? 'Nguyễn Ngọc Tuyền'}`
+        value: `${data?.studentCode} - ${data?.studentName}`
       },
       {
         icon: <Library className='h-5 w-5 text-gray-500' />,
         title: 'Ngành học',
-        value: `${data?.facultyCode ?? 'CNTT'} - ${data?.facultyName ?? 'Công nghệ thông tin'}`
+        value: `${data?.facultyCode} - ${data?.facultyName}`
       },
       {
         icon: <Book className='h-5 w-5 text-gray-500' />,
@@ -142,7 +177,7 @@ const CertificateView: React.FC<Props> = (props) => {
       {
         icon: <FileTextIcon className='h-5 w-5 text-gray-500' />,
         title: 'Số vào sổ gốc cấp văn bằng',
-        value: data?.regNo ?? 512
+        value: data?.regNo
       },
       {
         icon: <Text className='h-5 w-5 text-gray-500' />,
@@ -157,31 +192,61 @@ const CertificateView: React.FC<Props> = (props) => {
     ]
   }
 
+  const getDecriptionViewItems = (data: any) => {
+    const items = isDegree ? getDegreeItems(data?.certificate) : getCertificateItems(data?.certificate)
+
+    if (props.isBlockchain) {
+      return [
+        {
+          icon: <Blocks className='h-5 w-5 text-gray-500' />,
+          title: 'Mã HASH',
+          value: (
+            <p className='max-w-[300px] truncate' title={data?.on_chain.cert_hash}>
+              {data?.on_chain.cert_hash}
+            </p>
+          )
+        },
+        ...items
+      ]
+    }
+
+    return items
+  }
+
   return (
     <div>
-      <DecriptionView
-        title={queryData.data?.name || 'Không có dữ liệu'}
-        items={
-          isDegree
-            ? getDegreeItems(props.isBlockchain ? queryBlockchainData.data : queryData.data)
-            : getCertificateItems(props.isBlockchain ? queryBlockchainData.data : queryData.data)
-        }
-        description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
-      />
-      {(props.isBlockchain ? queryBlockchainFile.data : queryFile.data) ? (
+      {currentDataQuery.isLoading ? null : !currentDataQuery.error ? (
+        <>
+          <Alert className={cn('mx-auto mb-4 max-w-[800px]', !props.isBlockchain && 'hidden')} variant='success'>
+            <CheckCircleIcon />
+            <AlertTitle>Thông báo</AlertTitle>
+            <AlertDescription>{currentDataQuery.data?.message || 'Không tải được dữ liệu'}</AlertDescription>
+          </Alert>
+          <DecriptionView
+            title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
+            items={getDecriptionViewItems(currentDataQuery?.data)}
+            description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
+          />
+        </>
+      ) : (
+        <>
+          <Alert className='mx-auto mb-4 max-w-[800px]' variant='destructive'>
+            <CircleX />
+            <AlertTitle>Lỗi</AlertTitle>
+            <AlertDescription>{currentDataQuery?.error?.message || 'Không tải được dữ liệu'}</AlertDescription>
+          </Alert>
+        </>
+      )}
+
+      {currentFileQuery.data ? (
         <>
           <Separator className='my-3' />
           <div className='flex items-center justify-between'>
             <h3 className='mb-3'>Tệp PDF</h3>
-            <CertificateBlankButton
-              action={() => (props.isBlockchain ? queryBlockchainFile.mutate() : queryFile.mutate())}
-            />
+            <CertificateBlankButton action={() => currentFileQuery.mutate()} />
           </div>
           <div className='mt-4 h-[700px]'>
-            <PDFView
-              url={props.isBlockchain ? queryBlockchainFile.data : queryFile.data}
-              loading={queryFile.isLoading}
-            />
+            <PDFView url={currentFileQuery?.data} loading={currentFileQuery.isLoading} />
           </div>{' '}
         </>
       ) : (

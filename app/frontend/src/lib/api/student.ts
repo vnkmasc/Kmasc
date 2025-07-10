@@ -16,6 +16,16 @@ export const getStudentById = async (id: string) => {
   return formatStudent(res.data)
 }
 
+export const getStudentById2 = async (id: string) => {
+  const res = await apiService('GET', queryString(['users', id]))
+  return {
+    ...formatStudent(res.data),
+    univeristyName: res.data.university_name,
+    universityCode: res.data.university_code,
+    facultyCode: res.data.faculty_code
+  }
+}
+
 export const createStudent = async (data: any) => {
   const res = await apiService('POST', 'users', formatStudent(data, true))
   return res
