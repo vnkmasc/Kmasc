@@ -27,6 +27,7 @@ const SearchVerifyCode = () => {
       setBlockchainVerifyCode(code)
       setVerifyCode(code)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

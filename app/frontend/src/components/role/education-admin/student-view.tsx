@@ -1,6 +1,6 @@
 'use client'
 
-import { getStudentInfoItems } from '@/app/(role)/student/information/page'
+import { getStudentInfoItems } from '@/lib/utils/render-ui'
 import DecriptionView from '@/components/common/description-view'
 import { Separator } from '@/components/ui/separator'
 import { getStudentById2 } from '@/lib/api/student'
