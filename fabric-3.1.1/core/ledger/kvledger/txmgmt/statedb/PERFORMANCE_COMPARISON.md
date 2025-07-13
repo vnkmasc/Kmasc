@@ -21,7 +21,7 @@ Script này sẽ:
 ### Bước 2: Chạy test với encryption disabled
 ```bash
 cd core/ledger/kvledger/txmgmt/statedb/test_perf_without_aes
-go run main_simple.go
+go run main.go
 ```
 
 ### Bước 3: Restore encryption gốc

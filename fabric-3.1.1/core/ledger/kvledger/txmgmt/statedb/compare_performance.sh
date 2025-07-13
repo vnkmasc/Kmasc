@@ -14,7 +14,7 @@ echo ""
 echo "2. Chạy test KHÔNG AES:"
 echo "----------------------------------------"
 cd ../test_perf_without_aes
-go run main_simple.go
+go run main.go
 
 echo ""
 echo "=========================================="

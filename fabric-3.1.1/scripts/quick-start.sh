@@ -116,43 +116,43 @@ check_go_version || install_go
 # Step 1: Fix repositories if needed
 step1_fix_repositories() {
     echo "Step 1: Checking repositories..."
-    run_script "fix-repositories.sh" "repository fix"
+    run_script "scripts/fix-repositories.sh" "repository fix"
 }
 
 # Step 2: Setup environment
 step2_setup_environment() {
     echo "Step 2: Setting up environment..."
-    run_script "setup-environment.sh" "environment setup"
+    run_script "scripts/setup-environment.sh" "environment setup"
 }
 
 # Step 3: Download fabric-samples
 step3_download_fabric_samples() {
     echo "Step 3: Downloading fabric-samples..."
-    run_script "download-fabric-samples.sh" "fabric-samples download"
+    run_script "scripts/download-fabric-samples.sh" "fabric-samples download"
 }
 
 # Step 4: Test environment
 step4_test_environment() {
     echo "Step 4: Testing environment..."
-    run_script "test_environment.sh" "environment test"
+    run_script "scripts/test_environment.sh" "environment test"
 }
 
 # Step 5: Build encryption library
 step5_build_encryption() {
     echo "Step 5: Building encryption library..."
-    run_script "build-encryption.sh" "encryption library build"
+    run_script "scripts/build-encryption.sh" "encryption library build"
 }
 
 # Step 6: Build Fabric
 step6_build_fabric() {
     echo "Step 6: Building Fabric..."
-    run_script "build-fabric.sh" "Fabric build"
+    run_script "scripts/build-fabric.sh" "Fabric build"
 }
 
 # Step 7: Start network
 step7_start_network() {
     echo "Step 7: Starting test network..."
-    run_script "start-network.sh" "test network startup"
+    run_script "scripts/start-network.sh" "test network startup"
 }
 
 # Step 8: Show next steps

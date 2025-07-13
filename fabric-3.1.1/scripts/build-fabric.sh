@@ -11,7 +11,7 @@ echo "Starting build process..."
 echo
 
 # Navigate to fabric source directory
-FABRIC_DIR="$(cd "$(dirname "$0")" && pwd)"
+FABRIC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$FABRIC_DIR"
 
 echo "📁 Current directory: $(pwd)"

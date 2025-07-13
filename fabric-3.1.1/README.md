@@ -59,7 +59,7 @@ Dự án này bao gồm một bộ scripts modular để dễ dàng setup và qu
 - `check-environment.sh` - Kiểm tra môi trường
 - `list-scripts.sh` - Liệt kê tất cả scripts
 
-**📖 Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết chi tiết về tất cả scripts và cách sử dụng.**
+**📖 Xem [SCRIPTS.md](SCRIPTS.md) để biết chi tiết về tất cả scripts và cách sử dụng.**
 
 ## Cài đặt thủ công
 
@@ -191,7 +191,7 @@ go mod tidy
 make native
 ```
 
-**🔍 Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết thêm chi tiết về troubleshooting và các script hỗ trợ.**
+**🔍 Xem [SCRIPTS.md](SCRIPTS.md) để biết thêm chi tiết về troubleshooting và các script hỗ trợ.**
 
 ## Performance
 
@@ -224,4 +224,4 @@ Apache 2.0 License
 - Tạo issue trên GitHub
 - Kiểm tra README_ENCRYPTION.md cho chi tiết kỹ thuật
 - Chạy `./check-environment.sh` để debug môi trường
-- Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết chi tiết về scripts
+- Xem [SCRIPTS.md](SCRIPTS.md) để biết chi tiết về scripts
