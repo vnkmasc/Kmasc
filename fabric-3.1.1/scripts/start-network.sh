@@ -9,7 +9,7 @@ set -e
 echo "=== Hyperledger Fabric Test Network Startup Script ==="
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEST_NETWORK_DIR="$SCRIPT_DIR/fabric-samples/test-network"
+TEST_NETWORK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/fabric-samples/test-network"
 cd "$TEST_NETWORK_DIR"
 
 echo "📁 Current directory: $(pwd)"
@@ -29,8 +29,8 @@ fi
 echo "✅ Docker is ready"
 
 # --- Tự động chuẩn bị config cho test-network ---
-CONFIG_DIR="$SCRIPT_DIR/fabric-samples/config"
-CORE_YAML_SRC="$SCRIPT_DIR/fabric-samples/test-network/addOrg3/compose/docker/peercfg/core.yaml"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/fabric-samples/config"
+CORE_YAML_SRC="$(cd "$SCRIPT_DIR/.." && pwd)/fabric-samples/test-network/addOrg3/compose/docker/peercfg/core.yaml"
 CORE_YAML_DEST="$CONFIG_DIR/core.yaml"
 
 if [ ! -d "$CONFIG_DIR" ]; then

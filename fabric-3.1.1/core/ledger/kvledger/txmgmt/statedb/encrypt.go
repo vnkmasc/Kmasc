@@ -3,11 +3,18 @@
 
 package statedb
 
+/*
+#cgo LDFLAGS: -L. -lencryption -lssl -lcrypto
+#include "encrypt.h"
+*/
+import "C"
+
 import (
 	"fmt"
 	"os"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/hyperledger/fabric-lib-go/common/flogging"
 )
@@ -23,7 +30,7 @@ var (
 
 func logToFile(op, ns, key, status, errMsg string) {
 	logFileOnce.Do(func() {
-		logFile, logFileErr = os.OpenFile("/root/state_encryption_disabled.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		logFile, logFileErr = os.OpenFile("/root/state_encryption.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	})
 	if logFileErr != nil || logFile == nil {
 		return
@@ -34,7 +41,7 @@ func logToFile(op, ns, key, status, errMsg string) {
 	timestamp := fmt.Sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%06dZ",
 		now.Year(), now.Month(), now.Day(),
 		now.Hour(), now.Minute(), now.Second(),
-		now.Nanosecond()/1000)
+		now.Nanosecond()/1000) // Convert nanoseconds to microseconds
 	msg := timestamp + " " + op + " ns=" + ns + " key=" + key + " " + status
 	if errMsg != "" {
 		msg += " ERROR: " + errMsg
@@ -42,22 +49,50 @@ func logToFile(op, ns, key, status, errMsg string) {
 	logFile.WriteString(msg + "\n")
 }
 
-// EncryptValue - DISABLED: trả về nguyên input (không mã hóa)
+// EncryptValue mã hóa giá trị sử dụng hàm C
 func EncryptValue(value []byte, ns, key string) []byte {
 	if value == nil || len(value) == 0 {
-		logToFile("ENCRYPT_DISABLED", ns, key, "SKIP_EMPTY", "")
+		logToFile("ENCRYPT", ns, key, "SKIP_EMPTY", "")
 		return value
 	}
-	logToFile("ENCRYPT_DISABLED", ns, key, "SUCCESS", "Encryption disabled - returning original data")
-	return value
+	ciphertextLen := len(value) + 32 // Thêm padding cho AES block size
+	ciphertext := make([]byte, ciphertextLen)
+	var cPlaintext *C.uchar
+	if len(value) > 0 {
+		cPlaintext = (*C.uchar)(unsafe.Pointer(&value[0]))
+	}
+	cCiphertext := (*C.uchar)(unsafe.Pointer(&ciphertext[0]))
+	cCiphertextLen := C.int(0)
+	result := C.encrypt_aes_cbc(cPlaintext, C.int(len(value)), cCiphertext, &cCiphertextLen)
+	if result != 0 {
+		logToFile("ENCRYPT", ns, key, "FAIL", "C function error")
+		return nil
+	}
+	logToFile("ENCRYPT", ns, key, "SUCCESS", "")
+	encryptedData := ciphertext[:int(cCiphertextLen)]
+	return encryptedData
 }
 
-// DecryptValue - DISABLED: trả về nguyên input (không giải mã)
+// DecryptValue giải mã giá trị sử dụng hàm C
 func DecryptValue(value []byte, ns, key string) []byte {
 	if value == nil || len(value) == 0 {
-		logToFile("DECRYPT_DISABLED", ns, key, "SKIP_EMPTY", "")
+		logToFile("DECRYPT", ns, key, "SKIP_EMPTY", "")
 		return value
 	}
-	logToFile("DECRYPT_DISABLED", ns, key, "SUCCESS", "Decryption disabled - returning original data")
-	return value
+	plaintextLen := len(value)
+	plaintext := make([]byte, plaintextLen)
+	var cCiphertext *C.uchar
+	if len(value) > 0 {
+		cCiphertext = (*C.uchar)(unsafe.Pointer(&value[0]))
+	}
+	cPlaintext := (*C.uchar)(unsafe.Pointer(&plaintext[0]))
+	cPlaintextLen := C.int(0)
+	result := C.decrypt_aes_cbc(cCiphertext, C.int(len(value)), cPlaintext, &cPlaintextLen)
+	if result != 0 {
+		logToFile("DECRYPT", ns, key, "FAIL", "C function error")
+		return nil
+	}
+	logToFile("DECRYPT", ns, key, "SUCCESS", "")
+	decryptedData := plaintext[:int(cPlaintextLen)]
+	return decryptedData
 }
