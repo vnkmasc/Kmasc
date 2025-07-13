@@ -22,8 +22,8 @@ import (
 type BlockchainService interface {
 	PushCertificateToChain(ctx context.Context, certificateID primitive.ObjectID) (string, error)
 	GetCertificateFromChain(ctx context.Context, certificateID string) (*models.CertificateOnChain, error)
-	VerifyCertificateIntegrity(ctx context.Context, certID string) (bool, string, *models.CertificateOnChain, *models.Certificate, error)
 	VerifyFileByID(ctx context.Context, certID primitive.ObjectID) (io.ReadCloser, string, error)
+	VerifyCertificateIntegrity(ctx context.Context, certID string) (bool, string, *models.CertificateOnChain, *models.Certificate, *models.User, *models.Faculty, *models.University, error)
 }
 
 type blockchainService struct {
@@ -58,8 +58,18 @@ func (s *blockchainService) PushCertificateToChain(ctx context.Context, certific
 	if err != nil || cert == nil {
 		return "", common.ErrCertificateNotFound
 	}
+
 	if cert.CertHash == "" {
-		return "", fmt.Errorf("certificate chưa có cert_hash")
+		return "", fmt.Errorf("%w", common.ErrCertificateMissingHash)
+	}
+	if !cert.PhysicalCopyIssued {
+		return "", fmt.Errorf("%w", common.ErrCertificateNoFile)
+	}
+	// if !cert.Signed {
+	// 	return "", fmt.Errorf("%w", common.ErrCertificateNotSigned)
+	// }
+	if cert.OnBlockchain {
+		return "", fmt.Errorf("%w", common.ErrCertificateAlreadyOnChain)
 	}
 
 	chainData := models.CertificateOnChain{
@@ -82,11 +92,12 @@ func (s *blockchainService) PushCertificateToChain(ctx context.Context, certific
 	update := bson.M{
 		"$set": bson.M{
 			"blockchain_tx_id": txID,
+			"on_blockchain":    true,
 			"updated_at":       time.Now(),
 		},
 	}
 	if err := s.certRepo.UpdateCertificateByID(ctx, certificateID, update); err != nil {
-		return "", fmt.Errorf("không thể cập nhật blockchain_tx_id: %v", err)
+		return "", fmt.Errorf("không thể cập nhật blockchain_tx_id: %w", err)
 	}
 
 	return txID, nil
@@ -100,44 +111,52 @@ func (s *blockchainService) GetCertificateFromChain(ctx context.Context, certifi
 	return cert, nil
 }
 
-func (s *blockchainService) VerifyCertificateIntegrity(ctx context.Context, certID string) (bool, string, *models.CertificateOnChain, *models.Certificate, error) {
+func (s *blockchainService) VerifyCertificateIntegrity(ctx context.Context, certID string) (
+	bool, string,
+	*models.CertificateOnChain,
+	*models.Certificate,
+	*models.User,
+	*models.Faculty,
+	*models.University,
+	error,
+) {
 	onChainCert, err := s.fabricClient.GetCertificateByID(certID)
 	if err != nil {
-		return false, "", nil, nil, fmt.Errorf("lỗi lấy từ blockchain: %w", err)
+		return false, "", nil, nil, nil, nil, nil, fmt.Errorf("lỗi lấy từ blockchain: %w", err)
 	}
 
 	certificateObjID, err := primitive.ObjectIDFromHex(certID)
 	if err != nil {
-		return false, "", nil, nil, fmt.Errorf("certID không hợp lệ: %w", err)
+		return false, "", nil, nil, nil, nil, nil, fmt.Errorf("certID không hợp lệ: %w", err)
 	}
 
 	cert, err := s.certRepo.GetCertificateByID(ctx, certificateObjID)
 	if err != nil {
-		return false, "", nil, nil, fmt.Errorf("không tìm thấy văn bằng trong MongoDB: %w", err)
+		return false, "", nil, nil, nil, nil, nil, fmt.Errorf("không tìm thấy văn bằng trong MongoDB: %w", err)
 	}
 
 	user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
 	if err != nil {
-		return false, "", nil, nil, fmt.Errorf("không tìm thấy sinh viên: %w", err)
+		return false, "", nil, nil, nil, nil, nil, fmt.Errorf("không tìm thấy sinh viên: %w", err)
 	}
 
 	faculty, err := s.facultyRepo.FindByID(ctx, cert.FacultyID)
 	if err != nil {
-		return false, "", nil, nil, fmt.Errorf("không tìm thấy khoa: %w", err)
+		return false, "", nil, nil, nil, nil, nil, fmt.Errorf("không tìm thấy khoa: %w", err)
 	}
 
 	university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
 	if err != nil {
-		return false, "", nil, nil, fmt.Errorf("không tìm thấy trường đại học: %w", err)
+		return false, "", nil, nil, nil, nil, nil, fmt.Errorf("không tìm thấy trường đại học: %w", err)
 	}
 
 	localHash := generateCertificateHash(cert, user, faculty, university)
 
 	if localHash != onChainCert.CertHash {
-		return false, "Dữ liệu đã bị thay đổi!", onChainCert, cert, nil
+		return false, "Dữ liệu đã bị thay đổi!", onChainCert, cert, user, faculty, university, nil
 	}
 
-	return true, "Dữ liệu khớp hoàn toàn với blockchain", onChainCert, cert, nil
+	return true, "Dữ liệu khớp hoàn toàn với blockchain", onChainCert, cert, user, faculty, university, nil
 }
 
 func (s *blockchainService) VerifyFileByID(ctx context.Context, certID primitive.ObjectID) (io.ReadCloser, string, error) {

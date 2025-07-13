@@ -7,7 +7,16 @@ export const formatStudent = (data: any, isSendToServer: boolean = false) => {
         full_name: data.name,
         email: data.email,
         faculty_code: data.faculty,
-        course: String(data.year ?? '')
+        course: String(data.year ?? ''),
+        citizen_id_number: data.citizenId,
+        ethnicity: data.ethnicity,
+        current_address: data.currentAddress,
+        birth_address: data.birthAddress,
+        union_join_date: data.unionJoinDate,
+        party_join_date: data.partyJoinDate,
+        description: data.description,
+        date_of_birth: data.dateOfBirth ? format(new Date(data.dateOfBirth), 'dd/MM/yyyy') : undefined,
+        gender: Boolean(data.gender)
       }
     : {
         id: data.id,
@@ -17,7 +26,16 @@ export const formatStudent = (data: any, isSendToServer: boolean = false) => {
         faculty: data.faculty_code,
         facultyName: data.faculty_name,
         year: data.course,
-        status: String(data.status)
+        status: String(data.status),
+        citizenId: data.citizen_id_number,
+        ethnicity: data.ethnicity,
+        currentAddress: data.current_address,
+        birthAddress: data.birth_address,
+        unionJoinDate: data.union_join_date,
+        partyJoinDate: data.party_join_date,
+        description: data.description,
+        dateOfBirth: data.date_of_birth,
+        gender: String(data.gender)
       }
 }
 
@@ -25,12 +43,14 @@ export const formatFaculty = (data: any, isSendToServer: boolean = false) => {
   return isSendToServer
     ? {
         faculty_code: data.code,
-        faculty_name: data.name
+        faculty_name: data.name,
+        description: data.description
       }
     : {
         id: data.id,
         code: data.faculty_code,
-        name: data.faculty_name
+        name: data.faculty_name,
+        description: data.description
       }
 }
 
@@ -49,7 +69,7 @@ export const formatCertificate = (data: any, isSendToServer: boolean = false) =>
         certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
         serial_number: data.serialNumber,
         reg_no: data.regNo,
-        issue_date: data.date ? format(new Date(data.date), 'dd/mm/yyyy') : undefined
+        issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined
       }
     : {
         id: data.id,
@@ -78,7 +98,9 @@ export const formatCertificateView = (data: any) => {
     universityCode: data.university_code,
     serialNumber: data.serial_number,
     regNo: data.reg_no,
-    signed: data.signed
+    signed: data.signed,
+    description: data.description,
+    gpa: data.gpa
   }
 }
 
@@ -103,21 +125,42 @@ export const formatCertificateVerifyCode = (data: any, isSendToServer: boolean =
       }
 }
 
+const getIsDiscipline = (data: any) => {
+  switch (data) {
+    case 'true':
+      return true
+    case 'false':
+      return false
+    case undefined:
+      return undefined
+    case '':
+      return undefined
+    default:
+      return undefined
+  }
+}
+
 export const formatRewardDiscipline = (data: any, isSendToServer: boolean = false) => {
   return isSendToServer
     ? {
         student_code: data.studentCode,
         name: data.name,
         decision_number: data.decisionNumber,
-        is_discipline: Boolean(data.isDiscipline)
+        is_discipline: !!data.disciplineLevel || getIsDiscipline(data.isDiscipline),
+        description: data.description,
+        discipline_level: data.disciplineLevel ? Number(data.disciplineLevel) : undefined
       }
     : {
         id: data.id,
+        name: data.name,
         studentCode: data.student_code,
         studentName: data.student_name,
         faculty: data.faculty_code,
         facultyName: data.faculty_name,
         decisionNumber: data.decision_number,
-        isDiscipline: data.is_discipline
+        description: data.description,
+        isDiscipline: data.is_discipline,
+        disciplineLevel: String(data.discipline_level),
+        createdAt: format(new Date(data.created_at), 'dd/MM/yyyy HH:mm:ss')
       }
 }

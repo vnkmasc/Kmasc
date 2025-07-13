@@ -134,6 +134,12 @@ const FacultyManagementPage = () => {
             name: 'name',
             label: 'Tên khoa',
             validator: validateNoEmpty('Tên khoa')
+          },
+          {
+            type: 'textarea',
+            placeholder: 'Nhập mô tả',
+            name: 'description',
+            label: 'Mô tả'
           }
         ]}
         data={queryFacultyDetail.data || {}}

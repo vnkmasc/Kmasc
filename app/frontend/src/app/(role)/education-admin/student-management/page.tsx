@@ -1,5 +1,4 @@
 'use client'
-
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'
@@ -10,7 +9,7 @@ import TableList from '@/components/role/education-admin/table-list'
 import UploadButton from '@/components/role/education-admin/upload-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { PAGE_SIZE, STUDENT_STATUS_OPTIONS } from '@/constants/common'
+import { GENDER_SELECT_SETTING, PAGE_SIZE, STUDENT_STATUS_OPTIONS } from '@/constants/common'
 
 import {
   createStudent,
@@ -23,8 +22,9 @@ import {
 import { formatResponseImportExcel, showNotification } from '@/lib/utils/common'
 import { formatFacultyOptions, formatStudent } from '@/lib/utils/format-api'
 
-import { validateAcademicEmail } from '@/lib/utils/validators'
+import { validateAcademicEmail, validateCitizenId, validateNoEmpty } from '@/lib/utils/validators'
 import { PlusIcon } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useState } from 'react'
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
@@ -45,12 +45,19 @@ const StudentManagementPage: React.FC = () => {
     [filter]
   )
 
-  const queryStudents = useSWR('students' + JSON.stringify(filter), () =>
-    searchStudent({
-      ...formatStudent(filter, true),
-      page: filter.page || 1,
-      page_size: PAGE_SIZE
-    })
+  const queryStudents = useSWR(
+    'students' + JSON.stringify(filter),
+    () =>
+      searchStudent({
+        ...formatStudent(filter, true),
+        page: filter.page || 1,
+        page_size: PAGE_SIZE
+      }),
+    {
+      onError: (error) => {
+        showNotification('error', error.message || 'Lỗi khi lấy danh sách sinh viên')
+      }
+    }
   )
 
   const queryStudentDetail = useSWR(idDetail, () => getStudentById(idDetail as string), {
@@ -172,6 +179,11 @@ const StudentManagementPage: React.FC = () => {
             placeholder: 'Nhập họ và tên'
           },
           {
+            type: 'input',
+            name: 'citizenId',
+            placeholder: 'Nhập CCCD'
+          },
+          {
             type: 'select',
             name: 'faculty',
             placeholder: 'Chọn chuyên ngành',
@@ -196,6 +208,7 @@ const StudentManagementPage: React.FC = () => {
               }
             }
           },
+
           {
             type: 'select',
             name: 'status',
@@ -216,7 +229,12 @@ const StudentManagementPage: React.FC = () => {
       <TableList
         data={queryStudents.data?.data || []}
         items={[
-          { header: 'Mã SV', value: 'code', className: 'min-w-[80px] font-semibold text-blue-500' },
+          {
+            header: 'Mã SV',
+            value: 'code',
+            className: 'min-w-[80px] font-semibold text-blue-500',
+            render: (item) => <Link href={`/education-admin/student-management/${item.id}`}>{item.code}</Link>
+          },
           { header: 'Họ và tên', value: 'name', className: 'min-w-[200px]' },
           { header: 'Email', value: 'email', className: 'min-w-[200px]' },
           { header: 'Tên khoa', value: 'facultyName', className: 'min-w-[200px]' },
@@ -269,6 +287,73 @@ const StudentManagementPage: React.FC = () => {
           },
           {
             type: 'input',
+            label: 'Ngày sinh',
+            name: 'dateOfBirth',
+            setting: {
+              input: {
+                type: 'date'
+              }
+            },
+            validator: validateNoEmpty('Ngày sinh')
+          },
+          {
+            type: 'select',
+            label: 'Giới tính',
+            name: 'gender',
+            setting: GENDER_SELECT_SETTING,
+            validator: validateNoEmpty('Giới tính')
+          },
+          {
+            type: 'input',
+            label: 'Căn cước công dân',
+            name: 'citizenId',
+            validator: validateCitizenId,
+            placeholder: 'VD: 023456789012'
+          },
+          {
+            type: 'input',
+            label: 'Dân tộc',
+            name: 'ethnicity',
+            placeholder: 'VD: Kinh'
+          },
+          {
+            type: 'input',
+            label: 'Địa chỉ hiện tại',
+            name: 'currentAddress',
+            placeholder: 'VD: 123 Đường ABC, Quận XYZ, TP. HCM'
+          },
+          {
+            type: 'input',
+            label: 'Nơi sinh',
+            name: 'birthAddress',
+            placeholder: 'VD: 123 Đường ABC, Quận XYZ, TP. HCM'
+          },
+          {
+            type: 'input',
+            label: 'Ngày tham gia Đoàn',
+            name: 'unionJoinDate',
+            setting: {
+              input: {
+                type: 'date'
+              }
+            },
+
+            placeholder: 'VD: 01/01/2025'
+          },
+          {
+            type: 'input',
+            label: 'Ngày tham gia Đảng',
+            name: 'partyJoinDate',
+            setting: {
+              input: {
+                type: 'date'
+              }
+            },
+
+            placeholder: 'VD: 01/01/2025'
+          },
+          {
+            type: 'input',
             label: 'Email',
             name: 'email',
             validator: validateAcademicEmail,
@@ -292,7 +377,7 @@ const StudentManagementPage: React.FC = () => {
           },
           {
             type: 'input',
-            label: 'Năm',
+            label: 'Năm nhập học',
             name: 'year',
             setting: {
               input: {
@@ -310,6 +395,12 @@ const StudentManagementPage: React.FC = () => {
                 message: 'Năm đào tạo không thể quá hiện tại'
               }),
             defaultValue: new Date().getFullYear()
+          },
+          {
+            type: 'textarea',
+            name: 'description',
+            placeholder: 'Nhập mô tả',
+            label: 'Mô tả'
           },
           {
             type: 'select',

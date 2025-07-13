@@ -163,7 +163,12 @@ const AuthPage = () => {
               >
                 <ArrowLeft /> Quay lại
               </Button>
-              <Button className='flex-1' onClick={() => mutateSendOTP.trigger()} isLoading={mutateSendOTP.isMutating}>
+              <Button
+                className='flex-1'
+                variant={'secondary'}
+                onClick={() => mutateSendOTP.trigger()}
+                isLoading={mutateSendOTP.isMutating}
+              >
                 <Send /> Gửi lại mã OTP
               </Button>
             </div>

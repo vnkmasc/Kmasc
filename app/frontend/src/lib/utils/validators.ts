@@ -37,3 +37,16 @@ export const validateNoEmpty = (name: string) => {
       message: `${name} không được để trống`
     })
 }
+
+export const validateCitizenId = z
+  .string()
+  .trim()
+  .nonempty({
+    message: 'CMND không được để trống'
+  })
+  .min(12, {
+    message: 'CMND phải có 12 ký tự'
+  })
+  .regex(/^\d+$/, {
+    message: 'CMND chỉ được chứa các ký tự số'
+  })

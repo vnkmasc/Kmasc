@@ -9,7 +9,7 @@ const PDFView: React.FC<Props> = (props) => {
   if (!props.url && !props.loading)
     return (
       <div className='h-full w-full'>
-        <p className='text-center text-red-500'>Không có file PDF</p>
+        <p className='text-center text-red-500'> Không có tệp PDF</p>
       </div>
     )
   if (props.loading)

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -266,66 +267,51 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 	)
 
 	for i, row := range rows {
-		if i == 0 {
+		if i == 0 || len(row) < 7 {
 			continue
 		}
 
 		result := map[string]interface{}{"row": i + 1}
 
-		if len(row) < 5 {
-			result["error"] = "Thiếu dữ liệu"
+		// Giới tính
+		gender := strings.EqualFold(getValue(row, 6), "Nam")
+
+		// Parse ngày
+		dob, errDOB := parseDate(getValue(row, 7))
+		unionDate, _ := parseDate(getValue(row, 11))
+		partyDate, _ := parseDate(getValue(row, 12))
+
+		if errDOB != nil {
+			result["error"] = fmt.Sprintf("Ngày sinh không hợp lệ: %s", getValue(row, 7))
 			errorResults = append(errorResults, result)
 			continue
 		}
 
-		// Map Excel columns to proper field names for better validation
 		user := &models.CreateUserRequest{
-			StudentCode:     strings.TrimSpace(row[0]),
-			FullName:        strings.TrimSpace(row[1]),
-			Email:           strings.TrimSpace(row[2]),
-			FacultyCode:     strings.TrimSpace(row[3]),
-			Course:          strings.TrimSpace(row[4]),
-			CitizenIdNumber: strings.TrimSpace(row[5]),
-			Gender:          row[6] == "Nam",
+			StudentCode:     getValue(row, 0),
+			FullName:        getValue(row, 1),
+			Email:           getValue(row, 2),
+			FacultyCode:     getValue(row, 3),
+			Course:          getValue(row, 4),
+			CitizenIdNumber: getValue(row, 5),
+			Gender:          gender,
+			DateOfBirth:     dob,
+			Ethnicity:       getValue(row, 8),
+			CurrentAddress:  getValue(row, 9),
+			BirthAddress:    getValue(row, 10),
+			UnionJoinDate:   unionDate,
+			PartyJoinDate:   partyDate,
+			Description:     getValue(row, 13),
 		}
 
-		if len(row) > 7 && row[7] != "" {
-			user.DateOfBirth = row[7]
-		}
-
-		if len(row) > 8 && row[8] != "" {
-			user.Ethnicity = row[8]
-		}
-
-		if len(row) > 9 && row[9] != "" {
-			user.CurrentAddress = row[9]
-		}
-
-		if len(row) > 10 && row[10] != "" {
-			user.BirthAddress = row[10]
-		}
-
-		if len(row) > 11 && row[11] != "" {
-			user.UnionJoinDate = row[11]
-		}
-
-		if len(row) > 12 && row[12] != "" {
-			user.PartyJoinDate = row[12]
-		}
-
-		if len(row) > 13 && row[13] != "" {
-			user.Description = row[13]
-		}
-
-		// Validate the user data first
+		// Validate binding
 		if err := validator.New().Struct(user); err != nil {
 			if errs, ok := common.ParseValidationError(err); ok {
-				// Combine all validation errors into a single message
-				var errorMsgs []string
+				var messages []string
 				for _, msg := range errs {
-					errorMsgs = append(errorMsgs, msg)
+					messages = append(messages, msg)
 				}
-				result["error"] = strings.Join(errorMsgs, "; ")
+				result["error"] = strings.Join(messages, "; ")
 			} else {
 				result["error"] = "Dữ liệu không hợp lệ"
 			}
@@ -333,13 +319,9 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 			continue
 		}
 
-		_, err := h.userService.CreateUser(c.Request.Context(), claims, user)
+		_, err = h.userService.CreateUser(c.Request.Context(), claims, user)
 		if err != nil {
 			switch {
-			case errors.Is(err, common.ErrUnauthorized):
-				result["error"] = "Bạn chưa đăng nhập hoặc token không hợp lệ"
-			case errors.Is(err, common.ErrInvalidToken):
-				result["error"] = "Token không hợp lệ"
 			case errors.Is(err, common.ErrStudentIDExists):
 				result["error"] = "Mã sinh viên đã tồn tại"
 			case errors.Is(err, common.ErrEmailExists):
@@ -348,7 +330,6 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 				result["error"] = "Không tìm thấy khoa"
 			case errors.Is(err, common.ErrUniversityNotFound):
 				result["error"] = "Không tìm thấy trường đại học"
-
 			default:
 				result["error"] = err.Error()
 			}
@@ -359,24 +340,33 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 		}
 	}
 
-	if len(errorResults) == 0 {
-		c.JSON(http.StatusCreated, gin.H{
-			"success_count": len(successResults),
-			"data": gin.H{
-				"success": successResults,
-				"error":   []map[string]interface{}{},
-			},
-		})
-	} else {
-		c.JSON(http.StatusMultiStatus, gin.H{
-			"success_count": len(successResults),
-			"error_count":   len(errorResults),
-			"data": gin.H{
-				"success": successResults,
-				"error":   errorResults,
-			},
-		})
+	c.JSON(http.StatusOK, gin.H{
+		"success_count": len(successResults),
+		"error_count":   len(errorResults),
+		"data": gin.H{
+			"success": successResults,
+			"error":   errorResults,
+		},
+	})
+}
+
+func getValue(row []string, index int) string {
+	if len(row) > index {
+		return strings.TrimSpace(row[index])
 	}
+	return ""
+}
+
+func parseDate(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", nil
+	}
+	t, err := time.Parse("02/01/2006", s)
+	if err != nil {
+		return "", err
+	}
+	return t.Format("2006-01-02"), nil
 }
 
 func (h *UserHandler) GetUsersByFacultyCode(c *gin.Context) {

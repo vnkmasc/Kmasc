@@ -29,7 +29,10 @@ const TableList: React.FC<Props> = (props) => {
               <TableCell>{index + 1 + ((props.page ?? 1) - 1) * (props.pageSize ?? PAGE_SIZE)}</TableCell>
               {props.items.map((child, index) => (
                 <TableCell key={index}>
-                  <div className={`${child.className} truncate`}>
+                  <div
+                    className={`${child.className} truncate`}
+                    title={typeof item[child.value] === 'string' ? item[child.value] : ''}
+                  >
                     {child.render ? child.render(item) : item[child.value]}
                   </div>
                 </TableCell>

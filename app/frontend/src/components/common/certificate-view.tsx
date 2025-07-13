@@ -1,132 +1,252 @@
 'use client'
 
-import { getCertificateDataById, getCertificateFile } from '@/lib/api/certificate'
+import { getBlockchainData, getBlockchainFile, getCertificateDataById, getCertificateFile } from '@/lib/api/certificate'
 import useSWR from 'swr'
 import DecriptionView from './description-view'
-import { Book, Calendar, FileTextIcon, Key, Library, School, TagsIcon, User } from 'lucide-react'
+import {
+  Blocks,
+  Book,
+  Calendar,
+  ChartAreaIcon,
+  CheckCircleIcon,
+  CircleX,
+  FileTextIcon,
+  Key,
+  Library,
+  School,
+  TagsIcon,
+  Text,
+  User
+} from 'lucide-react'
 import { Badge } from '../ui/badge'
 import PDFView from './pdf-view'
 import { Separator } from '../ui/separator'
 import CertificateBlankButton from './certificate-blank-button'
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
+import { showNotification } from '@/lib/utils/common'
+import { cn } from '@/lib/utils'
 
 interface Props {
+  isBlockchain: boolean
   id: string
 }
 
 const CertificateView: React.FC<Props> = (props) => {
-  const queryData = useSWR(`certificate-view-${props.id}`, () => getCertificateDataById(props.id))
-  const isDegree = queryData.data?.certificateType !== undefined
-  const queryFile = useSWR(`certificate-file-${props.id}`, () => getCertificateFile(props.id), {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false
-  })
-
-  const certificateItems = [
+  const queryData = useSWR(
+    props.isBlockchain ? undefined : `certificate-view-${props.id}`,
+    () => getCertificateDataById(props.id),
     {
-      icon: <School className='h-5 w-5 text-gray-500' />,
-      title: 'Trường đại học/Học viện',
-      value: `${queryData.data?.universityCode} - ${queryData.data?.universityName}`
-    },
-    {
-      icon: <User className='h-5 w-5 text-gray-500' />,
-      title: 'Sinh viên',
-      value: `${queryData.data?.studentCode} - ${queryData.data?.studentName}`
-    },
-    {
-      icon: <Library className='h-5 w-5 text-gray-500' />,
-      title: 'Ngành học',
-      value: `${queryData.data?.facultyCode} - ${queryData.data?.facultyName}`
-    },
-    {
-      icon: <Book className='h-5 w-5 text-gray-500' />,
-      title: 'Chứng chỉ',
-      value: queryData.data?.name
-    },
-    {
-      icon: <Calendar className='h-5 w-5 text-gray-500' />,
-      title: 'Ngày cấp',
-      value: queryData.data?.date
-    },
-    {
-      icon: <Key className='h-5 w-5 text-gray-500' />,
-      title: 'Trạng thái ký',
-      value: (
-        <Badge variant={queryData.data?.signed ? 'default' : 'outline'}>
-          {queryData.data?.signed ? 'Đã ký' : 'Chưa ký'}
-        </Badge>
-      )
+      onError: (error) => {
+        showNotification('error', error.message || 'Không tải được dữ liệu')
+      }
     }
-  ]
-
-  const degreeItems = [
+  )
+  const isDegree = queryData.data?.certificate?.certificateType !== undefined
+  const queryFile = useSWR(
+    props.isBlockchain ? undefined : `certificate-file-${props.id}`,
+    () => getCertificateFile(props.id),
     {
-      icon: <School className='h-5 w-5 text-gray-500' />,
-      title: 'Trường đại học/Học viện',
-      value: `${queryData.data?.universityCode} - ${queryData.data?.universityName}`
-    },
-    {
-      icon: <User className='h-5 w-5 text-gray-500' />,
-      title: 'Sinh viên',
-      value: `${queryData.data?.studentCode} - ${queryData.data?.studentName}`
-    },
-    {
-      icon: <Library className='h-5 w-5 text-gray-500' />,
-      title: 'Ngành học',
-      value: `${queryData.data?.facultyCode} - ${queryData.data?.facultyName}`
-    },
-    {
-      icon: <Book className='h-5 w-5 text-gray-500' />,
-      title: 'Văn bằng',
-      value: (
-        <div>
-          <Badge className='bg-blue-500 text-white hover:bg-blue-400'>{queryData.data?.certificateType ?? '-'}</Badge>
-          {' - '}
-          <span>{queryData.data?.name}</span>
-        </div>
-      )
-    },
-    {
-      icon: <Calendar className='h-5 w-5 text-gray-500' />,
-      title: 'Ngày cấp',
-      value: queryData.data?.date
-    },
-    {
-      icon: <TagsIcon className='h-5 w-5 text-gray-500' />,
-      title: 'Số hiệu',
-      value: queryData.data?.serialNumber
-    },
-    {
-      icon: <FileTextIcon className='h-5 w-5 text-gray-500' />,
-      title: 'Số vào sổ gốc cấp văn bằng',
-      value: queryData.data?.regNo
-    },
-    {
-      icon: <Key className='h-5 w-5 text-gray-500' />,
-      title: 'Trạng thái ký',
-      value: (
-        <Badge variant={queryData.data?.signed ? 'default' : 'outline'}>
-          {queryData.data?.signed ? 'Đã ký' : 'Chưa ký'}
-        </Badge>
-      )
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+      onError: () => {
+        showNotification('error', 'Không tải được tệp PDF')
+      }
     }
-  ]
+  )
+
+  const queryBlockchainData = useSWR(
+    props.isBlockchain ? `blockchain-data-${props.id}` : undefined,
+    () => getBlockchainData(props.id),
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+      onError: (error) => {
+        showNotification('error', error.message || 'Không tải được dữ liệu')
+      }
+    }
+  )
+  const queryBlockchainFile = useSWR(
+    props.isBlockchain ? `blockchain-file-${props.id}` : undefined,
+    () => getBlockchainFile(props.id),
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+      onError: () => {
+        showNotification('error', 'Không tải được tệp PDF')
+      }
+    }
+  )
+
+  const currentDataQuery = props.isBlockchain ? queryBlockchainData : queryData
+  const currentFileQuery = props.isBlockchain ? queryBlockchainFile : queryFile
+
+  const getCertificateItems = (data: any) => {
+    return [
+      {
+        icon: <School className='h-5 w-5 text-gray-500' />,
+        title: 'Trường đại học/Học viện',
+        value: `${data?.universityCode} - ${data?.universityName}`
+      },
+      {
+        icon: <User className='h-5 w-5 text-gray-500' />,
+        title: 'Sinh viên',
+        value: `${data?.studentCode} - ${data?.studentName}`
+      },
+      {
+        icon: <Library className='h-5 w-5 text-gray-500' />,
+        title: 'Ngành học',
+        value: `${data?.facultyCode} - ${data?.facultyName}`
+      },
+
+      {
+        icon: <Book className='h-5 w-5 text-gray-500' />,
+        title: 'Chứng chỉ',
+        value: data?.name
+      },
+      {
+        icon: <Calendar className='h-5 w-5 text-gray-500' />,
+        title: 'Ngày cấp',
+        value: data?.date
+      },
+      {
+        icon: <TagsIcon className='h-5 w-5 text-gray-500' />,
+        title: 'Số hiệu',
+        value: data?.serialNumber
+      },
+      {
+        icon: <FileTextIcon className='h-5 w-5 text-gray-500' />,
+        title: 'Số vào sổ gốc cấp văn bằng',
+        value: data?.regNo
+      },
+      {
+        icon: <Text className='h-5 w-5 text-gray-500' />,
+        title: 'Mô tả',
+        value: data?.description
+      },
+      {
+        icon: <Key className='h-5 w-5 text-gray-500' />,
+        title: 'Trạng thái ký',
+        value: <Badge variant={data?.signed ? 'default' : 'outline'}>{data?.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
+      }
+    ]
+  }
+
+  const getDegreeItems = (data: any) => {
+    return [
+      {
+        icon: <School className='h-5 w-5 text-gray-500' />,
+        title: 'Trường đại học/Học viện',
+        value: `${data?.universityCode} - ${data?.universityName}`
+      },
+      {
+        icon: <User className='h-5 w-5 text-gray-500' />,
+        title: 'Sinh viên',
+        value: `${data?.studentCode} - ${data?.studentName}`
+      },
+      {
+        icon: <Library className='h-5 w-5 text-gray-500' />,
+        title: 'Ngành học',
+        value: `${data?.facultyCode} - ${data?.facultyName}`
+      },
+      {
+        icon: <Book className='h-5 w-5 text-gray-500' />,
+        title: 'Văn bằng',
+        value: (
+          <div>
+            <Badge className='bg-blue-500 text-white hover:bg-blue-400'>{data?.certificateType ?? '-'}</Badge>
+            {' - '}
+            <span>{data?.name}</span>
+          </div>
+        )
+      },
+      {
+        icon: <ChartAreaIcon className='h-5 w-5 text-gray-500' />,
+        title: 'GPA',
+        value: data?.gpa
+      },
+      {
+        icon: <Calendar className='h-5 w-5 text-gray-500' />,
+        title: 'Ngày cấp',
+        value: data?.date
+      },
+      {
+        icon: <TagsIcon className='h-5 w-5 text-gray-500' />,
+        title: 'Số hiệu',
+        value: data?.serialNumber
+      },
+      {
+        icon: <FileTextIcon className='h-5 w-5 text-gray-500' />,
+        title: 'Số vào sổ gốc cấp văn bằng',
+        value: data?.regNo
+      },
+      {
+        icon: <Text className='h-5 w-5 text-gray-500' />,
+        title: 'Mô tả',
+        value: data?.description
+      },
+      {
+        icon: <Key className='h-5 w-5 text-gray-500' />,
+        title: 'Trạng thái ký',
+        value: <Badge variant={data?.signed ? 'default' : 'outline'}>{data?.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
+      }
+    ]
+  }
+
+  const getDecriptionViewItems = (data: any) => {
+    const items = isDegree ? getDegreeItems(data?.certificate) : getCertificateItems(data?.certificate)
+
+    if (props.isBlockchain) {
+      return [
+        {
+          icon: <Blocks className='h-5 w-5 text-gray-500' />,
+          title: 'Mã HASH',
+          value: (
+            <p className='max-w-[300px] truncate' title={data?.on_chain.cert_hash}>
+              {data?.on_chain.cert_hash}
+            </p>
+          )
+        },
+        ...items
+      ]
+    }
+
+    return items
+  }
 
   return (
     <div>
-      <DecriptionView
-        title={queryData.data?.name || 'Không có dữ liệu'}
-        items={isDegree ? degreeItems : certificateItems}
-        description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
-      />
-      {queryFile.data ? (
+      {currentDataQuery.isLoading ? null : !currentDataQuery.error ? (
+        <>
+          <Alert className={cn('mx-auto mb-4 max-w-[800px]', !props.isBlockchain && 'hidden')} variant='success'>
+            <CheckCircleIcon />
+            <AlertTitle>Thông báo</AlertTitle>
+            <AlertDescription>{currentDataQuery.data?.message || 'Không tải được dữ liệu'}</AlertDescription>
+          </Alert>
+          <DecriptionView
+            title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
+            items={getDecriptionViewItems(currentDataQuery?.data)}
+            description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
+          />
+        </>
+      ) : (
+        <>
+          <Alert className='mx-auto mb-4 max-w-[800px]' variant='destructive'>
+            <CircleX />
+            <AlertTitle>Lỗi</AlertTitle>
+            <AlertDescription>{currentDataQuery?.error?.message || 'Không tải được dữ liệu'}</AlertDescription>
+          </Alert>
+        </>
+      )}
+
+      {currentFileQuery.data ? (
         <>
           <Separator className='my-3' />
           <div className='flex items-center justify-between'>
             <h3 className='mb-3'>Tệp PDF</h3>
-            <CertificateBlankButton action={() => queryFile.mutate()} />
+            <CertificateBlankButton action={() => currentFileQuery.mutate()} />
           </div>
           <div className='mt-4 h-[700px]'>
-            <PDFView url={queryFile.data} loading={queryFile.isLoading} />
+            <PDFView url={currentFileQuery?.data} loading={currentFileQuery.isLoading} />
           </div>{' '}
         </>
       ) : (
