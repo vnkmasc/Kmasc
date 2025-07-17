@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vnkmasc/Kmasc/app/backend/internal/aeslib"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
@@ -40,6 +41,7 @@ type CertificateService interface {
 	CreateCertificate(ctx context.Context, claims *utils.CustomClaims, req *models.CreateCertificateRequest) error
 	GetSimpleCertificatesByUserID(ctx context.Context, userID primitive.ObjectID) ([]*models.CertificateSimpleResponse, error)
 	SearchCertificates(ctx context.Context, params models.SearchCertificateParams) ([]*models.CertificateResponse, int64, error)
+	GetRawCertificateByID(ctx context.Context, id primitive.ObjectID) (*models.Certificate, error)
 }
 
 type certificateService struct {
@@ -273,6 +275,18 @@ func (s *certificateService) GetAllCertificates(ctx context.Context) ([]*models.
 	return responses, nil
 }
 
+// Sửa service
+func (s *certificateService) GetRawCertificateByID(ctx context.Context, id primitive.ObjectID) (*models.Certificate, error) {
+	cert, err := s.certificateRepo.GetCertificateByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if cert == nil {
+		return nil, common.ErrCertificateNotFound
+	}
+	return cert, nil
+}
+
 func (s *certificateService) GetCertificateByID(ctx context.Context, id primitive.ObjectID) (*models.CertificateResponse, error) {
 	cert, err := s.certificateRepo.GetCertificateByID(ctx, id)
 	if err != nil {
@@ -325,20 +339,33 @@ func (s *certificateService) UploadCertificateFile(
 	ctx context.Context,
 	certificateID primitive.ObjectID,
 	fileData []byte,
-	_ string, // filename cũ bỏ qua
+	_ string, // filename (bỏ qua vì sẽ tự tạo)
 	isDegree bool,
-	_ string, // certificateName bỏ qua
+	_ string, // certificateName (bỏ qua vì lấy từ DB)
 ) (string, error) {
+	// Lấy thông tin certificate
 	certificate, err := s.certificateRepo.GetCertificateByID(ctx, certificateID)
 	if err != nil {
 		return "", fmt.Errorf("không tìm thấy certificate: %w", err)
 	}
 
+	// Lấy thông tin trường đại học
 	university, err := s.universityRepo.FindByID(ctx, certificate.UniversityID)
 	if err != nil {
 		return "", fmt.Errorf("không tìm thấy trường đại học: %w", err)
 	}
 
+	// B1: Tạo key + IV
+	aesKey := aeslib.GenerateAESKey()
+	iv := aeslib.GenerateIV()
+
+	// B2: Mã hóa file
+	encryptedData, err := aeslib.EncryptAES(fileData, aesKey, iv)
+	if err != nil {
+		return "", fmt.Errorf("lỗi mã hóa file: %w", err)
+	}
+
+	// B3: Tạo object key lưu trên MinIO
 	ext := ".pdf"
 	var slug string
 	if isDegree {
@@ -346,18 +373,29 @@ func (s *certificateService) UploadCertificateFile(
 	} else {
 		slug = utils.Slugify(certificate.Name)
 	}
-
 	filename := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
 	objectKey := fmt.Sprintf("certificates/%s/%s", university.UniversityCode, filename)
 
-	contentType := http.DetectContentType(fileData)
-	err = s.minioClient.UploadFile(ctx, objectKey, fileData, contentType)
+	// B4: Upload lên MinIO
+	contentType := http.DetectContentType(encryptedData)
+	err = s.minioClient.UploadFile(ctx, objectKey, encryptedData, contentType)
 	if err != nil {
 		return "", fmt.Errorf("lỗi upload file lên MinIO: %w", err)
 	}
 
-	hash := sha256.Sum256(fileData)
+	// B5: Tính SHA256 để lưu hash
+	hash := sha256.Sum256(encryptedData)
 	certHash := hex.EncodeToString(hash[:])
+
+	// B6: Lưu thông tin vào MongoDB
+	certFile := models.CertificateFile{
+		ID:        primitive.NewObjectID(),
+		FileName:  filename,
+		FilePath:  objectKey,
+		AESKey:    aesKey,
+		IV:        iv,
+		CreatedAt: time.Now(),
+	}
 
 	update := bson.M{
 		"$set": bson.M{
@@ -366,7 +404,11 @@ func (s *certificateService) UploadCertificateFile(
 			"physical_copy_issued": true,
 			"updated_at":           time.Now(),
 		},
+		"$push": bson.M{
+			"certificate_files": certFile,
+		},
 	}
+
 	if err := s.certificateRepo.UpdateCertificateByID(ctx, certificateID, update); err != nil {
 		return "", fmt.Errorf("lỗi cập nhật thông tin file vào MongoDB: %w", err)
 	}

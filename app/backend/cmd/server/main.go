@@ -55,7 +55,8 @@ func main() {
 	}
 	fabricClient, err := blockchain.NewFabricClient(fabricCfg)
 	if err != nil {
-		log.Fatalf("khởi tạo FabricClient thất bại: %v", err)
+		log.Println("⚠️ Không thể kết nối Fabric, chạy chế độ không blockchain:", err)
+		fabricClient = nil // truyền nil để chế độ non-blockchain
 	}
 
 	// Repository

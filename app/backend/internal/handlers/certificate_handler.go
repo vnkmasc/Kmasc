@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/aeslib"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
@@ -165,49 +166,51 @@ func (h *CertificateHandler) GetCertificateByID(c *gin.Context) {
 }
 
 func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
+	// Xác thực token
 	claims, ok := c.MustGet("claims").(*utils.CustomClaims)
 	if !ok || claims == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Không xác thực được người dùng"})
 		return
 	}
 
-	// Lấy file upload
+	// Nhận file từ form
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Vui lòng chọn file để tải lên"})
 		return
 	}
 
+	// Kiểm tra định dạng file
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext != ".pdf" && ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Chỉ hỗ trợ file PDF, JPG, JPEG, PNG"})
 		return
 	}
 
-	// Parse query param
+	// Lấy query params
 	isDegree := c.Query("is_degree") == "true"
 	certificateName := c.Query("name")
 
-	// Lấy university ID từ token
+	// Parse University ID từ token
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ (UniversityID không đúng định dạng)"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ (UniversityID sai định dạng)"})
 		return
 	}
 
+	// Lấy thông tin trường
 	university, err := h.universityService.GetUniversityByID(c.Request.Context(), universityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không lấy được thông tin trường đại học"})
 		return
 	}
 
-	// Giả định tên file là mã sinh viên
+	// Mã sinh viên là phần tên file không có đuôi mở rộng
 	studentCode := strings.TrimSuffix(file.Filename, ext)
 
-	// Truy vấn certificate
+	// Lấy thông tin certificate
 	var certificate *models.Certificate
 	if isDegree {
-		// Mỗi sinh viên chỉ có 1 văn bằng
 		certificate, err = h.certificateService.GetDegreeCertificateByStudentCodeAndUniversity(
 			c.Request.Context(), studentCode, university.ID)
 	} else {
@@ -224,18 +227,19 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
-	// Check permission
+	// Kiểm tra quyền
 	if certificate.UniversityID != university.ID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Bạn không được phép cập nhật văn bằng này"})
 		return
 	}
 
+	// Không cho ghi đè nếu đã có file
 	if certificate.Path != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Văn bằng/chứng chỉ đã có file, không thể ghi đè"})
 		return
 	}
 
-	// Đọc nội dung file
+	// Đọc nội dung file upload
 	src, err := file.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể mở file"})
@@ -249,28 +253,28 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
-	// Tạo tên file lưu lên MinIO
+	// Tạo tên file chuẩn để lưu
 	var typeStr string
 	if certificate.IsDegree {
 		typeStr = "van-bang"
 	} else {
 		typeStr = certificate.Name
 	}
-
 	slug := utils.Slugify(typeStr)
 	finalFileName := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
 
-	// Upload và cập nhật
-	filePath, err := h.certificateService.UploadCertificateFile(
+	// Gọi service để xử lý upload (gồm mã hóa, upload, lưu key/IV)
+	objectPath, err := h.certificateService.UploadCertificateFile(
 		c.Request.Context(), certificate.ID, fileData, finalFileName, isDegree, typeStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Tải lên thất bại: " + err.Error()})
 		return
 	}
 
+	// Thành công
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Tải file thành công",
-		"path":    filePath,
+		"path":    objectPath,
 	})
 }
 
@@ -284,7 +288,8 @@ func (h *CertificateHandler) GetCertificateFile(c *gin.Context) {
 		return
 	}
 
-	certificate, err := h.certificateService.GetCertificateByID(ctx, certificateID)
+	// Lấy certificate từ database
+	certificate, err := h.certificateService.GetRawCertificateByID(ctx, certificateID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy văn bằng"})
 		return
@@ -295,6 +300,14 @@ func (h *CertificateHandler) GetCertificateFile(c *gin.Context) {
 		return
 	}
 
+	// Kiểm tra xem có thông tin key/iv không
+	if len(certificate.CertificateFiles) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không có thông tin key/iv để giải mã"})
+		return
+	}
+	fileInfo := certificate.CertificateFiles[0]
+
+	// Lấy file từ MinIO
 	object, err := h.minioClient.Client.GetObject(ctx, h.minioClient.Bucket, certificate.Path, minio.GetObjectOptions{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không đọc được file từ MinIO"})
@@ -302,15 +315,21 @@ func (h *CertificateHandler) GetCertificateFile(c *gin.Context) {
 	}
 	defer object.Close()
 
-	fileData, err := io.ReadAll(object)
+	encryptedData, err := io.ReadAll(object)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể đọc nội dung file"})
 		return
 	}
 
-	contentType := http.DetectContentType(fileData)
+	// Giải mã file
+	decryptedData, err := aeslib.DecryptAES(encryptedData, fileInfo.AESKey, fileInfo.IV)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Giải mã file thất bại"})
+		return
+	}
 
-	c.DataFromReader(http.StatusOK, int64(len(fileData)), contentType, bytes.NewReader(fileData), nil)
+	contentType := http.DetectContentType(decryptedData)
+	c.DataFromReader(http.StatusOK, int64(len(decryptedData)), contentType, bytes.NewReader(decryptedData), nil)
 }
 
 func (h *CertificateHandler) GetCertificatesByStudentID(c *gin.Context) {
