@@ -7,7 +7,7 @@ const defaultSocialLinks = [
   { icon: <GraduationCap className='size-5' />, href: 'https://actvn.edu.vn', label: 'Trang chủ học viện' },
   { icon: <Facebook className='size-5' />, href: 'https://www.facebook.com/hocvienkythuatmatma', label: 'Facebook' },
   { icon: <MapPinned className='size-5' />, href: 'https://maps.app.goo.gl/nH4ungjtTKWfox2c8', label: 'Địa chỉ' },
-  { icon: <Github className='size-5' />, href: 'https://github.com/kmasc/Kmasc', label: 'Github' }
+  { icon: <Github className='size-5' />, href: 'https://github.com/vnkmasc/Kmasc', label: 'Github' }
 ]
 
 const Footer: React.FC = () => {

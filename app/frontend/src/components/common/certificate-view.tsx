@@ -25,6 +25,7 @@ import CertificateBlankButton from './certificate-blank-button'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils'
+import CertificateQrCode from './certificate-qr-code'
 
 interface Props {
   isBlockchain: boolean
@@ -226,6 +227,7 @@ const CertificateView: React.FC<Props> = (props) => {
             title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
             items={getDecriptionViewItems(currentDataQuery?.data)}
             description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
+            extra={<CertificateQrCode id={props.id} isIcon={false} />}
           />
         </>
       ) : (

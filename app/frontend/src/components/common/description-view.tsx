@@ -10,6 +10,7 @@ interface Props {
   items: ViewItemProps[]
   title: any
   description?: string
+  extra?: React.ReactNode
 }
 
 const ViewItem: React.FC<ViewItemProps> = (props) => {
@@ -29,10 +30,13 @@ const ViewItem: React.FC<ViewItemProps> = (props) => {
 const DecriptionView: React.FC<Props> = (props) => {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{props.title}</CardTitle>
-        <CardDescription>{props.description}</CardDescription>
-      </CardHeader>
+      <div className='flex flex-row items-center p-4 sm:p-6'>
+        <CardHeader className='flex-1 !p-0 sm:p-0'>
+          <CardTitle>{props.title}</CardTitle>
+          <CardDescription>{props.description}</CardDescription>
+        </CardHeader>
+        {props.extra}
+      </div>
       <CardContent className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
         {props.items.map((item, index) => (
           <ViewItem key={index} {...item} />
