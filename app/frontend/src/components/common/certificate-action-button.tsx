@@ -6,6 +6,7 @@ import Link from 'next/link'
 import useSWRMutation from 'swr/mutation'
 import { pushCertificateIntoBlockchain } from '@/lib/api/certificate'
 import { showNotification } from '@/lib/utils/common'
+import CertificateQrCode from './certificate-qr-code'
 
 interface Props {
   id: string
@@ -37,6 +38,8 @@ const CertificateActionButton: React.FC<Props> = (props) => {
           <Blocks />
         </Button>
       </Link>
+      <CertificateQrCode id={props.id} isIcon={true} />
+
       <Button
         size={'icon'}
         title='Đẩy dữ liệu lên blockchain'
