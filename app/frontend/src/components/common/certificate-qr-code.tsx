@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { QrCode, Copy, Download, Check } from 'lucide-react'
+import { useRef } from 'react'
+import { QrCode, Copy, Download } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog'
 import { showMessage } from '@/lib/utils/common'
 import { Label } from '../ui/label'
+import UseBreakpoint from '@/lib/hooks/use-breakpoint'
 
 interface QRCodeDialogProps {
   id: string
@@ -15,8 +16,8 @@ interface QRCodeDialogProps {
 }
 
 const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
-  const [copied, setCopied] = useState(false)
   const qrRef = useRef<SVGSVGElement>(null)
+  const { md } = UseBreakpoint()
 
   // Generate the URL for QR code
   const certificateUrl = `${window.location.origin}?code=${props.id}`
@@ -24,11 +25,13 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(certificateUrl)
-      setCopied(true)
-      showMessage('Link đã được sao chép!')
-      setTimeout(() => setCopied(false), 2000)
+      showMessage('Đã sao chép vào clipboard', {
+        duration: 1000
+      })
     } catch {
-      showMessage('Không thể sao chép link')
+      showMessage('Không thể sao chép', {
+        duration: 1000
+      })
     }
   }
 
@@ -62,7 +65,9 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
         link.click()
 
         URL.revokeObjectURL(svgUrl)
-        showMessage('Mã QR đã được tải xuống!')
+        showMessage('Mã QR đã được tải xuống', {
+          duration: 1000
+        })
       }
 
       img.src = svgUrl
@@ -72,15 +77,13 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        {props.isIcon ? (
-          <Button size={'icon'} variant={'outline'} title='Hiển thị mã QR'>
-            <QrCode />
-          </Button>
-        ) : (
-          <Button size={'default'} title='Hiển thị mã QR'>
-            <QrCode /> Hiển thị mã QR
-          </Button>
-        )}
+        <Button
+          size={props.isIcon ? 'icon' : md ? 'default' : 'icon'}
+          variant={props.isIcon ? 'outline' : undefined}
+          title='Hiển thị mã QR'
+        >
+          <QrCode /> {!props.isIcon && md ? 'Hiển thị mã QR' : ''}
+        </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-md'>
         <DialogHeader>
@@ -105,7 +108,7 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
             <div className='mt-1 flex gap-2'>
               <Input value={props.id} readOnly className='flex-1 text-xs' />
               <Button size='icon' variant='outline' onClick={copyToClipboard}>
-                {copied ? <Check className='h-4 w-4 text-green-600' /> : <Copy className='h-4 w-4' />}
+                <Copy className='h-4 w-4' />
               </Button>
             </div>
           </div>
@@ -114,7 +117,7 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
             <div className='mt-1 flex gap-2'>
               <Input value={certificateUrl} readOnly className='flex-1 text-xs' />
               <Button size='icon' variant='outline' onClick={copyToClipboard}>
-                {copied ? <Check className='h-4 w-4 text-green-600' /> : <Copy className='h-4 w-4' />}
+                <Copy className='h-4 w-4' />
               </Button>
             </div>
           </div>
