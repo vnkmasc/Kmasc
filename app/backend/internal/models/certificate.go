@@ -43,8 +43,7 @@ type CertificateFile struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty"` // MongoDB ID
 	FileName  string             `bson:"file_name"`     // Tên file gốc
 	FilePath  string             `bson:"file_path"`     // Đường dẫn lưu file mã hóa (trên MinIO)
-	AESKey    []byte             `bson:"aes_key"`       // AES key (32 bytes - 256 bit)
-	IV        []byte             `bson:"iv"`            // IV (16 bytes - 128 bit)
+	Salt      string             `bson:"salt"`          // Salt dùng để mã hóa file
 	CreatedAt time.Time          `bson:"created_at"`    // Thời điểm tạo
 }
 type CertificateOnChain struct {
