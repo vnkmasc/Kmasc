@@ -2,7 +2,7 @@ package aeslib
 
 /*
 #cgo CFLAGS: -I../../crypto
-#cgo LDFLAGS: -L../../crypto -laes_encryptor
+#cgo LDFLAGS: -L../../crypto -laes_encryptor -lcrypto -Wl,-rpath=../../crypto
 #include "aes_encryptor.h"
 #include <stdlib.h>
 */
@@ -13,32 +13,15 @@ import (
 	"unsafe"
 )
 
-const (
-	AESKeySize = 32
-	AESIVSize  = 16
-)
-
-func GenerateAESKey() []byte {
-	key := make([]byte, AESKeySize)
-	C.generate_aes_key((*C.uchar)(unsafe.Pointer(&key[0])))
-	return key
-}
-
-func GenerateIV() []byte {
-	iv := make([]byte, AESIVSize)
-	C.generate_iv((*C.uchar)(unsafe.Pointer(&iv[0])))
-	return iv
-}
-
-// EncryptAES dùng module C để mã hóa data với key và IV
-func EncryptAES(data, key, iv []byte) ([]byte, error) {
+func EncryptPBKDF2(data []byte, password string) ([]byte, error) {
 	var outLen C.size_t
+	cPassword := C.CString(password)
+	defer C.free(unsafe.Pointer(cPassword))
 
-	cipher := C.aes_encrypt(
+	cipher := C.aes_encrypt_pbkdf2(
 		(*C.uchar)(unsafe.Pointer(&data[0])),
 		C.size_t(len(data)),
-		(*C.uchar)(unsafe.Pointer(&key[0])),
-		(*C.uchar)(unsafe.Pointer(&iv[0])),
+		cPassword,
 		&outLen,
 	)
 
@@ -47,19 +30,18 @@ func EncryptAES(data, key, iv []byte) ([]byte, error) {
 	}
 	defer C.free(unsafe.Pointer(cipher))
 
-	encrypted := C.GoBytes(unsafe.Pointer(cipher), C.int(outLen))
-	return encrypted, nil
+	return C.GoBytes(unsafe.Pointer(cipher), C.int(outLen)), nil
 }
 
-// DecryptAES dùng module C để giải mã data với key và IV
-func DecryptAES(encData, key, iv []byte) ([]byte, error) {
+func DecryptPBKDF2(data []byte, password string) ([]byte, error) {
 	var outLen C.size_t
+	cPassword := C.CString(password)
+	defer C.free(unsafe.Pointer(cPassword))
 
-	plain := C.aes_decrypt(
-		(*C.uchar)(unsafe.Pointer(&encData[0])),
-		C.size_t(len(encData)),
-		(*C.uchar)(unsafe.Pointer(&key[0])),
-		(*C.uchar)(unsafe.Pointer(&iv[0])),
+	plain := C.aes_decrypt_pbkdf2(
+		(*C.uchar)(unsafe.Pointer(&data[0])),
+		C.size_t(len(data)),
+		cPassword,
 		&outLen,
 	)
 
@@ -68,6 +50,5 @@ func DecryptAES(encData, key, iv []byte) ([]byte, error) {
 	}
 	defer C.free(unsafe.Pointer(plain))
 
-	decrypted := C.GoBytes(unsafe.Pointer(plain), C.int(outLen))
-	return decrypted, nil
+	return C.GoBytes(unsafe.Pointer(plain), C.int(outLen)), nil
 }

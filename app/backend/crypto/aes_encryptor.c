@@ -1,84 +1,102 @@
 #include "aes_encryptor.h"
-
-#include <stdlib.h>
-#include <string.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <string.h>
+#include <stdlib.h>
 
-void generate_aes_key(uint8_t key[AES_KEY_SIZE]) {
-    RAND_bytes(key, AES_KEY_SIZE);
-}
+#define SALT_SIZE 8
+#define KEY_SIZE 32
+#define IV_SIZE 16
+#define PBKDF2_ITERATIONS 100000
 
-void generate_iv(uint8_t iv[AES_IV_SIZE]) {
-    RAND_bytes(iv, AES_IV_SIZE);
-}
-
-uint8_t* aes_encrypt(
-    const uint8_t* data,
-    size_t data_len,
-    const uint8_t key[AES_KEY_SIZE],
-    const uint8_t iv[AES_IV_SIZE],
-    size_t* output_len
+unsigned char *aes_encrypt_pbkdf2(
+    const unsigned char *plaintext,
+    size_t plaintext_len,
+    const char *password,
+    size_t *ciphertext_len_out
 ) {
-    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) return NULL;
+    unsigned char salt[SALT_SIZE];
+    if (!RAND_bytes(salt, SALT_SIZE)) return NULL;
 
-    uint8_t* ciphertext = malloc(data_len + AES_IV_SIZE);
-    if (!ciphertext) {
-        EVP_CIPHER_CTX_free(ctx);
+    unsigned char key_iv[KEY_SIZE + IV_SIZE];
+    if (!PKCS5_PBKDF2_HMAC(password, strlen(password), salt, SALT_SIZE,
+                           PBKDF2_ITERATIONS, EVP_sha256(),
+                           KEY_SIZE + IV_SIZE, key_iv)) {
         return NULL;
     }
 
-    int len = 0;
-    int total_len = 0;
+    unsigned char *key = key_iv;
+    unsigned char *iv = key_iv + KEY_SIZE;
 
-    EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return NULL;
 
-    EVP_EncryptUpdate(ctx, ciphertext, &len, data, (int)data_len);
-    total_len = len;
+    int outlen1, outlen2;
+    size_t max_len = plaintext_len + EVP_MAX_BLOCK_LENGTH;
+    unsigned char *ciphertext = malloc(SALT_SIZE + max_len);
+    if (!ciphertext) return NULL;
 
-    EVP_EncryptFinal_ex(ctx, ciphertext + len, &len);
-    total_len += len;
+    memcpy(ciphertext, salt, SALT_SIZE);  // Save salt at the beginning
+
+    if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) goto err;
+
+    if (!EVP_EncryptUpdate(ctx, ciphertext + SALT_SIZE, &outlen1, plaintext, plaintext_len)) goto err;
+
+    if (!EVP_EncryptFinal_ex(ctx, ciphertext + SALT_SIZE + outlen1, &outlen2)) goto err;
+
+    *ciphertext_len_out = SALT_SIZE + outlen1 + outlen2;
 
     EVP_CIPHER_CTX_free(ctx);
-
-    *output_len = total_len;
     return ciphertext;
+
+err:
+    EVP_CIPHER_CTX_free(ctx);
+    free(ciphertext);
+    return NULL;
 }
 
-uint8_t* aes_decrypt(
-    const uint8_t* enc_data,
-    size_t enc_len,
-    const uint8_t key[AES_KEY_SIZE],
-    const uint8_t iv[AES_IV_SIZE],
-    size_t* output_len
+unsigned char *aes_decrypt_pbkdf2(
+    const unsigned char *ciphertext_with_salt,
+    size_t ciphertext_len,
+    const char *password,
+    size_t *plaintext_len_out
 ) {
-    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (ciphertext_len < SALT_SIZE) return NULL;
+
+    const unsigned char *salt = ciphertext_with_salt;
+    const unsigned char *ciphertext = ciphertext_with_salt + SALT_SIZE;
+    size_t enc_len = ciphertext_len - SALT_SIZE;
+
+    unsigned char key_iv[KEY_SIZE + IV_SIZE];
+    if (!PKCS5_PBKDF2_HMAC(password, strlen(password), salt, SALT_SIZE,
+                           PBKDF2_ITERATIONS, EVP_sha256(),
+                           KEY_SIZE + IV_SIZE, key_iv)) {
+        return NULL;
+    }
+
+    unsigned char *key = key_iv;
+    unsigned char *iv = key_iv + KEY_SIZE;
+
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) return NULL;
 
-    uint8_t* plaintext = malloc(enc_len);
-    if (!plaintext) {
-        EVP_CIPHER_CTX_free(ctx);
-        return NULL;
-    }
+    int outlen1, outlen2;
+    unsigned char *plaintext = malloc(enc_len);
+    if (!plaintext) return NULL;
 
-    int len = 0;
-    int total_len = 0;
+    if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) goto err;
 
-    EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+    if (!EVP_DecryptUpdate(ctx, plaintext, &outlen1, ciphertext, enc_len)) goto err;
 
-    EVP_DecryptUpdate(ctx, plaintext, &len, enc_data, (int)enc_len);
-    total_len = len;
+    if (!EVP_DecryptFinal_ex(ctx, plaintext + outlen1, &outlen2)) goto err;
 
-    if (!EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
-        free(plaintext);
-        EVP_CIPHER_CTX_free(ctx);
-        return NULL;
-    }
-
-    total_len += len;
-    *output_len = total_len;
+    *plaintext_len_out = outlen1 + outlen2;
 
     EVP_CIPHER_CTX_free(ctx);
     return plaintext;
+
+err:
+    EVP_CIPHER_CTX_free(ctx);
+    free(plaintext);
+    return NULL;
 }
