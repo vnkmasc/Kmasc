@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { QrCode, Copy, Download } from 'lucide-react'
+import { QrCode, Copy, Download, ArrowRight } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -9,6 +9,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { showMessage } from '@/lib/utils/common'
 import { Label } from '../ui/label'
 import UseBreakpoint from '@/lib/hooks/use-breakpoint'
+import Link from 'next/link'
 
 interface QRCodeDialogProps {
   id: string
@@ -18,13 +19,12 @@ interface QRCodeDialogProps {
 const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
   const qrRef = useRef<SVGSVGElement>(null)
   const { md } = UseBreakpoint()
-
   // Generate the URL for QR code
   const certificateUrl = `${window.location.origin}?code=${props.id}`
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = async (copyText: string) => {
     try {
-      await navigator.clipboard.writeText(certificateUrl)
+      await navigator.clipboard.writeText(copyText)
       showMessage('Đã sao chép vào clipboard', {
         duration: 1000
       })
@@ -96,27 +96,34 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
             <QRCodeSVG ref={qrRef} value={certificateUrl} size={200} level='M' />
           </div>
 
-          {/* Download Button */}
-          <Button onClick={downloadQRCode} className='w-full'>
-            <Download className='mr-2 h-4 w-4' />
-            Tải xuống mã QR
-          </Button>
+          <div className='flex flex-col gap-2 sm:flex-row'>
+            <Button onClick={downloadQRCode}>
+              <Download />
+              Tải xuống
+            </Button>
+            <Link href={certificateUrl}>
+              <Button variant='outline'>
+                <ArrowRight />
+                Chuyển hướng
+              </Button>
+            </Link>
+          </div>
 
           {/* URL Input with Copy Button */}
           <div className='w-full'>
             <Label>ID chứng chỉ</Label>
             <div className='mt-1 flex gap-2'>
               <Input value={props.id} readOnly className='flex-1 text-xs' />
-              <Button size='icon' variant='outline' onClick={copyToClipboard}>
+              <Button size='icon' variant='outline' onClick={() => copyToClipboard(props.id)}>
                 <Copy className='h-4 w-4' />
               </Button>
             </div>
           </div>
           <div className='w-full'>
-            <Label>Link chứng chỉ</Label>
+            <Label>Đường dẫn chứng chỉ</Label>
             <div className='mt-1 flex gap-2'>
               <Input value={certificateUrl} readOnly className='flex-1 text-xs' />
-              <Button size='icon' variant='outline' onClick={copyToClipboard}>
+              <Button size='icon' variant='outline' onClick={() => copyToClipboard(certificateUrl)}>
                 <Copy className='h-4 w-4' />
               </Button>
             </div>

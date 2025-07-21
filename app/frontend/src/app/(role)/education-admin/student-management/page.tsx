@@ -164,7 +164,7 @@ const StudentManagementPage: React.FC = () => {
           <UploadButton key='upload-excel' handleUpload={handleUpload} loading={mutateImportExcel.isMutating} />,
           <Button key='create-student' onClick={() => setIdDetail(null)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Thêm sinh viên</span>
+            <span className='hidden sm:block'>Tạo mới</span>
           </Button>
         ]}
       />

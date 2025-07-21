@@ -131,7 +131,7 @@ const RewardDisciplineManagementPage: React.FC = () => {
         extra={[
           <Button key='add-reward-discipline' onClick={() => setIdDetail(null)}>
             <PlusIcon />
-            Thêm KT & KL
+            Tạo mới
           </Button>
         ]}
       />

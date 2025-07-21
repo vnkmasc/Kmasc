@@ -86,7 +86,7 @@ const FacultyManagementPage = () => {
         extra={[
           <Button key='create-faculty' onClick={() => setIdDetail(null)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Thêm khoa</span>
+            <span className='hidden sm:block'>Tạo mới</span>
           </Button>
         ]}
       />
