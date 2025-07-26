@@ -3,6 +3,7 @@ package blockchain
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -91,7 +92,11 @@ func NewFabricClient(cfg *FabricConfig) (*FabricClient, error) {
 
 	network, err := gw.GetNetwork(cfg.ChannelName)
 	if err != nil {
-		return nil, fmt.Errorf("lỗi lấy network: %v", err)
+		log.Printf("⚠️ Lỗi lấy network từ gateway (peer chưa sẵn sàng?): %v", err)
+		return &FabricClient{
+			cfg:      cfg,
+			contract: nil,
+		}, nil
 	}
 
 	contract := network.GetContract(cfg.ChaincodeName)

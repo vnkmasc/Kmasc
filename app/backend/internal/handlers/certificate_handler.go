@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/aeslib"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
@@ -21,6 +22,7 @@ import (
 	"github.com/xuri/excelize/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type CertificateHandler struct {
@@ -28,6 +30,7 @@ type CertificateHandler struct {
 	universityService  service.UniversityService
 	facultyService     service.FacultyService
 	userService        service.UserService
+	accountService     service.AuthService
 	minioClient        *database.MinioClient
 }
 
@@ -36,6 +39,7 @@ func NewCertificateHandler(
 	uniSvc service.UniversityService,
 	facultySvc service.FacultyService,
 	userSvc service.UserService,
+	authSvc service.AuthService,
 	minioClient *database.MinioClient,
 ) *CertificateHandler {
 	return &CertificateHandler{
@@ -43,6 +47,7 @@ func NewCertificateHandler(
 		universityService:  uniSvc,
 		facultyService:     facultySvc,
 		userService:        userSvc,
+		accountService:     authSvc,
 		minioClient:        minioClient,
 	}
 }
@@ -163,7 +168,6 @@ func (h *CertificateHandler) GetCertificateByID(c *gin.Context) {
 	})
 
 }
-
 func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 	claims, ok := c.MustGet("claims").(*utils.CustomClaims)
 	if !ok || claims == nil {
@@ -171,10 +175,16 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
-	// Lấy file upload
+	// Lấy file và password
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Vui lòng chọn file để tải lên"})
+		return
+	}
+
+	password := c.PostForm("password")
+	if password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Vui lòng nhập lại mật khẩu để mã hóa file"})
 		return
 	}
 
@@ -184,58 +194,69 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		return
 	}
 
-	// Parse query param
+	// Parse các tham số
 	isDegree := c.Query("is_degree") == "true"
 	certificateName := c.Query("name")
-
-	// Lấy university ID từ token
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ (UniversityID không đúng định dạng)"})
-		return
-	}
-
-	university, err := h.universityService.GetUniversityByID(c.Request.Context(), universityID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không lấy được thông tin trường đại học"})
-		return
-	}
-
-	// Giả định tên file là mã sinh viên
 	studentCode := strings.TrimSuffix(file.Filename, ext)
 
-	// Truy vấn certificate
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ (UniversityID sai định dạng)"})
+		return
+	}
+
+	// Tìm chứng chỉ
 	var certificate *models.Certificate
 	if isDegree {
-		// Mỗi sinh viên chỉ có 1 văn bằng
 		certificate, err = h.certificateService.GetDegreeCertificateByStudentCodeAndUniversity(
-			c.Request.Context(), studentCode, university.ID)
+			c.Request.Context(), studentCode, universityID)
 	} else {
 		if certificateName == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Thiếu tên chứng chỉ (query param 'name')"})
 			return
 		}
 		certificate, err = h.certificateService.GetCertificateByStudentCodeAndNameAndUniversity(
-			c.Request.Context(), studentCode, certificateName, university.ID)
+			c.Request.Context(), studentCode, certificateName, universityID)
 	}
-
 	if err != nil || certificate == nil || certificate.ID.IsZero() {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy văn bằng/chứng chỉ phù hợp"})
 		return
 	}
-
-	// Check permission
-	if certificate.UniversityID != university.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Bạn không được phép cập nhật văn bằng này"})
-		return
-	}
-
 	if certificate.Path != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Văn bằng/chứng chỉ đã có file, không thể ghi đè"})
 		return
 	}
 
-	// Đọc nội dung file
+	// Lấy tài khoản từ AccountID trong token
+	accountID, err := primitive.ObjectIDFromHex(claims.AccountID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ (AccountID sai định dạng)"})
+		return
+	}
+
+	account, err := h.accountService.GetAccountByID(c.Request.Context(), accountID)
+	if err != nil || account == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Không tìm thấy tài khoản"})
+		return
+	}
+
+	// ==== DEBUG THÔNG TIN MẬT KHẨU ====
+	fmt.Println("[DEBUG] AccountID từ token:", claims.AccountID)
+	fmt.Println("[DEBUG] AccountID từ DB:", account.ID.Hex())
+	fmt.Println("[DEBUG] PasswordHash từ DB:", account.PasswordHash)
+	fmt.Println("[DEBUG] Mật khẩu người dùng nhập:", password)
+	fmt.Printf("[DEBUG] Mật khẩu (hex): %x\n", []byte(password))
+	fmt.Printf("[DEBUG] Mật khẩu (byte): %#v\n", []byte(password))
+
+	// So sánh bằng bcrypt
+	if err := bcrypt.CompareHashAndPassword([]byte(account.PasswordHash), []byte(password)); err != nil {
+		fmt.Println("[DEBUG] So sánh mật khẩu: ❌ KHÔNG TRÙNG - bcrypt lỗi:", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Mật khẩu không chính xác"})
+		return
+	}
+	fmt.Println("[DEBUG] So sánh mật khẩu: ✅ KHỚP")
+
+	// Đọc file gốc
 	src, err := file.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể mở file"})
@@ -248,29 +269,22 @@ func (h *CertificateHandler) UploadCertificateFile(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể đọc file"})
 		return
 	}
+	fmt.Printf("[DEBUG] File gốc: %d bytes\n", len(fileData))
 
-	// Tạo tên file lưu lên MinIO
-	var typeStr string
-	if certificate.IsDegree {
-		typeStr = "van-bang"
-	} else {
-		typeStr = certificate.Name
-	}
-
-	slug := utils.Slugify(typeStr)
-	finalFileName := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
-
-	// Upload và cập nhật
-	filePath, err := h.certificateService.UploadCertificateFile(
-		c.Request.Context(), certificate.ID, fileData, finalFileName, isDegree, typeStr)
+	// Mã hóa và upload
+	objectPath, err := h.certificateService.UploadCertificateFile(
+		c.Request.Context(), certificate.ID, fileData, file.Filename, isDegree, password,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Tải lên thất bại: " + err.Error()})
 		return
 	}
 
+	fmt.Println("[DEBUG] Đã mã hóa file bằng module C và lưu lên MinIO:", objectPath)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Tải file thành công",
-		"path":    filePath,
+		"path":    objectPath,
 	})
 }
 
@@ -284,7 +298,7 @@ func (h *CertificateHandler) GetCertificateFile(c *gin.Context) {
 		return
 	}
 
-	certificate, err := h.certificateService.GetCertificateByID(ctx, certificateID)
+	certificate, err := h.certificateService.GetRawCertificateByID(ctx, certificateID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy văn bằng"})
 		return
@@ -295,6 +309,14 @@ func (h *CertificateHandler) GetCertificateFile(c *gin.Context) {
 		return
 	}
 
+	// Nhận mật khẩu giải mã từ query param
+	password := c.Query("password")
+	if password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Thiếu mật khẩu để giải mã file"})
+		return
+	}
+
+	// Lấy object đã mã hóa từ MinIO
 	object, err := h.minioClient.Client.GetObject(ctx, h.minioClient.Bucket, certificate.Path, minio.GetObjectOptions{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không đọc được file từ MinIO"})
@@ -302,15 +324,22 @@ func (h *CertificateHandler) GetCertificateFile(c *gin.Context) {
 	}
 	defer object.Close()
 
-	fileData, err := io.ReadAll(object)
+	encryptedData, err := io.ReadAll(object)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể đọc nội dung file"})
 		return
 	}
 
-	contentType := http.DetectContentType(fileData)
+	// Giải mã file bằng PBKDF2 + AES-256-CBC
+	decryptedData, err := aeslib.DecryptPBKDF2(encryptedData, password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Giải mã file thất bại: " + err.Error()})
+		return
+	}
 
-	c.DataFromReader(http.StatusOK, int64(len(fileData)), contentType, bytes.NewReader(fileData), nil)
+	// Trả về file gốc
+	contentType := http.DetectContentType(decryptedData)
+	c.DataFromReader(http.StatusOK, int64(len(decryptedData)), contentType, bytes.NewReader(decryptedData), nil)
 }
 
 func (h *CertificateHandler) GetCertificatesByStudentID(c *gin.Context) {

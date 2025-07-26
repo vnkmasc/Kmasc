@@ -55,7 +55,8 @@ func main() {
 	}
 	fabricClient, err := blockchain.NewFabricClient(fabricCfg)
 	if err != nil {
-		log.Fatalf("khởi tạo FabricClient thất bại: %v", err)
+		log.Println("⚠️ Không thể kết nối Fabric, chạy chế độ không blockchain:", err)
+		fabricClient = nil
 	}
 
 	// Repository
@@ -84,7 +85,14 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(authService, universityService, userService, facultyService)
 	universityHandler := handlers.NewUniversityHandler(universityService)
-	certificateHandler := handlers.NewCertificateHandler(certificateService, universityService, facultyService, userService, minioClient)
+	certificateHandler := handlers.NewCertificateHandler(
+		certificateService,
+		universityService,
+		facultyService,
+		userService,
+		authService,
+		minioClient,
+	)
 	verificationHandler := handlers.NewVerificationHandler(
 		verificationService,
 		userService,
@@ -121,7 +129,12 @@ func main() {
 		os.Exit(0)
 	}()
 
-	if err := r.Run(":8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9090"
+	}
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Không thể khởi động server: %v", err)
 	}
+
 }
