@@ -9,10 +9,13 @@ package pvtdatastorage
 import (
 	"time"
 
+	"fmt"
+
 	"github.com/hyperledger/fabric-protos-go-apiv2/ledger/rwset"
 	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
 	"github.com/hyperledger/fabric/core/ledger/util"
 	"github.com/pkg/errors"
 )
@@ -113,6 +116,8 @@ func constructHashedIndexFor(ledgerID string, db *leveldbhelper.DBHandle) error 
 				if dataVal, err = encodeDataValue(dataEntry.value); err != nil {
 					return err
 				}
+				// Encrypt value before storing
+				dataVal = statedb.EncryptValue(dataVal, dataEntry.key.ns, dataEntry.key.coll+"|"+fmt.Sprint(dataEntry.key.txNum))
 				batch.Put(dataKey, dataVal)
 				if err := addHashedIndexEntriesInto(batch, dataEntry.key, dataEntry.value); err != nil {
 					return err

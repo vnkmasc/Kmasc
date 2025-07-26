@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"fmt"
+
 	"github.com/bits-and-blooms/bitset"
 	"github.com/hyperledger/fabric-lib-go/common/flogging"
 	"github.com/hyperledger/fabric-protos-go-apiv2/ledger/rwset"
@@ -20,6 +22,7 @@ import (
 	"github.com/hyperledger/fabric/core/ledger/confighistory"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
 	"github.com/hyperledger/fabric/core/ledger/pvtdatapolicy"
 	"github.com/hyperledger/fabric/core/ledger/util"
 	"github.com/pkg/errors"
@@ -329,6 +332,8 @@ func (s *Store) Commit(blockNum uint64, pvtData []*ledger.TxPvtData, missingPvtD
 		if val, err = encodeDataValue(dataEntry.value); err != nil {
 			return err
 		}
+		// Encrypt value before storing
+		val = statedb.EncryptValue(val, dataEntry.key.ns, dataEntry.key.coll+"|"+fmt.Sprint(dataEntry.key.txNum))
 		batch.Put(key, val)
 	}
 
@@ -519,6 +524,8 @@ func (s *Store) GetPvtDataByBlockNum(blockNum uint64, filter ledger.PvtNsCollFil
 			currentTxWsetAssember = newTxPvtdataAssembler(blockNum, currentTxNum)
 		}
 
+		// Decrypt value after reading
+		dataValueBytes = statedb.DecryptValue(dataValueBytes, dataKey.ns, dataKey.coll+"|"+fmt.Sprint(dataKey.txNum))
 		dataValue, err := decodeDataValue(dataValueBytes)
 		if err != nil {
 			return nil, err
@@ -966,12 +973,12 @@ func (s *Store) retrieveDataEntries(dataKeys []*dataKey) ([]*dataEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		// Decrypt value after reading
+		v = statedb.DecryptValue(v, k.ns, k.coll+"|"+fmt.Sprint(k.txNum))
 		collWS, err := decodeDataValue(v)
 		if err != nil {
 			return nil, err
 		}
-
 		dataEntries = append(dataEntries,
 			&dataEntry{
 				key:   k,
@@ -1214,6 +1221,9 @@ func (p *purgeUpdatesProcessor) process(hashedIndexKey, hashedIndexVal []byte) e
 		if err != nil {
 			return err
 		}
+		// Decrypt value after reading
+		decodedKey, _ := decodeDatakey(dataKey)
+		dataValue = statedb.DecryptValue(dataValue, decodedKey.ns, decodedKey.coll+"|"+fmt.Sprint(decodedKey.txNum))
 		collPvtRWSetProto, err := decodeDataValue(dataValue)
 		if err != nil {
 			return err
@@ -1269,6 +1279,9 @@ func (p *purgeUpdatesProcessor) commitPendingChanges() error {
 		if err != nil {
 			return err
 		}
+		// Encrypt value before storing
+		decodedKey, _ := decodeDatakey([]byte(k))
+		encDataValue = statedb.EncryptValue(encDataValue, decodedKey.ns, decodedKey.coll+"|"+fmt.Sprint(decodedKey.txNum))
 		p.batch.Put([]byte(k), encDataValue)
 	}
 	if err := p.db.WriteBatch(p.batch, true); err != nil {
