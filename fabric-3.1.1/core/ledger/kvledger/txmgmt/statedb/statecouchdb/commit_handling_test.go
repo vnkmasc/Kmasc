@@ -160,13 +160,13 @@ func TestExecuteCommitter(t *testing.T) {
 		key:            "key1",
 		revision:       "",
 		VersionedValue: &statedb.VersionedValue{Value: []byte("value1"), Metadata: nil, Version: version.NewHeight(1, 1)},
-	})
+	}, "ns")
 	require.NoError(t, err)
 	couchDocKey2, err := keyValToCouchDoc(&keyValue{
 		key:            "key2",
 		revision:       "",
 		VersionedValue: &statedb.VersionedValue{Value: nil, Metadata: nil, Version: version.NewHeight(1, 1)},
-	})
+	}, "ns")
 	require.NoError(t, err)
 
 	committers := []*committer{
@@ -229,7 +229,7 @@ func TestCommitUpdates(t *testing.T) {
 
 	committerDB, err := db.getNamespaceDBHandle("ns")
 	require.NoError(t, err)
-	couchDoc, err := keyValToCouchDoc(&keyValue{key: "key1", revision: "", VersionedValue: nsUpdates["key1"]})
+	couchDoc, err := keyValToCouchDoc(&keyValue{key: "key1", revision: "", VersionedValue: nsUpdates["key1"]}, "ns")
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -277,7 +277,7 @@ func TestCommitUpdates(t *testing.T) {
 		}
 	}
 
-	couchDoc, err = keyValToCouchDoc(&keyValue{key: "key2", revision: "", VersionedValue: nsUpdates["key2"]})
+	couchDoc, err = keyValToCouchDoc(&keyValue{key: "key2", revision: "", VersionedValue: nsUpdates["key2"]}, "ns")
 	require.NoError(t, err)
 
 	committer := &committer{

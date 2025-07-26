@@ -66,7 +66,8 @@ func (v jsonValue) toBytes() ([]byte, error) {
 	return jsonBytes, err
 }
 
-func couchDocToKeyValue(doc *couchDoc) (*keyValue, error) {
+// All calls to couchDocToKeyValue and keyValToCouchDoc must now pass namespace.
+func couchDocToKeyValue(doc *couchDoc, namespace string) (*keyValue, error) {
 	docFields, err := validateAndRetrieveFields(doc)
 	if err != nil {
 		return nil, err
@@ -75,12 +76,15 @@ func couchDocToKeyValue(doc *couchDoc) (*keyValue, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Decrypt value and metadata after reading
+	val := statedb.DecryptValue(docFields.value, namespace, docFields.id)
+	meta := statedb.DecryptValue(metadata, namespace, docFields.id)
 	return &keyValue{
 		docFields.id, docFields.revision,
 		&statedb.VersionedValue{
-			Value:    docFields.value,
+			Value:    val,
 			Version:  version,
-			Metadata: metadata,
+			Metadata: meta,
 		},
 	}, nil
 }
@@ -127,7 +131,7 @@ func validateAndRetrieveFields(doc *couchDoc) (*couchDocFields, error) {
 	return docFields, err
 }
 
-func keyValToCouchDoc(kv *keyValue) (*couchDoc, error) {
+func keyValToCouchDoc(kv *keyValue, namespace string) (*couchDoc, error) {
 	type kvType int32
 	const (
 		kvTypeDelete = iota
@@ -136,6 +140,14 @@ func keyValToCouchDoc(kv *keyValue) (*couchDoc, error) {
 	)
 	key, value, metadata, version := kv.key, kv.Value, kv.Metadata, kv.Version
 	jsonMap := make(jsonValue)
+
+	// Encrypt value and metadata before storing
+	if value != nil {
+		value = statedb.EncryptValue(value, namespace, key)
+	}
+	if metadata != nil {
+		metadata = statedb.EncryptValue(metadata, namespace, key)
+	}
 
 	var kvtype kvType
 	switch {
