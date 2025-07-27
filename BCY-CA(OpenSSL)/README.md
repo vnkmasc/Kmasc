@@ -41,7 +41,100 @@ BCY-CA là một Certificate Authority tuỳ chỉnh thay thế Fabric-CA trong 
 
 ---
 
+##Luồng hoạt động của BCY-CA
+
+Luồng hoạt động của BCY-CA được thiết kế để quản lý danh tính và chứng chỉ một cách tuần tự và hiệu quả. Dưới đây là mô tả chi tiết về từng bước xử lý:
+
+1. Khởi tạo Root CA (/initca)
+
+Input: Không yêu cầu input cụ thể, chỉ cần gọi API.
+
+Quy trình:
+
+Tạo cặp khóa RSA (private key và public key) bằng OpenSSL.
+
+Tạo chứng chỉ tự ký (self-signed certificate) cho Root CA.
+
+Lưu ca-cert.pem và ca-key.pem vào thư mục cấu hình (ví dụ: organizations/ca/).
+
+Output: File ca-cert.pem và ca-key.pem được lưu trong thư mục chỉ định.
+
+Script tương ứng: ./registerEnroll.sh initCA
+
+2. Đăng ký người dùng (/register)
+
+Input: ID người dùng (ví dụ: admin, user1) và thông tin tổ chức (ví dụ: org1.example.com).
+
+Quy trình:
+
+Xác thực yêu cầu đăng ký.
+
+Tạo một secret (mật khẩu tạm thời).
+
+Lưu ID và secret vào cơ sở dữ liệu nội bộ hoặc file cấu hình.
+
+Output: Trả về ID và secret cho người dùng.
+
+Script tương ứng: Được gọi trong ./registerEnroll.sh setupPeerOrg hoặc setupOrdererOrg
+
+3. Ký chứng chỉ người dùng (/enroll)
+
+Input: ID, secret, và CSR (Certificate Signing Request).
+
+Quy trình:
+
+Xác thực ID và secret.
+
+Kiểm tra CSR hợp lệ.
+
+Ký CSR bằng ca-key.pem.
+
+Tạo chứng chỉ người dùng và cấu trúc thư mục MSP.
+
+Output: Chứng chỉ người dùng và thư mục MSP (ví dụ: organizations/peerOrganizations/org1.example.com/users/).
+
+Script tương ứng: ./registerEnroll.sh setupPeerOrg
+
+4. Ký chứng chỉ TLS (/enroll/tls)
+
+Input: CSR TLS từ peer hoặc orderer.
+
+Quy trình:
+
+Xác thực yêu cầu TLS.
+
+Ký CSR bằng CA để tạo TLS cert.
+
+Đảm bảo chứa các extension như subjectAltName.
+
+Lưu chứng chỉ vào thư mục TLS (ví dụ: tls/peer0.org1.example.com/).
+
+Output: Chứng chỉ TLS và thư mục TLS MSP.
+
+Script tương ứng: ./registerEnroll.sh setupPeerOrg hoặc setupOrdererOrg
+
+5. Tạo cấu trúc MSP
+
+Quy trình:
+
+Sau khi ký, BCY-CA tự động tạo cấu trúc MSP đúng chuẩn Hyperledger Fabric.
+
+Bao gồm:
+
+cacerts/: Chứng chỉ CA.
+
+tlscacerts/: Chứng chỉ TLS CA.
+
+keystore/: Khóa riêng.
+
+signcerts/: Chứng chỉ đã ký.
+
+config.yaml: Cấu hình tổ chức.
+
+Output: Thư mục MSP hoàn chỉnh.
+
 ## Hướng Dẫn Triển Khai
+Chạy customCA server: go run ./cmd/main.go
 
 ### 1. Cài Đặt
 
