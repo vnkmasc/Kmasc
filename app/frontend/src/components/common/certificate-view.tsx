@@ -10,6 +10,7 @@ import {
   ChartAreaIcon,
   CheckCircleIcon,
   CircleX,
+  Eye,
   FileTextIcon,
   Key,
   Library,
@@ -19,6 +20,7 @@ import {
   User
 } from 'lucide-react'
 import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
 import PDFView from './pdf-view'
 import { Separator } from '../ui/separator'
 import CertificateBlankButton from './certificate-blank-button'
@@ -26,6 +28,9 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils'
 import CertificateQrCode from './certificate-qr-code'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
+import CertificatePreview from './certificate-preview'
+import { getCertificatePreviewProps } from '@/lib/utils/format-api'
 
 interface Props {
   isBlockchain: boolean
@@ -227,7 +232,27 @@ const CertificateView: React.FC<Props> = (props) => {
             title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
             items={getDecriptionViewItems(currentDataQuery?.data)}
             description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
-            extra={<CertificateQrCode id={props.id} isIcon={false} />}
+            extra={
+              <div className='flex items-center gap-2'>
+                <CertificateQrCode id={props.id} isIcon={false} />
+                {isDegree && currentDataQuery?.data?.certificate && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant='outline' size='sm'>
+                        <Eye className='mr-2 h-4 w-4' />
+                        Xem trước
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className='md:min-w-[600px]'>
+                      <DialogHeader>
+                        <DialogTitle>Văn bằng</DialogTitle>
+                      </DialogHeader>
+                      <CertificatePreview {...getCertificatePreviewProps(currentDataQuery?.data)!} />
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            }
           />
         </>
       ) : (
