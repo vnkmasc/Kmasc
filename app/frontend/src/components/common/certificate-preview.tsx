@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useRef } from 'react'
-import html2pdf from 'html2pdf.js'
 import { Button } from '../ui/button'
 import { Download } from 'lucide-react'
 
@@ -29,20 +28,27 @@ const Certificate: React.FC<Props> = ({
   const certificateRef = useRef(null)
 
   // Hàm xử lý việc xuất PDF
-  const handleExportPdf = () => {
-    const element = certificateRef.current
-    const fileName = `VanBang_${recipientName.replace(/ /g, '_')}.pdf`
+  const handleExportPdf = async () => {
+    try {
+      const element = certificateRef.current
+      const fileName = `VanBang_${recipientName.replace(/ /g, '_')}.pdf`
 
-    const options = {
-      margin: [0, 0, 0, 0], // không lề
-      filename: fileName,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 3, letterRendering: true, useCORS: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+      const options = {
+        margin: [0, 0, 0, 0], // không lề
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 3, letterRendering: true, useCORS: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+      }
+
+      // Dynamic import html2pdf để tránh lỗi SSR
+      const html2pdf = (await import('html2pdf.js')).default
+
+      // Tạo và tải file PDF
+      html2pdf().from(element).set(options).save()
+    } catch (error) {
+      console.error('Error exporting PDF:', error)
     }
-
-    // Tạo và tải file PDF
-    html2pdf().from(element).set(options).save()
   }
 
   return (
