@@ -15,6 +15,7 @@ import (
 
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 	"github.com/pkg/errors"
 )
 
@@ -76,9 +77,10 @@ func couchDocToKeyValue(doc *couchDoc, namespace string) (*keyValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Decrypt value and metadata after reading
-	val := statedb.DecryptValue(docFields.value, namespace, docFields.id)
-	meta := statedb.DecryptValue(metadata, namespace, docFields.id)
+	// Decrypt value and metadata after reading using MKV
+	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+	val := mkv.DecryptValueMKV(docFields.value, mkvKey)
+	meta := mkv.DecryptValueMKV(metadata, mkvKey)
 	return &keyValue{
 		docFields.id, docFields.revision,
 		&statedb.VersionedValue{
@@ -141,12 +143,13 @@ func keyValToCouchDoc(kv *keyValue, namespace string) (*couchDoc, error) {
 	key, value, metadata, version := kv.key, kv.Value, kv.Metadata, kv.Version
 	jsonMap := make(jsonValue)
 
-	// Encrypt value and metadata before storing
+	// Encrypt value and metadata before storing using MKV
+	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
 	if value != nil {
-		value = statedb.EncryptValue(value, namespace, key)
+		value = mkv.EncryptValueMKV(value, mkvKey)
 	}
 	if metadata != nil {
-		metadata = statedb.EncryptValue(metadata, namespace, key)
+		metadata = mkv.EncryptValueMKV(metadata, mkvKey)
 	}
 
 	var kvtype kvType
