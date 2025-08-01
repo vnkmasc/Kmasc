@@ -7,13 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package pvtdatastorage
 
 import (
-	"fmt"
-
 	"github.com/bits-and-blooms/bitset"
 	"github.com/hyperledger/fabric-protos-go-apiv2/ledger/rwset"
 	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
-	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 	"github.com/pkg/errors"
 )
 
@@ -350,7 +348,8 @@ func (e *entriesForPvtDataOfOldBlocks) addDataEntriesTo(batch *leveldbhelper.Upd
 			return errors.Wrap(err, "error while encoding data value")
 		}
 		// Encrypt value before storing
-		val = statedb.EncryptValue(val, dataKey.ns, dataKey.coll+"|"+fmt.Sprint(dataKey.txNum))
+		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		val = mkv.EncryptValueMKV(val, mkvKey)
 		batch.Put(key, val)
 	}
 	return nil
