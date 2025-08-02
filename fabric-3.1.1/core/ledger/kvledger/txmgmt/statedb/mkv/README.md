@@ -33,6 +33,3 @@ Thư mục này chứa mã nguồn thư viện mã hóa MKV256 (thuần C) và G
 - Không để file C nào có hàm `main` trong thư mục này khi build với Go/cgo.
 - Key phải đúng độ dài (32 bytes cho 256 bit).
 - Chỉ hỗ trợ block size 256 bit (32 bytes) cho MKV256.
-
-## Liên hệ
-Nếu gặp vấn đề hoặc cần hỗ trợ, hãy liên hệ tác giả hoặc mở issue trong repo. 
