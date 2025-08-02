@@ -207,18 +207,6 @@ make native
 - Khóa động thay vì khóa cố định
 - IV ngẫu nhiên cho mỗi lần mã hóa
 
-## Đóng góp
-
-1. Fork repository
-2. Tạo feature branch
-3. Commit changes
-4. Push to branch
-5. Tạo Pull Request
-
-## License
-
-Apache 2.0 License
-
 ## Hỗ trợ
 
 - Tạo issue trên GitHub

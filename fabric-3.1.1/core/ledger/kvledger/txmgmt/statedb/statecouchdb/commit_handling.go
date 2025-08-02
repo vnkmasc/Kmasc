@@ -133,7 +133,7 @@ func (vdb *VersionedDB) buildCommittersForNs(ns string, nsUpdates map[string]*st
 	i := 0
 	for key, vv := range nsUpdates {
 		kv := &keyValue{key: key, revision: revisions[key], VersionedValue: vv}
-		couchDoc, err := keyValToCouchDoc(kv)
+		couchDoc, err := keyValToCouchDoc(kv, ns)
 		if err != nil {
 			return nil, err
 		}

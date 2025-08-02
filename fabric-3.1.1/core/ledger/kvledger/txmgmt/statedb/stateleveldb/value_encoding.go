@@ -10,13 +10,15 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 )
 
 // encodeValue encodes the value, version, and metadata
 func encodeValue(v *statedb.VersionedValue, ns, key string) ([]byte, error) {
-	// Mã hóa value và metadata trước khi lưu
-	encryptedValue := statedb.EncryptValue(v.Value, ns, key)
-	encryptedMetadata := statedb.EncryptValue(v.Metadata, ns, key)
+	// Mã hóa value và metadata bằng MKV
+	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes, bạn có thể thay bằng key động nếu muốn
+	encryptedValue := mkv.EncryptValueMKV(v.Value, mkvKey)
+	encryptedMetadata := mkv.EncryptValueMKV(v.Metadata, mkvKey)
 	return proto.Marshal(
 		&DBValue{
 			Version:  v.Version.ToBytes(),
@@ -37,8 +39,9 @@ func decodeValue(encodedValue []byte, ns, key string) (*statedb.VersionedValue, 
 	if err != nil {
 		return nil, err
 	}
-	val := statedb.DecryptValue(dbValue.Value, ns, key)
-	metadata := statedb.DecryptValue(dbValue.Metadata, ns, key)
+	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes, bạn có thể thay bằng key động nếu muốn
+	val := mkv.DecryptValueMKV(dbValue.Value, mkvKey)
+	metadata := mkv.DecryptValueMKV(dbValue.Metadata, mkvKey)
 	// protobuf always makes an empty byte array as nil
 	if val == nil {
 		val = []byte{}

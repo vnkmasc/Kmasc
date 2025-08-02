@@ -50,9 +50,9 @@ func TestKVAndDocConversion(t *testing.T) {
 }
 
 func testKVAndDocConversion(t *testing.T, kv *keyValue) {
-	doc, err := keyValToCouchDoc(kv)
+	doc, err := keyValToCouchDoc(kv, "testns")
 	require.NoError(t, err)
-	actualKV, err := couchDocToKeyValue(doc)
+	actualKV, err := couchDocToKeyValue(doc, "testns")
 	require.NoError(t, err)
 	require.Equal(t, kv, actualKV)
 }
@@ -75,9 +75,9 @@ func testSortJSON(t *testing.T, filePrefix int) {
 		))
 	require.NoError(t, err)
 	kv := &keyValue{"", "", &statedb.VersionedValue{Value: input, Version: version.NewHeight(1, 1)}}
-	doc, err := keyValToCouchDoc(kv)
+	doc, err := keyValToCouchDoc(kv, "testns")
 	require.NoError(t, err)
-	actualKV, err := couchDocToKeyValue(doc)
+	actualKV, err := couchDocToKeyValue(doc, "testns")
 	require.NoError(t, err)
 
 	var prettyPrintJSON bytes.Buffer

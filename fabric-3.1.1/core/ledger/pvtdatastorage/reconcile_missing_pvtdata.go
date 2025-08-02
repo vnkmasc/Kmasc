@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go-apiv2/ledger/rwset"
 	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 	"github.com/pkg/errors"
 )
 
@@ -346,6 +347,9 @@ func (e *entriesForPvtDataOfOldBlocks) addDataEntriesTo(batch *leveldbhelper.Upd
 		if val, err = encodeDataValue(pvtData); err != nil {
 			return errors.Wrap(err, "error while encoding data value")
 		}
+		// Encrypt value before storing
+		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		val = mkv.EncryptValueMKV(val, mkvKey)
 		batch.Put(key, val)
 	}
 	return nil

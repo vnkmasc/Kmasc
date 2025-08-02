@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 	"github.com/hyperledger/fabric/core/ledger/util"
 	"github.com/pkg/errors"
 )
@@ -113,6 +114,9 @@ func constructHashedIndexFor(ledgerID string, db *leveldbhelper.DBHandle) error 
 				if dataVal, err = encodeDataValue(dataEntry.value); err != nil {
 					return err
 				}
+				// Encrypt value before storing
+				mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+				dataVal = mkv.EncryptValueMKV(dataVal, mkvKey)
 				batch.Put(dataKey, dataVal)
 				if err := addHashedIndexEntriesInto(batch, dataEntry.key, dataEntry.value); err != nil {
 					return err

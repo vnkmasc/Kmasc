@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger/fabric/core/ledger/confighistory"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 	"github.com/hyperledger/fabric/core/ledger/pvtdatapolicy"
 	"github.com/hyperledger/fabric/core/ledger/util"
 	"github.com/pkg/errors"
@@ -329,6 +330,9 @@ func (s *Store) Commit(blockNum uint64, pvtData []*ledger.TxPvtData, missingPvtD
 		if val, err = encodeDataValue(dataEntry.value); err != nil {
 			return err
 		}
+		// Encrypt value before storing using MKV
+		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		val = mkv.EncryptValueMKV(val, mkvKey)
 		batch.Put(key, val)
 	}
 
@@ -519,6 +523,9 @@ func (s *Store) GetPvtDataByBlockNum(blockNum uint64, filter ledger.PvtNsCollFil
 			currentTxWsetAssember = newTxPvtdataAssembler(blockNum, currentTxNum)
 		}
 
+		// Decrypt value after reading
+		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		dataValueBytes = mkv.DecryptValueMKV(dataValueBytes, mkvKey)
 		dataValue, err := decodeDataValue(dataValueBytes)
 		if err != nil {
 			return nil, err
@@ -966,12 +973,13 @@ func (s *Store) retrieveDataEntries(dataKeys []*dataKey) ([]*dataEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		// Decrypt value after reading
+		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		v = mkv.DecryptValueMKV(v, mkvKey)
 		collWS, err := decodeDataValue(v)
 		if err != nil {
 			return nil, err
 		}
-
 		dataEntries = append(dataEntries,
 			&dataEntry{
 				key:   k,
@@ -1214,6 +1222,9 @@ func (p *purgeUpdatesProcessor) process(hashedIndexKey, hashedIndexVal []byte) e
 		if err != nil {
 			return err
 		}
+		// Decrypt value after reading
+		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		dataValue = mkv.DecryptValueMKV(dataValue, mkvKey)
 		collPvtRWSetProto, err := decodeDataValue(dataValue)
 		if err != nil {
 			return err
@@ -1269,6 +1280,9 @@ func (p *purgeUpdatesProcessor) commitPendingChanges() error {
 		if err != nil {
 			return err
 		}
+		// Encrypt value before storing
+		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		encDataValue = mkv.EncryptValueMKV(encDataValue, mkvKey)
 		p.batch.Put([]byte(k), encDataValue)
 	}
 	if err := p.db.WriteBatch(p.batch, true); err != nil {
