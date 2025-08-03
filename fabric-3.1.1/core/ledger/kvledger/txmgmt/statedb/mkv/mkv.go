@@ -9,7 +9,10 @@ package mkv
 */
 import "C"
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -93,4 +96,159 @@ func DecryptValueMKV(value []byte, key []byte) []byte {
 	}
 	logToFileMKV("DECRYPT", "", "", "SUCCESS", "")
 	return plaintext[:int(cPlaintextLen)]
+}
+
+// GenerateK1 tạo khóa K1 ngẫu nhiên 32 bytes
+func GenerateK1() ([]byte, error) {
+	k1 := make([]byte, 32)
+	_, err := rand.Read(k1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate K1: %v", err)
+	}
+	logToFileMKV("GENERATE_K1", "", "", "SUCCESS", "")
+	return k1, nil
+}
+
+// GenerateK0FromPassword tạo khóa K0 từ password bằng PBKDF2 (đơn giản hóa bằng SHA256)
+func GenerateK0FromPassword(password string) []byte {
+	hash := sha256.Sum256([]byte(password))
+	k0 := hash[:]
+	logToFileMKV("GENERATE_K0", "", "", "SUCCESS", "")
+	return k0
+}
+
+// EncryptK1WithK0 mã hóa K1 bằng K0 sử dụng MKV
+func EncryptK1WithK0(k1 []byte, k0 []byte) []byte {
+	return EncryptValueMKV(k1, k0)
+}
+
+// DecryptK1WithK0 giải mã K1 bằng K0 sử dụng MKV
+func DecryptK1WithK0(encryptedK1 []byte, k0 []byte) []byte {
+	return DecryptValueMKV(encryptedK1, k0)
+}
+
+// SaveK1ToFile lưu K1 vào file
+func SaveK1ToFile(k1 []byte, filename string) error {
+	err := ioutil.WriteFile(filename, k1, 0600)
+	if err != nil {
+		logToFileMKV("SAVE_K1", "", filename, "FAIL", err.Error())
+		return fmt.Errorf("failed to save K1: %v", err)
+	}
+	logToFileMKV("SAVE_K1", "", filename, "SUCCESS", "")
+	return nil
+}
+
+// LoadK1FromFile đọc K1 từ file
+func LoadK1FromFile(filename string) ([]byte, error) {
+	k1, err := ioutil.ReadFile(filename)
+	if err != nil {
+		logToFileMKV("LOAD_K1", "", filename, "FAIL", err.Error())
+		return nil, fmt.Errorf("failed to load K1: %v", err)
+	}
+	logToFileMKV("LOAD_K1", "", filename, "SUCCESS", "")
+	return k1, nil
+}
+
+// SaveEncryptedK1ToFile lưu K1 đã mã vào file
+func SaveEncryptedK1ToFile(encryptedK1 []byte, filename string) error {
+	err := ioutil.WriteFile(filename, encryptedK1, 0600)
+	if err != nil {
+		logToFileMKV("SAVE_ENCRYPTED_K1", "", filename, "FAIL", err.Error())
+		return fmt.Errorf("failed to save encrypted K1: %v", err)
+	}
+	logToFileMKV("SAVE_ENCRYPTED_K1", "", filename, "SUCCESS", "")
+	return nil
+}
+
+// LoadEncryptedK1FromFile đọc K1 đã mã từ file
+func LoadEncryptedK1FromFile(filename string) ([]byte, error) {
+	encryptedK1, err := ioutil.ReadFile(filename)
+	if err != nil {
+		logToFileMKV("LOAD_ENCRYPTED_K1", "", filename, "FAIL", err.Error())
+		return nil, fmt.Errorf("failed to load encrypted K1: %v", err)
+	}
+	logToFileMKV("LOAD_ENCRYPTED_K1", "", filename, "SUCCESS", "")
+	return encryptedK1, nil
+}
+
+// GetCurrentK1 lấy K1 hiện tại (giải mã từ file nếu cần)
+func GetCurrentK1(password string) ([]byte, error) {
+	// Thử đọc K1 đã mã trước
+	encryptedK1, err := LoadEncryptedK1FromFile("encrypted_k1.key")
+	if err != nil {
+		// Nếu không có, thử đọc K1 plaintext
+		k1, err := LoadK1FromFile("k1.key")
+		if err != nil {
+			return nil, fmt.Errorf("no K1 found: %v", err)
+		}
+		return k1, nil
+	}
+
+	// Giải mã K1 bằng password
+	k0 := GenerateK0FromPassword(password)
+	k1 := DecryptK1WithK0(encryptedK1, k0)
+	if k1 == nil {
+		return nil, fmt.Errorf("failed to decrypt K1 with password")
+	}
+	return k1, nil
+}
+
+// InitializeKeyManagement khởi tạo hệ thống quản lý khóa
+func InitializeKeyManagement(password string) error {
+	// Tạo K1 ngẫu nhiên
+	k1, err := GenerateK1()
+	if err != nil {
+		return err
+	}
+
+	// Lưu K1 plaintext
+	err = SaveK1ToFile(k1, "k1.key")
+	if err != nil {
+		return err
+	}
+
+	// Tạo K0 từ password
+	k0 := GenerateK0FromPassword(password)
+
+	// Mã K1 bằng K0
+	encryptedK1 := EncryptK1WithK0(k1, k0)
+	if encryptedK1 == nil {
+		return fmt.Errorf("failed to encrypt K1 with K0")
+	}
+
+	// Lưu K1 đã mã
+	err = SaveEncryptedK1ToFile(encryptedK1, "encrypted_k1.key")
+	if err != nil {
+		return err
+	}
+
+	logToFileMKV("INIT_KEYS", "", "", "SUCCESS", "")
+	return nil
+}
+
+// ChangePassword thay đổi password (giải mã và mã lại K1)
+func ChangePassword(oldPassword, newPassword string) error {
+	// Lấy K1 hiện tại
+	k1, err := GetCurrentK1(oldPassword)
+	if err != nil {
+		return fmt.Errorf("failed to get current K1: %v", err)
+	}
+
+	// Tạo K0 mới từ password mới
+	newK0 := GenerateK0FromPassword(newPassword)
+
+	// Mã lại K1 bằng K0 mới
+	encryptedK1 := EncryptK1WithK0(k1, newK0)
+	if encryptedK1 == nil {
+		return fmt.Errorf("failed to encrypt K1 with new K0")
+	}
+
+	// Lưu K1 đã mã mới
+	err = SaveEncryptedK1ToFile(encryptedK1, "encrypted_k1.key")
+	if err != nil {
+		return err
+	}
+
+	logToFileMKV("CHANGE_PASSWORD", "", "", "SUCCESS", "")
+	return nil
 }

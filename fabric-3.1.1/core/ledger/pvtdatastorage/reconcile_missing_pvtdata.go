@@ -348,7 +348,11 @@ func (e *entriesForPvtDataOfOldBlocks) addDataEntriesTo(batch *leveldbhelper.Upd
 			return errors.Wrap(err, "error while encoding data value")
 		}
 		// Encrypt value before storing
-		mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+		mkvKey, err := mkv.GetCurrentK1("statedb_leveldb_password")
+		if err != nil {
+			// Fallback to hardcoded key if key management not initialized
+			mkvKey = []byte("1234567890abcdef1234567890abcdef")
+		}
 		val = mkv.EncryptValueMKV(val, mkvKey)
 		batch.Put(key, val)
 	}
