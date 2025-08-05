@@ -17,6 +17,9 @@ func SetupRouter(
 	verificationHandler *handlers.VerificationHandler,
 	rewardDisciplineHandler *handlers.RewardDisciplineHandler,
 	blockchainHandler *handlers.BlockchainHandler,
+	majorHandler *handlers.MajorHandler,
+	templateHandler *handlers.TemplateHandler,
+	ediplomaHandler *handlers.EDiplomaHandler,
 
 ) *gin.Engine {
 	r := gin.Default()
@@ -117,6 +120,28 @@ func SetupRouter(
 	blockchainGroup.GET("/certificate-on-chain/:id", blockchainHandler.GetCertificateByID)
 	blockchainGroup.GET("/verify/:id", blockchainHandler.VerifyCertificateIntegrity)
 	blockchainGroup.GET("/verify-file/:id", blockchainHandler.VerifyCertificateFile)
+
+	// ===== Major routes =====
+	majorGroup := api.Group("/majors")
+	majorGroup.Use(middleware.JWTAuthMiddleware())
+	majorGroup.POST("", majorHandler.CreateMajor)
+	majorGroup.GET("/faculty/:faculty_id", majorHandler.GetMajorsByFaculty)
+	majorGroup.DELETE("/:id", majorHandler.DeleteMajor)
+
+	templateGroup := api.Group("/templates")
+	templateGroup.Use(middleware.JWTAuthMiddleware())
+	templateGroup.POST("", templateHandler.CreateTemplate)
+	templateGroup.GET("/faculty/:faculty_id", templateHandler.GetTemplatesByFaculty)
+	templateGroup.POST("/sign/faculty/:faculty_id", templateHandler.SignTemplatesByFaculty)
+	templateGroup.POST("/sign/university", templateHandler.SignAllPendingTemplatesOfUniversity)
+	templateGroup.POST("/sign/minedu/:university_id", templateHandler.SignTemplatesByMinEdu)
+	templateGroup.POST("/verify/faculty/:faculty_id", templateHandler.VerifyTemplatesByFaculty)
+	templateGroup.GET("/:id/file", templateHandler.GetTemplateFile)
+	// templateGroup.PUT("/:id", templateHandler.UpdateTemplate)
+
+	ediplomaGroup := api.Group("/ediplomas")
+	ediplomaGroup.Use(middleware.JWTAuthMiddleware())
+	ediplomaGroup.POST("/generate", ediplomaHandler.GenerateEDiploma)
 
 	return r
 }

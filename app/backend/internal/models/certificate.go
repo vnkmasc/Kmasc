@@ -113,7 +113,7 @@ type SearchCertificateParams struct {
 	Page            int    `form:"page,default=1"`
 	PageSize        int    `form:"page_size,default=10"`
 	SortOrder       string `form:"sort_order"` // "asc" | "desc"
-
+	Year            int    `form:"year"`
 }
 
 func ValidateCreateCertificateRequest(sl validator.StructLevel) {
