@@ -6,6 +6,7 @@ import DecriptionView from './description-view'
 import {
   Blocks,
   Book,
+  BookOpen,
   Calendar,
   ChartAreaIcon,
   CheckCircleIcon,
@@ -155,6 +156,11 @@ const CertificateView: React.FC<Props> = (props) => {
         value: `${data?.facultyCode} - ${data?.facultyName}`
       },
       {
+        icon: <BookOpen className='h-5 w-5 text-gray-500' />,
+        title: 'Hệ đào tạo',
+        value: data?.educationType
+      },
+      {
         icon: <Book className='h-5 w-5 text-gray-500' />,
         title: 'Văn bằng',
         value: (
@@ -238,8 +244,8 @@ const CertificateView: React.FC<Props> = (props) => {
                 {isDegree && currentDataQuery?.data?.certificate && (
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant='outline' size='sm'>
-                        <Eye className='mr-2 h-4 w-4' />
+                      <Button variant='outline'>
+                        <Eye />
                         Xem trước
                       </Button>
                     </DialogTrigger>

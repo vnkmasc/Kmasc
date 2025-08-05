@@ -101,10 +101,11 @@ export const formatCertificateView = (data: any) => {
     signed: data.signed,
     description: data.description,
     gpa: data.gpa,
-    dateOfBirth: data.date_of_birth || '',
-    course: data.course || '',
-    graduationRank: data.graduation_rank || '',
-    major: data.major || data.faculty_name || ''
+    dateOfBirth: data.date_of_birth,
+    course: data.course,
+    graduationRank: data.graduation_rank,
+    major: data.major || data.faculty_name,
+    educationType: data.education_type
   }
 }
 
