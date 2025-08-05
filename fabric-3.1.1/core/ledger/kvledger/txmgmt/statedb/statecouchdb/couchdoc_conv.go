@@ -15,6 +15,7 @@ import (
 
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 	"github.com/pkg/errors"
 )
 
@@ -66,7 +67,8 @@ func (v jsonValue) toBytes() ([]byte, error) {
 	return jsonBytes, err
 }
 
-func couchDocToKeyValue(doc *couchDoc) (*keyValue, error) {
+// All calls to couchDocToKeyValue and keyValToCouchDoc must now pass namespace.
+func couchDocToKeyValue(doc *couchDoc, namespace string) (*keyValue, error) {
 	docFields, err := validateAndRetrieveFields(doc)
 	if err != nil {
 		return nil, err
@@ -75,12 +77,16 @@ func couchDocToKeyValue(doc *couchDoc) (*keyValue, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Decrypt value and metadata after reading using MKV
+	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+	val := mkv.DecryptValueMKV(docFields.value, mkvKey)
+	meta := mkv.DecryptValueMKV(metadata, mkvKey)
 	return &keyValue{
 		docFields.id, docFields.revision,
 		&statedb.VersionedValue{
-			Value:    docFields.value,
+			Value:    val,
 			Version:  version,
-			Metadata: metadata,
+			Metadata: meta,
 		},
 	}, nil
 }
@@ -127,7 +133,7 @@ func validateAndRetrieveFields(doc *couchDoc) (*couchDocFields, error) {
 	return docFields, err
 }
 
-func keyValToCouchDoc(kv *keyValue) (*couchDoc, error) {
+func keyValToCouchDoc(kv *keyValue, namespace string) (*couchDoc, error) {
 	type kvType int32
 	const (
 		kvTypeDelete = iota
@@ -136,6 +142,15 @@ func keyValToCouchDoc(kv *keyValue) (*couchDoc, error) {
 	)
 	key, value, metadata, version := kv.key, kv.Value, kv.Metadata, kv.Version
 	jsonMap := make(jsonValue)
+
+	// Encrypt value and metadata before storing using MKV
+	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+	if value != nil {
+		value = mkv.EncryptValueMKV(value, mkvKey)
+	}
+	if metadata != nil {
+		metadata = mkv.EncryptValueMKV(metadata, mkvKey)
+	}
 
 	var kvtype kvType
 	switch {

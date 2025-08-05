@@ -75,6 +75,11 @@ install-fabric.sh
 libencryption.so
 encrypt.o
 
+# MKV implementation test files and binaries
+libmkv.so
+mkv.o
+MKV256.o
+
 crypto-config/
 fabric-samples/
 my-network/

@@ -542,7 +542,7 @@ func (vdb *VersionedDB) readFromDB(namespace, key string) (*keyValue, error) {
 	if couchDoc == nil {
 		return nil, nil
 	}
-	kv, err := couchDocToKeyValue(couchDoc)
+	kv, err := couchDocToKeyValue(couchDoc, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -1045,7 +1045,7 @@ func (scanner *queryScanner) Next() (*statedb.VersionedKV, error) {
 	if doc == nil {
 		return nil, nil
 	}
-	kv, err := couchDocToKeyValue(doc)
+	kv, err := couchDocToKeyValue(doc, scanner.namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -1209,7 +1209,7 @@ func (s *dbsScanner) Next() (*statedb.VersionedKV, error) {
 				continue
 			}
 		}
-		kv, err := couchDocToKeyValue(couchDoc)
+		kv, err := couchDocToKeyValue(couchDoc, s.currentNamespace)
 		if err != nil {
 			return nil, errors.WithMessagef(
 				err,
@@ -1277,6 +1277,7 @@ func (s *snapshotImporter) importState() error {
 				key:            versionedKV.Key,
 				VersionedValue: versionedKV.VersionedValue,
 			},
+			versionedKV.Namespace,
 		)
 		if err != nil {
 			return err
