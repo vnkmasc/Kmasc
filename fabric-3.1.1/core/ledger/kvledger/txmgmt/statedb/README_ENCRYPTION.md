@@ -6,11 +6,11 @@ Module này tích hợp mã hóa/giải mã OpenSSL vào cơ sở dữ liệu tr
 
 ## Tính năng
 
-- ✅ Tự động mã hóa/giải mã dữ liệu trạng thái
-- ✅ Mã hóa OpenSSL AES-256-CBC
-- ✅ Tích hợp CGO với thư viện C tùy chỉnh
-- ✅ Tương thích với Hyperledger Fabric 3.1.1
-- ✅ Minh bạch với chaincode hiện có
+- Tự động mã hóa/giải mã dữ liệu trạng thái
+- Mã hóa OpenSSL AES-256-CBC
+- Tích hợp CGO với thư viện C tùy chỉnh
+- Tương thích với Hyperledger Fabric 3.1.1
+- Minh bạch với chaincode hiện có
 
 ## Cấu trúc File
 
@@ -106,12 +106,12 @@ go test -bench=. ./...
 
 ### Kết quả Test
 Script test sẽ xác minh:
-- ✅ Biên dịch thư viện C
-- ✅ Liên kết OpenSSL
-- ✅ Build package Go
-- ✅ Unit tests
-- ✅ Integration tests
-- ✅ Performance benchmarks
+- Biên dịch thư viện C
+- Liên kết OpenSSL
+- Build package Go
+- Unit tests
+- Integration tests
+- Performance benchmarks
 
 ## Thuật toán Mã hóa
 
@@ -212,7 +212,7 @@ go test ./...
 
 #### 1. **Implementation thực sự đã có:**
 
-✅ **File `encrypt.c`** - Đây là implementation thực sự với OpenSSL AES-256-CBC:
+**File `encrypt.c`** - Đây là implementation thực sự với OpenSSL AES-256-CBC:
 - Sử dụng OpenSSL EVP API (`EVP_aes_256_cbc()`)
 - Có key và IV thực sự (32-byte key, 16-byte IV)
 - Thực hiện encryption/decryption thật, không phải dummy
@@ -220,7 +220,7 @@ go test ./...
 
 #### 2. **Bằng chứng hoạt động:**
 
-✅ **Test program `test_encrypt`** chứng minh:
+**Test program `test_encrypt`** chứng minh:
 ```bash
 # Chạy test để xem encryption thực sự
 cd core/ledger/kvledger/txmgmt/statedb
@@ -234,7 +234,7 @@ cd core/ledger/kvledger/txmgmt/statedb
 
 #### 3. **Integration với Fabric:**
 
-✅ **File `encrypt_prod.go`** - Go wrapper sử dụng CGO:
+**File `encrypt_prod.go`** - Go wrapper sử dụng CGO:
 ```go
 // Gọi hàm C thực sự
 result := C.encrypt_aes_cbc(cPlaintext, C.int(len(value)), cCiphertext, &cCiphertextLen)
@@ -249,11 +249,11 @@ LevelDB → DecryptValue() → decrypt_aes_cbc() → OpenSSL AES-256-CBC → Ori
 
 #### 5. **Performance và Security:**
 
-- ✅ AES-256-CBC (industry standard)
-- ✅ Hardware acceleration support
-- ✅ Comprehensive logging (`/root/state_encryption.log`)
-- ✅ CGO integration cho performance
-- ✅ OpenSSL EVP API (production-ready)
+- AES-256-CBC (industry standard)
+- Hardware acceleration support
+- Comprehensive logging (`/root/state_encryption.log`)
+- CGO integration cho performance
+- OpenSSL EVP API (production-ready)
 
 #### 6. **Demo thực tế:**
 
@@ -265,7 +265,7 @@ Chạy script demo để xem encryption hoạt động:
 **Kết quả demo:**
 - Original data: `Sensitive blockchain data: {"asset":"car","owner":"Alice","value":1000000}`
 - Encrypted data: `f7c406b8ce66f0bc658ff6e6faa8777d72df0a741485fb58af4c721c8b267d4309295cc87cac617e5da840291e7c245ca2aa9c4239c0a67170a72a3ee1842e6da2bdf0f51a2930cba339f28429b11505`
-- Verification: ✅ Decryption successful, data integrity confirmed
+- Verification: Decryption successful, data integrity confirmed
 
 #### 7. **Các file implementation:**
 
@@ -275,7 +275,6 @@ Chạy script demo để xem encryption hoạt động:
 - `test_encrypt.c` - Test program chứng minh hoạt động
 - `Makefile` - Build system cho thư viện C
 
-**Kết luận:** Implementation đã hoàn chỉnh và hoạt động thực sự, không phải chỉ interface! Tất cả encryption/decryption đều sử dụng OpenSSL AES-256-CBC thực sự.
 
 ---
 

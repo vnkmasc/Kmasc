@@ -6,12 +6,12 @@ Dự án này tích hợp mã hóa/giải mã sử dụng OpenSSL thông qua CGO
 
 ## Tính năng
 
-- ✅ Mã hóa/giải mã tự động cho state database
-- ✅ Sử dụng OpenSSL AES-256-CBC
-- ✅ Tích hợp CGO với thư viện C tùy chỉnh
-- ✅ Tương thích với Hyperledger Fabric 3.1.1
-- ✅ Test network hoạt động đầy đủ
-- ✅ Scripts modular và có thể chạy độc lập
+- Mã hóa/giải mã tự động cho state database
+- Sử dụng OpenSSL AES-256-CBC
+- Tích hợp CGO với thư viện C tùy chỉnh
+- Tương thích với Hyperledger Fabric 3.1.1
+- Test network hoạt động đầy đủ
+- Scripts modular và có thể chạy độc lập
 
 ## Đã kiểm thử trên
 
@@ -40,7 +40,30 @@ cd fabric-3.1.1
 ```
 
 ### Phương pháp 2: Setup từng bước
-Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết chi tiết về các script có sẵn và cách sử dụng từng bước.
+Chạy các file lệnh sau theo thứ tự:
+
+```bash
+# Bước 1: Sửa repositories (nếu cần)
+./scripts/fix-repositories.sh
+
+# Bước 2: Cài đặt môi trường
+./scripts/setup-environment.sh
+
+# Bước 3: Tải fabric-samples
+./scripts/download-fabric-samples.sh
+
+# Bước 4: Kiểm tra môi trường
+./scripts/test_environment.sh
+
+# Bước 5: Build thư viện encryption
+./scripts/build-encryption.sh
+
+# Bước 6: Build Fabric
+./scripts/build-fabric.sh
+
+# Bước 7: Khởi động test network
+./scripts/start-network.sh
+```
 
 ## Scripts có sẵn
 
@@ -206,22 +229,3 @@ make native
 - Sử dụng HSM hoặc key management system
 - Khóa động thay vì khóa cố định
 - IV ngẫu nhiên cho mỗi lần mã hóa
-
-## Đóng góp
-
-1. Fork repository
-2. Tạo feature branch
-3. Commit changes
-4. Push to branch
-5. Tạo Pull Request
-
-## License
-
-Apache 2.0 License
-
-## Hỗ trợ
-
-- Tạo issue trên GitHub
-- Kiểm tra README_ENCRYPTION.md cho chi tiết kỹ thuật
-- Chạy `./check-environment.sh` để debug môi trường
-- Xem [SCRIPTS.md](SCRIPTS.md) để biết chi tiết về scripts

@@ -443,24 +443,6 @@ fabric-3.1.1
 - Khóa mã hóa được hardcode chỉ để demo
 - Xem xét script trước khi chạy trong môi trường sản xuất
 
-## Đóng góp
-Khi thêm script mới:
-1. Bao gồm xử lý lỗi phù hợp
-2. Thêm đầu ra có màu sử dụng định dạng chuẩn
-3. Làm cho script có thể thực thi
-4. Cập nhật README này
-5. Thử nghiệm độc lập và như một phần của quick-start.sh
-6. Thêm vào xác minh test-quick-start.sh
-
-## Hỗ trợ
-Cho vấn đề hoặc câu hỏi:
-1. Chạy `./scripts/check-environment.sh` để chẩn đoán
-2. Chạy `./scripts/test-quick-start.sh` để xác minh tính toàn vẹn script
-3. Chạy `./scripts/demo-scripts.sh` để xem scripts hoạt động
-4. Kiểm tra log script cá nhân
-5. Đảm bảo tất cả phụ thuộc được cài đặt
-6. Xác minh bạn đang ở thư mục đúng (fabric-3.1.1/)
-
 ---
 
 **Lưu ý**: Tất cả script bao gồm xử lý lỗi và sẽ cung cấp phản hồi rõ ràng về thành công hoặc thất bại. Kiểm tra đầu ra cho bất kỳ cảnh báo hoặc lỗi nào cần chú ý. 

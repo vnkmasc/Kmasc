@@ -1,8 +1,8 @@
-# Đánh giá Hiệu năng: Thay thế Goleveldb bằng LevelDB C++ trong Hyperledger Fabric
+# Đánh giá Hiệu năng: Thay thế Goleveldb bằng LevelDB C trong Hyperledger Fabric
 
 ## Tổng quan
 
-Tài liệu này đánh giá tính khả thi và hiệu năng của việc thay thế goleveldb (Go implementation) bằng LevelDB C++ native trong Hyperledger Fabric, nhằm cải thiện hiệu suất và tối ưu hóa tài nguyên hệ thống.
+Tài liệu này đánh giá tính khả thi và hiệu năng của việc thay thế goleveldb (Go implementation) bằng LevelDB C native trong Hyperledger Fabric, nhằm cải thiện hiệu suất và tối ưu hóa tài nguyên hệ thống.
 
 ## Bối cảnh và Động lực
 
@@ -12,11 +12,11 @@ Tài liệu này đánh giá tính khả thi và hiệu năng của việc thay 
 - **CPU utilization**: Higher CPU usage do Go runtime
 - **Throughput**: Giới hạn trong high-throughput scenarios
 
-### Lợi ích tiềm năng của LevelDB C++
-- **Hiệu suất cao hơn**: Native C++ implementation
+### Lợi ích tiềm năng của LevelDB C
+- **Hiệu suất cao hơn**: Native C implementation
 - **Memory efficiency**: Lower memory footprint
 - **CPU optimization**: Tối ưu hóa CPU tốt hơn
-- **Maturity**: LevelDB C++ đã được Google phát triển và test kỹ lưỡng
+- **Maturity**: LevelDB C đã được Google phát triển và test kỹ lưỡng
 
 ## Phân tích Kiến trúc
 
@@ -29,13 +29,13 @@ Goleveldb (Go)
 File System
 ```
 
-### Kiến trúc đề xuất (LevelDB C++)
+### Kiến trúc đề xuất (LevelDB C)
 ```
 Fabric Core (Go)
     ↓
 CGO Bridge
     ↓
-LevelDB C++ (Native)
+LevelDB C (Native)
     ↓
 File System
 ```
@@ -62,29 +62,29 @@ File System
 ### 2. Kết quả Benchmark
 
 #### Throughput Comparison
-| Metric | Goleveldb | LevelDB C++ | Improvement |
-|--------|-----------|-------------|-------------|
+| Metric | Goleveldb | LevelDB C | Improvement |
+|--------|-----------|-----------|-------------|
 | Write TPS | 15,000 | 22,500 | +50% |
 | Read TPS | 45,000 | 67,500 | +50% |
 | Mixed TPS | 12,000 | 18,000 | +50% |
 
 #### Latency Analysis
-| Percentile | Goleveldb (ms) | LevelDB C++ (ms) | Improvement |
-|------------|----------------|------------------|-------------|
+| Percentile | Goleveldb (ms) | LevelDB C (ms) | Improvement |
+|------------|----------------|----------------|-------------|
 | Average | 2.5 | 1.8 | -28% |
 | P95 | 8.2 | 5.1 | -38% |
 | P99 | 15.6 | 9.3 | -40% |
 
 #### Memory Usage
-| Metric | Goleveldb | LevelDB C++ | Improvement |
-|--------|-----------|-------------|-------------|
+| Metric | Goleveldb | LevelDB C | Improvement |
+|--------|-----------|-----------|-------------|
 | RSS (MB) | 1,200 | 850 | -29% |
 | Heap (MB) | 800 | 450 | -44% |
 | Peak Memory | 1,800 | 1,200 | -33% |
 
 #### CPU Utilization
-| Scenario | Goleveldb (%) | LevelDB C++ (%) | Improvement |
-|----------|---------------|-----------------|-------------|
+| Scenario | Goleveldb (%) | LevelDB C (%) | Improvement |
+|----------|---------------|---------------|-------------|
 | Idle | 5 | 2 | -60% |
 | Write-heavy | 85 | 65 | -24% |
 | Read-heavy | 70 | 50 | -29% |
@@ -124,14 +124,14 @@ import "C"
 ```
 
 #### Build Dependencies
-- **C++ compiler**: Required for building
+- **C compiler**: Required for building
 - **LevelDB library**: Need to manage version compatibility
 - **Cross-platform**: Different build requirements cho different OS
 
 #### Maintenance Overhead
 - **CGO complexity**: Debugging khó khăn hơn
-- **Memory management**: Manual memory management trong C++
-- **Error handling**: Bridge between Go và C++ error systems
+- **Memory management**: Manual memory management trong C
+- **Error handling**: Bridge between Go và C error systems
 
 ### 3. Migration Strategy
 
@@ -145,7 +145,7 @@ import "C"
 
 #### Phase 2: Integration
 ```bash
-# 1. Replace goleveldb với LevelDB C++
+# 1. Replace goleveldb với LevelDB C
 # 2. Update build system
 # 3. Comprehensive testing
 # 4. Performance validation
@@ -253,7 +253,7 @@ LEVELDB_DIR := $(CURDIR)/leveldb-$(LEVELDB_VERSION)
 
 .PHONY: leveldb
 leveldb:
-	@echo "Building LevelDB C++ library..."
+	@echo "Building LevelDB C library..."
 	cd $(LEVELDB_DIR) && make -j$(nproc)
 	cp $(LEVELDB_DIR)/libleveldb.a $(CURDIR)/lib/
 	cp -r $(LEVELDB_DIR)/include/* $(CURDIR)/include/
@@ -303,7 +303,7 @@ alerts:
 
 ## Kết luận
 
-Việc thay thế goleveldb bằng LevelDB C++ mang lại lợi ích hiệu năng đáng kể:
+Việc thay thế goleveldb bằng LevelDB C mang lại lợi ích hiệu năng đáng kể:
 
 ### Tóm tắt lợi ích
 - **50% improvement** trong throughput
