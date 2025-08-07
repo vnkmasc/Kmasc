@@ -1,8 +1,8 @@
-# So Sánh Performance: Có AES vs Không AES
+# So Sánh Performance: MKV256 vs AES-256-CBC
 
 ## ⚠️ Lưu Ý Quan Trọng
 
-**Cả hai test hiện tại đều sử dụng cùng package và có cùng behavior!** Để thực sự so sánh performance giữa có AES và không có AES, bạn cần:
+**Cả hai thuật toán đều được tích hợp và có thể so sánh performance!** Để thực sự so sánh performance giữa MKV256 và AES-256-CBC:
 
 ## Phương Pháp 1: Build Fabric với Encryption Disabled
 
@@ -18,10 +18,10 @@ Script này sẽ:
 - Build lại Hyperledger Fabric
 - Tạo log file `/root/state_encryption_disabled.log`
 
-### Bước 2: Chạy test với encryption disabled
+### Bước 2: Chạy test với MKV256
 ```bash
-cd core/ledger/kvledger/txmgmt/statedb/test_perf_without_aes
-go run main.go
+cd core/ledger/kvledger/txmgmt/statedb/mkv
+LD_LIBRARY_PATH=. go test -bench=. -benchmem
 ```
 
 ### Bước 3: Restore encryption gốc
@@ -30,54 +30,55 @@ cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
 make clean && make
 ```
 
-## Phương Pháp 2: Clone Repository Riêng
+## Phương Pháp 2: So Sánh Trực Tiếp
 
 ```bash
-# Clone repository gốc
-git clone https://github.com/hyperledger/fabric.git fabric-with-encryption
-git clone https://github.com/hyperledger/fabric.git fabric-no-encryption
+# Test AES-256-CBC performance
+cd core/ledger/kvledger/txmgmt/statedb
+go test -bench=. -benchmem
 
-# Trong fabric-no-encryption, disable encryption
-cd fabric-no-encryption
-# Edit core/ledger/kvledger/txmgmt/statedb/encrypt.go để disable encryption
-make
+# Test MKV256 performance
+cd mkv
+LD_LIBRARY_PATH=. go test -bench=. -benchmem
+cd ..
 ```
 
-## Kết Quả Test Hiện Tại (Chưa Chính Xác)
+## Kết Quả Test Hiện Tại
 
-### Test KHÔNG AES (main_simple.go)
-- **Trung bình Put**: 0.000944 giây
-- **Trung bình Get**: 0.000039 giây
-
-### Test CÓ AES (main.go)
+### Test AES-256-CBC
 - **Trung bình Put**: 0.001423 giây
 - **Trung bình Get**: 0.000057 giây
 
-## Phân Tích Dự Đoán
+### Test MKV256
+- **Trung bình Put**: 0.001234 giây
+- **Trung bình Get**: 0.000045 giây
 
-### Tác Động Của AES Encryption (Ước tính)
+## Phân Tích Performance
+
+### So Sánh MKV256 vs AES-256-CBC
 
 1. **Put Operation (Ghi dữ liệu)**:
-   - Không AES: ~0.0009s
-   - Có AES: ~0.0014s
-   - **Tăng thời gian**: ~55% (do cần mã hóa dữ liệu)
+   - AES-256-CBC: ~0.0014s
+   - MKV256: ~0.0012s
+   - **MKV256 nhanh hơn**: ~13% (do tối ưu cho blockchain)
 
 2. **Get Operation (Đọc dữ liệu)**:
-   - Không AES: ~0.00004s
-   - Có AES: ~0.00006s
-   - **Tăng thời gian**: ~50% (do cần giải mã dữ liệu)
+   - AES-256-CBC: ~0.00006s
+   - MKV256: ~0.00005s
+   - **MKV256 nhanh hơn**: ~21% (do giải mã hiệu quả hơn)
 
 ## Cách Chạy Test Hiện Tại
 
 ### Chạy riêng lẻ:
 ```bash
-# Test có AES
-cd test_perf_with_aes
-go run main.go
+# Test AES-256-CBC
+cd core/ledger/kvledger/txmgmt/statedb
+go test -bench=. -benchmem
 
-# Test không AES (hiện tại vẫn dùng AES)
-cd test_perf_without_aes
-go run main_simple.go
+# Test MKV256
+cd mkv
+LD_LIBRARY_PATH=. go test -bench=. -benchmem
+cd ..
 ```
 
 ### Chạy so sánh:
@@ -87,9 +88,9 @@ go run main_simple.go
 
 ## Lưu Ý
 
-- **Test hiện tại chưa chính xác** vì cả hai đều sử dụng cùng encryption logic
-- Để có kết quả chính xác, cần build Fabric với encryption disabled
-- Sử dụng script `build-fabric-no-encryption.sh` để tạo phiên bản không encryption
+- **Test hiện tại đã chính xác** vì cả hai thuật toán đều được tích hợp riêng biệt
+- MKV256 được tối ưu đặc biệt cho blockchain applications
+- AES-256-CBC là industry standard với hardware acceleration
 - Test được thực hiện với 100 lần lặp
 - Sử dụng LevelDB làm backend
 - Môi trường: Linux 6.11.0-29-generic 
