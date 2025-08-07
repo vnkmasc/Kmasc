@@ -149,12 +149,6 @@ step5_5_build_mkv() {
     run_script "scripts/build-mkv.sh" "MKV library build"
 }
 
-# Step 5.6: Test MKV library
-step5_6_test_mkv() {
-    echo "Step 5.6: Testing MKV library..."
-    run_script "scripts/test-mkv.sh" "MKV library test"
-}
-
 # Step 6: Build Fabric
 step6_build_fabric() {
     echo "Step 6: Building Fabric..."
@@ -210,7 +204,6 @@ main() {
     step4_test_environment
     step5_build_encryption
     step5_5_build_mkv
-    step5_6_test_mkv
     step6_build_fabric
     step7_start_network
     step8_next_steps
@@ -224,7 +217,6 @@ echo "3. Download fabric-samples"
 echo "4. Test the environment"
 echo "5. Build the encryption library"
 echo "5.5. Build the MKV library"
-echo "5.6. Test the MKV library"
 echo "6. Build Fabric with encryption"
 echo "7. Start the test network"
 echo

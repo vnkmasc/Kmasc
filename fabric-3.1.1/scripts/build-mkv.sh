@@ -82,10 +82,11 @@ build_mkv() {
                     ldd libmkv.so
                 fi
                 
-                # Run MKV tests if available
+                # Run MKV tests if available (optional)
                 if file_exists "mkv_test.go"; then
                     print_status "INFO" "Running MKV unit tests..."
-                    LD_LIBRARY_PATH=. go test -v
+                    export LD_LIBRARY_PATH=.
+                    go test -v
                     if [ $? -eq 0 ]; then
                         print_status "PASS" "MKV unit tests passed"
                     else

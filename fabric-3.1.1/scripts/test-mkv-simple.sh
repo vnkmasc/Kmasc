@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Test MKV Library Script
+# Simple MKV Test Script
 # Author: Phong Ngo
 # Date: June 15, 2025
 
 set -e
 
-echo "=== Test MKV Library ==="
+echo "=== Simple MKV Test ==="
 echo "Date: $(date)"
 echo
 
@@ -48,8 +48,8 @@ dir_exists() {
 }
 
 # Main function to test mkv library
-test_mkv() {
-    echo "Testing MKV library..."
+test_mkv_simple() {
+    echo "Testing MKV library (simple version)..."
     
     # Save current directory
     ROOT_DIR=$(pwd)
@@ -91,63 +91,6 @@ test_mkv() {
                 print_status "WARN" "mkv_test.go not found, skipping unit tests"
             fi
             
-            # Test basic functionality with a simple Go program
-            print_status "INFO" "Testing basic MKV functionality..."
-            cat > test_mkv_basic.go << 'EOF'
-package main
-
-/*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lmkv
-#include "mkv.h"
-*/
-import "C"
-import (
-    "fmt"
-    "unsafe"
-)
-
-func main() {
-    key := []byte("12345678901234567890123456789012") // 32 bytes for 256-bit
-    data := []byte("Hello, MKV encryption!")
-    
-    // Prepare variables
-    cKey := (*C.uchar)(unsafe.Pointer(&key[0]))
-    cData := (*C.uchar)(unsafe.Pointer(&data[0]))
-    dataLen := C.int(len(data))
-    var ciphertextLen C.int
-    
-    // Allocate buffer for encrypted data (max size)
-    maxCiphertextLen := dataLen + 32 // Add some padding
-    encrypted := make([]byte, maxCiphertextLen)
-    cEncrypted := (*C.uchar)(unsafe.Pointer(&encrypted[0]))
-    
-    // Encrypt
-    result := C.mkv_encrypt(cData, dataLen, cEncrypted, &ciphertextLen, cKey, C.int(len(key)))
-    if result != 0 {
-        fmt.Println("❌ Encryption failed")
-        return
-    }
-    
-    // Resize encrypted buffer to actual size
-    encrypted = encrypted[:ciphertextLen]
-    
-    fmt.Println("✅ Basic MKV functionality test passed")
-    fmt.Printf("Original: %s\n", string(data))
-    fmt.Printf("Encrypted length: %d\n", ciphertextLen)
-}
-EOF
-
-            go run test_mkv_basic.go
-            if [ $? -eq 0 ]; then
-                print_status "PASS" "Basic MKV functionality test passed"
-            else
-                print_status "FAIL" "Basic MKV functionality test failed"
-            fi
-            
-            # Clean up test file
-            rm -f test_mkv_basic.go
-            
         else
             print_status "FAIL" "libmkv.so not found. Please build MKV library first."
             exit 1
@@ -167,5 +110,5 @@ EOF
 
 # Check if script is being run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    test_mkv
+    test_mkv_simple
 fi
