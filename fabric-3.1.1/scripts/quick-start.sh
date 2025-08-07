@@ -143,6 +143,18 @@ step5_build_encryption() {
     run_script "scripts/build-encryption.sh" "encryption library build"
 }
 
+# Step 5.5: Build MKV library
+step5_5_build_mkv() {
+    echo "Step 5.5: Building MKV library..."
+    run_script "scripts/build-mkv.sh" "MKV library build"
+}
+
+# Step 5.6: Test MKV library
+step5_6_test_mkv() {
+    echo "Step 5.6: Testing MKV library..."
+    run_script "scripts/test-mkv.sh" "MKV library test"
+}
+
 # Step 6: Build Fabric
 step6_build_fabric() {
     echo "Step 6: Building Fabric..."
@@ -165,11 +177,15 @@ step8_next_steps() {
     echo "📋 What's been set up:"
     echo "   ✅ Environment dependencies (Go, OpenSSL, Docker)"
     echo "   ✅ Encryption library (libencryption.so)"
+    echo "   ✅ MKV library (libmkv.so)"
     echo "   ✅ Fabric binaries with encryption"
     echo "   ✅ Test network running"
     echo
     echo "🔍 To verify encryption is working:"
     echo "   docker exec peer0.org1.example.com cat /root/state_encryption.log"
+    echo
+    echo "🔍 To verify MKV encryption is working:"
+    echo "   docker exec peer0.org1.example.com cat /root/state_mkv.log"
     echo
     echo "🧪 To test chaincode:"
     echo "   cd fabric-samples/test-network"
@@ -193,6 +209,8 @@ main() {
     step3_download_fabric_samples
     step4_test_environment
     step5_build_encryption
+    step5_5_build_mkv
+    step5_6_test_mkv
     step6_build_fabric
     step7_start_network
     step8_next_steps
@@ -205,6 +223,8 @@ echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
 echo "5. Build the encryption library"
+echo "5.5. Build the MKV library"
+echo "5.6. Test the MKV library"
 echo "6. Build Fabric with encryption"
 echo "7. Start the test network"
 echo
