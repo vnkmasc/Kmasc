@@ -349,10 +349,164 @@ show_status() {
     echo
 }
 
+# Function to test encryption/decryption
+test_encryption() {
+    local input_file="$1"
+    
+    if [ -z "$input_file" ]; then
+        print_error "Input file not specified"
+        return 1
+    fi
+    
+    if [ ! -f "$input_file" ]; then
+        print_error "Input file not found: $input_file"
+        return 1
+    fi
+    
+    print_info "Testing MKV encryption/decryption with file: $input_file"
+    
+    # Check if keys exist
+    if [ ! -f "encrypted_k1.key" ]; then
+        print_error "encrypted_k1.key not found. Please initialize the system first."
+        return 1
+    fi
+    
+    # Get password from user
+    read -s -p "Enter password: " password
+    echo
+    
+    if [ -z "$password" ]; then
+        print_error "Password cannot be empty"
+        return 1
+    fi
+    
+    # Generate K0 from password
+    generate_k0_from_password "$password"
+    
+    # Decrypt K1 with K0
+    decrypt_k1_with_k0
+    
+    if [ $? -ne 0 ]; then
+        print_error "Failed to decrypt K1 with password"
+        return 1
+    fi
+    
+    # Read decrypted K1
+    if [ ! -f "decrypted_k1.key" ]; then
+        print_error "Decrypted K1 not found"
+        return 1
+    fi
+    
+    # Create test encryption program
+    cat > test_encryption.c << 'EOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "mkv.h"
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+    
+    FILE *fin, *fout;
+    unsigned char k1[32];
+    unsigned char buffer[1024];
+    unsigned char encrypted[1024];
+    unsigned char decrypted[1024];
+    int read_len, encrypted_len, decrypted_len;
+    
+    // Read K1
+    fin = fopen("decrypted_k1.key", "rb");
+    if (!fin) {
+        fprintf(stderr, "Cannot open decrypted_k1.key\n");
+        return 1;
+    }
+    fread(k1, 1, 32, fin);
+    fclose(fin);
+    
+    // Read input file
+    fin = fopen(argv[1], "rb");
+    if (!fin) {
+        fprintf(stderr, "Cannot open input file: %s\n", argv[1]);
+        return 1;
+    }
+    read_len = fread(buffer, 1, 1024, fin);
+    fclose(fin);
+    
+    // Encrypt data
+    int ret = mkv_encrypt(buffer, read_len, encrypted, &encrypted_len, k1, 256);
+    if (ret != 0) {
+        fprintf(stderr, "Encryption failed\n");
+        return 1;
+    }
+    
+    // Save encrypted data
+    fout = fopen("test_encrypted.bin", "wb");
+    if (!fout) {
+        fprintf(stderr, "Cannot create test_encrypted.bin\n");
+        return 1;
+    }
+    fwrite(encrypted, 1, encrypted_len, fout);
+    fclose(fout);
+    
+    // Decrypt data
+    ret = mkv_decrypt(encrypted, encrypted_len, decrypted, &decrypted_len, k1, 256);
+    if (ret != 0) {
+        fprintf(stderr, "Decryption failed\n");
+        return 1;
+    }
+    
+    // Save decrypted data
+    fout = fopen("test_decrypted.txt", "wb");
+    if (!fout) {
+        fprintf(stderr, "Cannot create test_decrypted.txt\n");
+        return 1;
+    }
+    fwrite(decrypted, 1, decrypted_len, fout);
+    fclose(fout);
+    
+    printf("Encryption/Decryption test completed successfully\n");
+    printf("Original size: %d bytes\n", read_len);
+    printf("Encrypted size: %d bytes\n", encrypted_len);
+    printf("Decrypted size: %d bytes\n", decrypted_len);
+    
+    return 0;
+}
+EOF
+
+    # Compile and run test
+    gcc -o test_encryption test_encryption.c -L. -lmkv
+    ./test_encryption "$input_file"
+    
+    if [ $? -eq 0 ]; then
+        print_success "Encryption/Decryption test completed successfully"
+        print_info "Files created:"
+        print_info "  - test_encrypted.bin (encrypted data)"
+        print_info "  - test_decrypted.txt (decrypted data)"
+        
+        # Show file sizes
+        if [ -f "test_encrypted.bin" ]; then
+            print_info "  Encrypted size: $(stat -c%s test_encrypted.bin) bytes"
+        fi
+        if [ -f "test_decrypted.txt" ]; then
+            print_info "  Decrypted size: $(stat -c%s test_decrypted.txt) bytes"
+        fi
+        
+        # Clean up
+        rm -f test_encryption.c test_encryption
+    else
+        print_error "Encryption/Decryption test failed"
+        rm -f test_encryption.c test_encryption
+        return 1
+    fi
+}
+
 # Function to clean up temporary files
 cleanup() {
     print_info "Cleaning up temporary files..."
-    rm -f k0.key decrypted_k1.key
+    rm -f k0.key decrypted_k1.key test_encrypted.bin test_decrypted.txt
     print_success "Cleanup completed"
 }
 
@@ -361,19 +515,21 @@ show_help() {
     echo "MKV Key Manager Script"
     echo "====================="
     echo
-    echo "Usage: $0 [COMMAND]"
+    echo "Usage: $0 [COMMAND] [ARGUMENTS]"
     echo
     echo "Commands:"
     echo "  init     - Initialize key management system"
     echo "  change   - Change password"
     echo "  status   - Show current key status"
+    echo "  test_encryption <file> - Test encryption/decryption with file"
     echo "  cleanup  - Clean up temporary files"
     echo "  help     - Show this help message"
     echo
     echo "Examples:"
-    echo "  $0 init     # Initialize with new password"
-    echo "  $0 change   # Change existing password"
-    echo "  $0 status   # Check current status"
+    echo "  $0 init                    # Initialize with new password"
+    echo "  $0 change                  # Change existing password"
+    echo "  $0 status                  # Check current status"
+    echo "  $0 test_encryption data.txt # Test encryption with data.txt"
     echo
 }
 
@@ -390,6 +546,9 @@ main() {
             ;;
         status)
             show_status
+            ;;
+        test_encryption)
+            test_encryption "$2"
             ;;
         cleanup)
             cleanup

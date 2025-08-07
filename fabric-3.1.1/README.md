@@ -51,8 +51,8 @@ Dự án này bao gồm một bộ scripts modular để dễ dàng setup và qu
 - `quick-start.sh` - Setup hoàn chỉnh từ đầu
 - `setup-environment.sh` - Cài đặt dependencies
 - `build-fabric.sh` - Build Fabric với encryption
-- `build-mkv.sh` - Build MKV library (bao gồm test)
-- `test-mkv-simple.sh` - Test MKV library (đơn giản)
+- `build-mkv.sh` - Build MKV library
+- `test-mkv.sh` - Test MKV library
 - `build-all-libraries.sh` - Build cả encryption và MKV libraries
 - `start-network.sh` - Khởi động test network
 

@@ -137,16 +137,40 @@ step4_test_environment() {
     run_script "scripts/test_environment.sh" "environment test"
 }
 
-# Step 5: Build encryption library
-step5_build_encryption() {
-    echo "Step 5: Building encryption library..."
+# Step 5.0: Build encryption library
+step5_0_build_encryption() {
+    echo "Step 5.0: Building encryption library..."
     run_script "scripts/build-encryption.sh" "encryption library build"
 }
 
-# Step 5.5: Build MKV library
-step5_5_build_mkv() {
-    echo "Step 5.5: Building MKV library..."
+# Step 5.1: Build MKV library
+step5_1_build_mkv() {
+    echo "Step 5.1: Building MKV library..."
     run_script "scripts/build-mkv.sh" "MKV library build"
+}
+
+# Step 5.2: Test MKV library
+step5_2_test_mkv() {
+    echo "Step 5.2: Testing MKV library..."
+    run_script "scripts/test-mkv.sh" "MKV library test"
+}
+
+# Step 5.3: Initialize MKV keys in containers
+step5_3_init_mkv_keys() {
+    echo "Step 5.3: Initializing MKV keys in containers..."
+    run_script "scripts/init-mkv-keys-wrapper.sh" "MKV keys initialization"
+}
+
+# Step 5.4: Auto-initialize MKV keys after network start
+step5_4_auto_init_mkv_keys() {
+    echo "Step 5.4: Auto-initializing MKV keys after network start..."
+    run_script "scripts/init-mkv-keys-wrapper.sh" "MKV keys auto-initialization"
+}
+
+# Step 5.5: Test MKV in Docker containers
+step5_5_test_mkv_docker() {
+    echo "Step 5.5: Testing MKV in Docker containers..."
+    run_script "scripts/test-mkv-docker.sh" "MKV Docker test"
 }
 
 # Step 6: Build Fabric
@@ -175,6 +199,12 @@ step8_next_steps() {
     echo "   ✅ Fabric binaries with encryption"
     echo "   ✅ Test network running"
     echo
+    echo "🔐 MKV Key Management:"
+    echo "   🔑 Default password: fabric_mkv_password_2025"
+    echo "   🔄 To change password:"
+    echo "      ./scripts/init-mkv-keys-standalone.sh -p your_new_password"
+    echo "   📁 Key files location: /root/mkv/ in each container"
+    echo
     echo "🔍 To verify encryption is working:"
     echo "   docker exec peer0.org1.example.com cat /root/state_encryption.log"
     echo
@@ -189,6 +219,9 @@ step8_next_steps() {
     echo "   cd fabric-samples/test-network"
     echo "   ./network.sh down"
     echo
+    echo "📚 For more information:"
+    echo "   cat scripts/README-MKV.md"
+    echo
     print_status "INFO" "Quick start completed at $(date)"
 }
 
@@ -202,8 +235,12 @@ main() {
     step2_setup_environment
     step3_download_fabric_samples
     step4_test_environment
-    step5_build_encryption
-    step5_5_build_mkv
+    step5_0_build_encryption
+    step5_1_build_mkv
+    step5_2_test_mkv
+    step5_3_init_mkv_keys
+    step5_4_auto_init_mkv_keys
+    step5_5_test_mkv_docker
     step6_build_fabric
     step7_start_network
     step8_next_steps
@@ -215,10 +252,15 @@ echo "1. Fix any repository issues"
 echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
-echo "5. Build the encryption library"
-echo "5.5. Build the MKV library"
+echo "5.0. Build the encryption library"
+echo "5.1. Build the MKV library"
+echo "5.2. Test the MKV library"
+echo "5.3. Initialize MKV keys in containers"
+echo "5.4. Auto-initialize MKV keys after network start"
+echo "5.5. Test MKV in Docker containers"
 echo "6. Build Fabric with encryption"
 echo "7. Start the test network"
+echo "8. Next steps"
 echo
 read -p "Do you want to continue? (y/N): " -n 1 -r
 echo
