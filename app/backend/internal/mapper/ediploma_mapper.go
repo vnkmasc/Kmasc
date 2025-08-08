@@ -18,8 +18,9 @@ func MapEDiplomaToDTO(
 		FacultyCode:    faculty.FacultyCode,
 		FacultyName:    faculty.FacultyName,
 		MajorID:        ed.MajorID,
-		// MajorCode:          ifMajorNotNil(major, major.MajorCode),
-		// MajorName:          ifMajorNotNil(major, major.MajorName),
+		// MajorCode:      ifMajorNotNil(major, major.MajorCode),
+		// MajorName:      ifMajorNotNil(major, major.MajorName),
+
 		UserID:             ed.UserID,
 		StudentCode:        ed.StudentCode,
 		FullName:           ed.FullName,
@@ -39,6 +40,12 @@ func MapEDiplomaToDTO(
 		OnBlockchain:       ed.OnBlockchain,
 		CreatedAt:          ed.CreatedAt,
 		UpdatedAt:          ed.UpdatedAt,
+
+		// New fields from Template
+		SignatureOfUni:    ed.SignatureOfUni,
+		SignatureOfMinEdu: ed.SignatureOfMinEdu,
+		Status:            ed.Status,
+		IsLocked:          ed.IsLocked,
 	}
 }
 

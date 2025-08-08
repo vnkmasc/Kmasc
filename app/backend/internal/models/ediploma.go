@@ -36,6 +36,11 @@ type EDiploma struct {
 	OnBlockchain   bool   `bson:"on_blockchain" json:"on_blockchain"`
 	BlockchainTxID string `bson:"blockchain_tx_id,omitempty" json:"blockchain_tx_id,omitempty"`
 
+	SignatureOfUni    string `bson:"signature_of_uni,omitempty" json:"signatureOfUni,omitempty"`
+	SignatureOfMinEdu string `bson:"signature_of_minedu,omitempty" json:"signatureOfMinEdu,omitempty"`
+	Status            string `bson:"status" json:"status"` // PENDING, VERIFIED,...
+	IsLocked          bool   `bson:"is_locked" json:"isLocked"`
+
 	// Metadata
 	Description string    `bson:"description,omitempty" json:"description,omitempty"`
 	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
@@ -71,6 +76,11 @@ type EDiplomaDTO struct {
 	Signed             bool               `json:"signed"`
 	SignedAt           time.Time          `json:"signed_at"`
 	OnBlockchain       bool               `json:"on_blockchain"`
-	CreatedAt          time.Time          `json:"created_at"`
-	UpdatedAt          time.Time          `json:"updated_at"`
+	SignatureOfUni     string             `json:"signatureOfUni,omitempty"`
+	SignatureOfMinEdu  string             `json:"signatureOfMinEdu,omitempty"`
+	Status             string             `json:"status"`
+	IsLocked           bool               `json:"isLocked"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

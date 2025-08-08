@@ -218,6 +218,10 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		SignedAt:           time.Time{},
 		OnBlockchain:       false,
 		BlockchainTxID:     "",
+		SignatureOfUni:     template.SignatureOfUni,
+		SignatureOfMinEdu:  template.SignatureOfMinEdu,
+		Status:             "PENDING", // hoặc template.Status nếu bạn muốn lấy từ DB
+		IsLocked:           false,     // mặc định false
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
