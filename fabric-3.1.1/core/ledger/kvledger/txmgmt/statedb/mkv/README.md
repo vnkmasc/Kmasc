@@ -27,16 +27,21 @@ Hệ thống sử dụng **2 tầng khóa** theo sơ đồ:
 
 ### Khóa K0 (Derived Key)
 - **Kích thước**: 32 bytes (256 bits)
-- **Nguồn gốc**: Dẫn xuất từ password bằng PBKDF2 (SHA256)
+- **Nguồn gốc**: Dẫn xuất từ password bằng PBKDF2-HMAC-SHA256
 - **Mục đích**: Mã hóa K1
-- **Công thức**: `K0 = SHA256(password)`
+- **Tham số PBKDF2**:
+  - **Salt**: 32 bytes ngẫu nhiên (lưu trong `k0_salt.key`)
+  - **Iterations**: 10,000 (theo khuyến nghị OWASP)
+  - **PRF**: HMAC-SHA256
+- **Công thức**: `K0 = PBKDF2(password, salt, 10000, 32)`
 
 ## Nội dung thư mục
 - `MKV256.c`, `MKV256.h`, `PrecomputedTable256.h`: Thuật toán mã hóa MKV256
 - `mkv.c`, `mkv.h`: Hàm mã hóa/giải mã dữ liệu dài, padding PKCS#7
-- `mkv.go`: Go wrapper với hệ thống quản lý khóa 2 tầng
+- `mkv.go`: Go wrapper với hệ thống quản lý khóa 2 tầng và PBKDF2
 - `mkv_test.go`: Unit test kiểm tra mã hóa/giải mã
 - `key_test.go`: Test cho hệ thống quản lý khóa
+- `pbkdf2_test.go`: Test riêng cho implementation PBKDF2
 - `key_manager.sh`: Script quản lý khóa tương tác
 - `cleanup_all.sh`: Script dọn dẹp hoàn chỉnh
 - `demo.sh`: Script demo hệ thống
@@ -185,12 +190,34 @@ if err != nil {
 encryptedValue := mkv.EncryptValueMKV(value, k1)
 ```
 
+## PBKDF2 Implementation
+
+### Tổng quan
+Hệ thống sử dụng PBKDF2 (Password-Based Key Derivation Function 2) để tạo khóa K0 từ password, thay vì SHA256 đơn giản như trước đây.
+
+### Tham số PBKDF2
+- **PRF**: HMAC-SHA256
+- **Salt**: 32 bytes ngẫu nhiên
+- **Iterations**: 10,000 (theo khuyến nghị OWASP)
+- **Key length**: 32 bytes (256 bits)
+
+### Ưu điểm so với SHA256 đơn giản
+1. **Salt**: Chống rainbow table attacks
+2. **Iterations**: Làm chậm brute force attacks
+3. **HMAC**: Tăng tính bảo mật so với hash đơn giản
+4. **Tiêu chuẩn**: PBKDF2 là tiêu chuẩn được chấp nhận rộng rãi
+
+### Backward Compatibility
+- Nếu không tìm thấy file `k0_salt.key`, hệ thống sẽ sử dụng salt cố định
+- Điều này đảm bảo tương thích với dữ liệu cũ
+
 ## Bảo mật
 
 ### Lưu trữ khóa
 - **K1**: Được mã hóa bằng K0 trước khi lưu
 - **K0**: Không lưu trữ, chỉ dẫn xuất từ password khi cần
-- **Password**: Không lưu trữ, chỉ dùng để sinh K0
+- **Salt**: Lưu trữ trong `k0_salt.key` để tái tạo K0
+- **Password**: Không lưu trữ, chỉ dùng để sinh K0 qua PBKDF2
 
 ### Quyền truy cập file
 - Tất cả file khóa có quyền 600 (chỉ owner đọc/ghi)

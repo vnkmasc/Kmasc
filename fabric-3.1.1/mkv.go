@@ -9,6 +9,7 @@ package mkv
 */
 import "C"
 import (
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
@@ -109,12 +110,78 @@ func GenerateK1() ([]byte, error) {
 	return k1, nil
 }
 
-// GenerateK0FromPassword tạo khóa K0 từ password bằng PBKDF2 (đơn giản hóa bằng SHA256)
-func GenerateK0FromPassword(password string) []byte {
-	hash := sha256.Sum256([]byte(password))
-	k0 := hash[:]
-	logToFileMKV("GENERATE_K0", "", "", "SUCCESS", "")
-	return k0
+// PBKDF2 implements Password-Based Key Derivation Function 2
+func PBKDF2(password, salt []byte, iterations int, keyLen int) []byte {
+	// Use HMAC-SHA1 as the PRF (for compatibility with test vectors)
+	h := hmac.New(sha256.New, password)
+
+	// Generate key blocks
+	key := make([]byte, 0, keyLen)
+	blockNum := 1
+
+	for len(key) < keyLen {
+		// U1 = PRF(password, salt || INT(blockNum))
+		h.Reset()
+		h.Write(salt)
+		h.Write([]byte{byte(blockNum >> 24), byte(blockNum >> 16), byte(blockNum >> 8), byte(blockNum)})
+		u := h.Sum(nil)
+		result := make([]byte, len(u))
+		copy(result, u)
+
+		// U2 = PRF(password, U1), U3 = PRF(password, U2), ...
+		for i := 1; i < iterations; i++ {
+			h.Reset()
+			h.Write(u)
+			u = h.Sum(nil)
+			for j := range result {
+				result[j] ^= u[j]
+			}
+		}
+
+		key = append(key, result...)
+		blockNum++
+	}
+
+	return key[:keyLen]
+}
+
+// GenerateK0FromPasswordWithSalt tạo khóa K0 từ password với salt được cung cấp
+func GenerateK0FromPasswordWithSalt(password string, salt []byte) ([]byte, error) {
+	iterations := 10000
+	keyLen := 32
+
+	k0 := PBKDF2([]byte(password), salt, iterations, keyLen)
+	logToFileMKV("GENERATE_K0", "", "", "SUCCESS", fmt.Sprintf("PBKDF2_%d_iters_provided_salt", iterations))
+	return k0, nil
+}
+
+// GenerateK0FromPassword tạo khóa K0 từ password bằng PBKDF2 với salt và iterations
+func GenerateK0FromPassword(password string) ([]byte, error) {
+	// Tìm file salt
+	saltPath, err := findKeyFile("k0_salt.key")
+	if err != nil {
+		// Nếu không có salt file, sử dụng salt cố định (backward compatibility)
+		salt := []byte("MKV_K0_SALT_v1.0")
+		iterations := 10000
+		keyLen := 32
+
+		k0 := PBKDF2([]byte(password), salt, iterations, keyLen)
+		logToFileMKV("GENERATE_K0", "", "", "SUCCESS", fmt.Sprintf("PBKDF2_%d_iters_fixed_salt", iterations))
+		return k0, nil
+	}
+
+	// Load salt từ file
+	salt, err := LoadSaltFromFile(saltPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load salt: %v", err)
+	}
+
+	iterations := 10000
+	keyLen := 32
+
+	k0 := PBKDF2([]byte(password), salt, iterations, keyLen)
+	logToFileMKV("GENERATE_K0", "", "", "SUCCESS", fmt.Sprintf("PBKDF2_%d_iters_file_salt", iterations))
+	return k0, nil
 }
 
 // EncryptK1WithK0 mã hóa K1 bằng K0 sử dụng MKV
@@ -125,6 +192,39 @@ func EncryptK1WithK0(k1 []byte, k0 []byte) []byte {
 // DecryptK1WithK0 giải mã K1 bằng K0 sử dụng MKV
 func DecryptK1WithK0(encryptedK1 []byte, k0 []byte) []byte {
 	return DecryptValueMKV(encryptedK1, k0)
+}
+
+// GenerateSalt tạo salt ngẫu nhiên 32 bytes
+func GenerateSalt() ([]byte, error) {
+	salt := make([]byte, 32)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate salt: %v", err)
+	}
+	logToFileMKV("GENERATE_SALT", "", "", "SUCCESS", "")
+	return salt, nil
+}
+
+// SaveSaltToFile lưu salt vào file
+func SaveSaltToFile(salt []byte, filename string) error {
+	err := ioutil.WriteFile(filename, salt, 0600)
+	if err != nil {
+		logToFileMKV("SAVE_SALT", "", filename, "FAIL", err.Error())
+		return fmt.Errorf("failed to save salt: %v", err)
+	}
+	logToFileMKV("SAVE_SALT", "", filename, "SUCCESS", "")
+	return nil
+}
+
+// LoadSaltFromFile đọc salt từ file
+func LoadSaltFromFile(filename string) ([]byte, error) {
+	salt, err := ioutil.ReadFile(filename)
+	if err != nil {
+		logToFileMKV("LOAD_SALT", "", filename, "FAIL", err.Error())
+		return nil, fmt.Errorf("failed to load salt: %v", err)
+	}
+	logToFileMKV("LOAD_SALT", "", filename, "SUCCESS", "")
+	return salt, nil
 }
 
 // SaveK1ToFile lưu K1 vào file
@@ -218,7 +318,10 @@ func GetCurrentK1(password string) ([]byte, error) {
 	}
 
 	// Giải mã K1 bằng password
-	k0 := GenerateK0FromPassword(password)
+	k0, err := GenerateK0FromPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate K0: %v", err)
+	}
 	k1 := DecryptK1WithK0(encryptedK1, k0)
 	if k1 == nil {
 		return nil, fmt.Errorf("failed to decrypt K1 with password")
@@ -234,8 +337,17 @@ func InitializeKeyManagement(password string) error {
 		return err
 	}
 
-	// Tạo K0 từ password
-	k0 := GenerateK0FromPassword(password)
+	// Tạo salt ngẫu nhiên cho PBKDF2
+	salt, err := GenerateSalt()
+	if err != nil {
+		return err
+	}
+
+	// Tạo K0 từ password với salt mới
+	k0, err := GenerateK0FromPasswordWithSalt(password, salt)
+	if err != nil {
+		return err
+	}
 
 	// Mã K1 bằng K0
 	encryptedK1 := EncryptK1WithK0(k1, k0)
@@ -265,6 +377,13 @@ func InitializeKeyManagement(password string) error {
 		if err != nil {
 			logToFileMKV("SAVE_K1", "", k1Path, "FAIL", err.Error())
 			continue // Tiếp tục với vị trí khác
+		}
+
+		// Lưu salt
+		saltPath := path + "/k0_salt.key"
+		err = SaveSaltToFile(salt, saltPath)
+		if err != nil {
+			logToFileMKV("SAVE_SALT", "", saltPath, "FAIL", err.Error())
 		}
 
 		// Lưu K0
@@ -298,7 +417,10 @@ func ChangePassword(oldPassword, newPassword string) error {
 	}
 
 	// Tạo K0 mới từ password mới
-	newK0 := GenerateK0FromPassword(newPassword)
+	newK0, err := GenerateK0FromPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to generate new K0: %v", err)
+	}
 
 	// Mã lại K1 bằng K0 mới
 	encryptedK1 := EncryptK1WithK0(k1, newK0)

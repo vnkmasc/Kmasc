@@ -21,14 +21,20 @@ func TestKeyManagementSystem(t *testing.T) {
 	// Test 2: Generate K0 from password
 	t.Run("Generate K0 from password", func(t *testing.T) {
 		password := "mysecretpassword123"
-		k0 := GenerateK0FromPassword(password)
+		k0, err := GenerateK0FromPassword(password)
+		if err != nil {
+			t.Fatalf("Failed to generate K0: %v", err)
+		}
 		if len(k0) != 32 {
 			t.Fatalf("K0 length should be 32 bytes, got %d", len(k0))
 		}
 		t.Logf("K0 generated from password: %s", hex.EncodeToString(k0))
 
 		// Test consistency
-		k0_again := GenerateK0FromPassword(password)
+		k0_again, err := GenerateK0FromPassword(password)
+		if err != nil {
+			t.Fatalf("Failed to generate K0 again: %v", err)
+		}
 		if hex.EncodeToString(k0) != hex.EncodeToString(k0_again) {
 			t.Fatalf("K0 generation is not consistent")
 		}
@@ -44,7 +50,10 @@ func TestKeyManagementSystem(t *testing.T) {
 
 		// Generate K0 from password
 		password := "testpassword456"
-		k0 := GenerateK0FromPassword(password)
+		k0, err := GenerateK0FromPassword(password)
+		if err != nil {
+			t.Fatalf("Failed to generate K0: %v", err)
+		}
 
 		// Encrypt K1 with K0
 		encryptedK1 := EncryptK1WithK0(k1, k0)
@@ -102,7 +111,10 @@ func TestKeyManagementSystem(t *testing.T) {
 		}
 
 		password := "filetestpassword"
-		k0 := GenerateK0FromPassword(password)
+		k0, err := GenerateK0FromPassword(password)
+		if err != nil {
+			t.Fatalf("Failed to generate K0: %v", err)
+		}
 
 		// Encrypt K1
 		encryptedK1 := EncryptK1WithK0(k1, k0)
@@ -156,7 +168,10 @@ func TestKeyManagementSystem(t *testing.T) {
 		}
 
 		// Verify we can decrypt with password
-		k0 := GenerateK0FromPassword(password)
+		k0, err := GenerateK0FromPassword(password)
+		if err != nil {
+			t.Fatalf("Failed to generate K0: %v", err)
+		}
 		decryptedK1 := DecryptK1WithK0(encryptedK1, k0)
 		if decryptedK1 == nil {
 			t.Fatalf("Failed to decrypt K1 with password")
