@@ -123,3 +123,10 @@ func (m *MinioClient) DownloadFile(ctx context.Context, bucket, object string) (
 
 	return io.ReadAll(obj)
 }
+func (m *MinioClient) RemoveFile(ctx context.Context, objectName string) error {
+	err := m.Client.RemoveObject(ctx, m.Bucket, objectName, minio.RemoveObjectOptions{})
+	if err != nil {
+		log.Printf("[WARN] Failed to remove object from MinIO: %v", err)
+	}
+	return err
+}

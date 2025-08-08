@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,69 @@ func NewTemplateHandler(
 		minioClient:     minioClient,
 		facultyService:  facultyService,
 	}
+}
+func (h *TemplateHandler) UpdateTemplate(c *gin.Context) {
+	templateIDHex := c.Param("id")
+	templateID, err := primitive.ObjectIDFromHex(templateIDHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID in token"})
+		return
+	}
+
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+
+	var fileBytes []byte
+	var originalFilename string
+
+	file, header, err := c.Request.FormFile("file")
+	if err == nil {
+		defer file.Close()
+		fileBytes, err = io.ReadAll(file)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read uploaded file"})
+			return
+		}
+		originalFilename = header.Filename
+	}
+
+	updatedTemplate, err := h.templateService.UpdateTemplate(
+		c.Request.Context(),
+		templateID,
+		universityID,
+		name,
+		description,
+		originalFilename,
+		fileBytes,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Template updated successfully",
+		"template": updatedTemplate,
+	})
 }
 
 func (h *TemplateHandler) VerifyTemplatesByFaculty(c *gin.Context) {
@@ -272,37 +336,45 @@ func (h *TemplateHandler) SignTemplatesByMinEdu(c *gin.Context) {
 		"signed_templates": count,
 	})
 }
+func (h *TemplateHandler) GetTemplateView(c *gin.Context) {
+	ctx := c.Request.Context()
+	templateIDStr := c.Param("id")
 
-// // PUT /templates/:id
-// func (h *TemplateHandler) UpdateTemplate(c *gin.Context) {
-// 	id := c.Param("id")
+	template, err := h.templateService.GetTemplateByID(ctx, templateIDStr)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "template not found"})
+		return
+	}
 
-// 	var req struct {
-// 		Name        string `json:"name"`
-// 		Description string `json:"description"`
-// 	}
+	bucket, objectPath, err := parseMinioURL(template.FileLink)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid file link format"})
+		return
+	}
 
-// 	if err := c.ShouldBindJSON(&req); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
-// 		return
-// 	}
+	data, err := h.minioClient.DownloadFile(ctx, bucket, objectPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file from MinIO"})
+		return
+	}
 
-// 	updateData := &models.DiplomaTemplate{
-// 		Name:        req.Name,
-// 		Description: req.Description,
-// 	}
+	c.Data(http.StatusOK, "text/html; charset=utf-8", data)
+}
+func parseMinioURL(urlStr string) (bucket, objectPath string, err error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return "", "", err
+	}
 
-// 	if err := h.templateService.UpdateTemplate(c.Request.Context(), id, updateData); err != nil {
-// 		if err.Error() == "template is locked and cannot be modified" {
-// 			c.JSON(http.StatusForbidden, gin.H{"error": "Template is locked"})
-// 			return
-// 		}
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update template"})
-// 		return
-// 	}
+	trimmedPath := strings.TrimPrefix(u.Path, "/")
+	parts := strings.SplitN(trimmedPath, "/", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid MinIO file URL")
+	}
 
-//		c.JSON(http.StatusOK, gin.H{"message": "Template updated"})
-//	}
+	return parts[0], parts[1], nil
+}
+
 func (h *TemplateHandler) GetTemplateFile(c *gin.Context) {
 
 	templateID := c.Param("id")

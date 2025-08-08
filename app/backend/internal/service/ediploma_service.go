@@ -192,7 +192,11 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		log.Printf("[ERROR] Failed to upload PDF to MinIO: %v", err)
 		return nil, fmt.Errorf("failed to upload PDF to MinIO: %w", err)
 	}
-
+	log.Printf("[DEBUG] Locking template after diploma generation")
+	err = s.templateRepo.UpdateIsLocked(ctx, templateID, true)
+	if err != nil {
+		log.Printf("[ERROR] Failed to lock template: %v", err)
+	}
 	now := time.Now()
 	ediploma := &models.EDiploma{
 		ID:                 primitive.NewObjectID(),
@@ -220,8 +224,6 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		BlockchainTxID:     "",
 		SignatureOfUni:     template.SignatureOfUni,
 		SignatureOfMinEdu:  template.SignatureOfMinEdu,
-		Status:             "PENDING", // hoặc template.Status nếu bạn muốn lấy từ DB
-		IsLocked:           false,     // mặc định false
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}

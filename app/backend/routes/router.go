@@ -139,7 +139,8 @@ func SetupRouter(
 	templateGroup.POST("/sign/minedu/:university_id", templateHandler.SignTemplatesByMinEdu)
 	templateGroup.POST("/verify/faculty/:faculty_id", templateHandler.VerifyTemplatesByFaculty)
 	templateGroup.GET("/:id/file", templateHandler.GetTemplateFile)
-	// templateGroup.PUT("/:id", templateHandler.UpdateTemplate)
+	templateGroup.GET("/view/:id", templateHandler.GetTemplateView)
+	templateGroup.PUT("/:id", templateHandler.UpdateTemplate)
 
 	ediplomaGroup := api.Group("/ediplomas")
 	ediplomaGroup.Use(middleware.JWTAuthMiddleware())

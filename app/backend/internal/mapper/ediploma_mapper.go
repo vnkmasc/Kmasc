@@ -44,8 +44,6 @@ func MapEDiplomaToDTO(
 		// New fields from Template
 		SignatureOfUni:    ed.SignatureOfUni,
 		SignatureOfMinEdu: ed.SignatureOfMinEdu,
-		Status:            ed.Status,
-		IsLocked:          ed.IsLocked,
 	}
 }
 

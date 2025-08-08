@@ -24,6 +24,8 @@ type TemplateRepository interface {
 	UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, status, signature string) error
 	FindSignedByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
+	UpdateIsLocked(ctx context.Context, id primitive.ObjectID, isLocked bool) error
+	Update(ctx context.Context, template *models.DiplomaTemplate) error
 }
 
 type templateRepository struct {
@@ -34,6 +36,28 @@ func NewTemplateRepository(db *mongo.Database) TemplateRepository {
 	return &templateRepository{
 		collection: db.Collection("diploma_templates"),
 	}
+}
+
+func (r *templateRepository) Update(ctx context.Context, template *models.DiplomaTemplate) error {
+	filter := bson.M{"_id": template.ID}
+	update := bson.M{
+		"$set": bson.M{
+			"name":        template.Name,
+			"description": template.Description,
+			"file_link":   template.FileLink,
+			"hash":        template.Hash,
+			"updated_at":  template.UpdatedAt,
+		},
+	}
+	_, err := r.collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+func (r *templateRepository) UpdateIsLocked(ctx context.Context, id primitive.ObjectID, isLocked bool) error {
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": bson.M{"isLocked": isLocked}}
+	_, err := r.collection.UpdateOne(ctx, filter, update)
+	return err
 }
 
 func (r *templateRepository) VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error {
