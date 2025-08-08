@@ -35,15 +35,22 @@ cp "$FABRIC_SAMPLES_PATH/organizations/peerOrganizations/org1.example.com/ca/ca.
 
 echo "✅ TLS CA files copied to: $TLS_DEST"
 
-echo "📦 Copying admin credentials..."
-cp -r "$FABRIC_SAMPLES_PATH/organizations/peerOrganizations/$ORG_DOMAIN/users/$ADMIN_USER/msp/"* \
-   "$ADMIN_DEST"
+echo "📦 Copying admin cert and key..."
 
-echo "✅ Admin credentials copied to: $ADMIN_DEST"
+mkdir -p "$ADMIN_DEST/signcerts"
+cp "$FABRIC_SAMPLES_PATH/organizations/peerOrganizations/$ORG_DOMAIN/users/$ADMIN_USER/msp/signcerts/cert.pem" \
+   "$ADMIN_DEST/signcerts/"
+
+mkdir -p "$ADMIN_DEST/keystore"
+cp "$FABRIC_SAMPLES_PATH/organizations/peerOrganizations/$ORG_DOMAIN/users/$ADMIN_USER/msp/keystore/"* \
+   "$ADMIN_DEST/keystore/"
+
+echo "✅ Admin cert and key copied to: $ADMIN_DEST"
+
 
 echo "🔄 Rendering connection.yaml from template..."
 envsubst < ./scripts/connection.template.yaml > ./config/connection-org1.yaml
-echo "✅ connection.yaml generated from connection.template.yaml"
+echo "✅ connection-org1.yaml generated from connection.template.yaml"
 
 echo "🧰 Wallet and Keystore reset complete."
 echo "🚀 Ready to run your backend: go run ./cmd/server"

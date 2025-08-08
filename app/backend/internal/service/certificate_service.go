@@ -484,6 +484,15 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 		}
 		filter["faculty_id"] = faculty.ID
 	}
+	if params.Year > 0 {
+		from := time.Date(params.Year, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := from.AddDate(1, 0, 0)
+
+		filter["issue_date"] = bson.M{
+			"$gte": from,
+			"$lt":  to,
+		}
+	}
 
 	// Lấy toàn bộ certificates để tự nhóm và phân trang
 	allCerts, _, err := s.certificateRepo.FindCertificate(ctx, filter, 0, 0)
