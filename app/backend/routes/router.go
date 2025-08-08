@@ -93,6 +93,7 @@ func SetupRouter(
 	facultyGroup.PUT("/:id", facultyHandler.UpdateFaculty)
 	facultyGroup.DELETE("/:id", facultyHandler.DeleteFaculty)
 	facultyGroup.GET("/:id", facultyHandler.GetFacultyByID)
+	facultyGroup.GET("/university/:university_id", facultyHandler.GetFacultiesByUniversity)
 
 	//temp
 	api.POST("/upload", fileHandler.UploadFile)
@@ -132,6 +133,7 @@ func SetupRouter(
 	templateGroup.Use(middleware.JWTAuthMiddleware())
 	templateGroup.POST("", templateHandler.CreateTemplate)
 	templateGroup.GET("/faculty/:faculty_id", templateHandler.GetTemplatesByFaculty)
+	templateGroup.GET("/university/:university_id/faculty/:faculty_id", templateHandler.GetTemplatesByFacultyAndUniversity)
 	templateGroup.POST("/sign/faculty/:faculty_id", templateHandler.SignTemplatesByFaculty)
 	templateGroup.POST("/sign/university", templateHandler.SignAllPendingTemplatesOfUniversity)
 	templateGroup.POST("/sign/minedu/:university_id", templateHandler.SignTemplatesByMinEdu)
@@ -142,6 +144,8 @@ func SetupRouter(
 	ediplomaGroup := api.Group("/ediplomas")
 	ediplomaGroup.Use(middleware.JWTAuthMiddleware())
 	ediplomaGroup.POST("/generate", ediplomaHandler.GenerateEDiploma)
+	ediplomaGroup.POST("/generate-bulk", ediplomaHandler.GenerateBulkEDiplomas)
+	ediplomaGroup.GET("/faculty/:faculty_id", ediplomaHandler.GetEDiplomasByFaculty)
 
 	return r
 }

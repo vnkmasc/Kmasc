@@ -12,6 +12,7 @@ import (
 type EDiplomaRepository interface {
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.EDiploma, error)
 	Save(ctx context.Context, ediploma *models.EDiploma) error
+	GetByFacultyID(ctx context.Context, facultyID primitive.ObjectID) ([]*models.EDiploma, error)
 }
 
 type eDiplomaRepository struct {
@@ -36,4 +37,24 @@ func (r *eDiplomaRepository) FindByID(ctx context.Context, id primitive.ObjectID
 func (r *eDiplomaRepository) Save(ctx context.Context, ediploma *models.EDiploma) error {
 	_, err := r.db.InsertOne(ctx, ediploma)
 	return err
+}
+func (r *eDiplomaRepository) GetByFacultyID(ctx context.Context, facultyID primitive.ObjectID) ([]*models.EDiploma, error) {
+	filter := bson.M{"faculty_id": facultyID}
+
+	cursor, err := r.db.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var ediplomas []*models.EDiploma
+	for cursor.Next(ctx) {
+		var ed models.EDiploma
+		if err := cursor.Decode(&ed); err != nil {
+			return nil, err
+		}
+		ediplomas = append(ediplomas, &ed)
+	}
+
+	return ediplomas, nil
 }

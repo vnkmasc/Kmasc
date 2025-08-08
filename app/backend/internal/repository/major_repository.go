@@ -14,6 +14,7 @@ type MajorRepository interface {
 	FindByCodeAndFacultyID(ctx context.Context, majorCode string, facultyID primitive.ObjectID) (*models.Major, error)
 	GetByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.Major, error)
 	DeleteByID(ctx context.Context, id primitive.ObjectID) error
+	GetByID(ctx context.Context, id primitive.ObjectID) (*models.Major, error)
 }
 
 type majorRepository struct {
@@ -29,6 +30,17 @@ func NewMajorRepository(db *mongo.Database) MajorRepository {
 func (r *majorRepository) Insert(ctx context.Context, major *models.Major) error {
 	_, err := r.collection.InsertOne(ctx, major)
 	return err
+}
+func (r *majorRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.Major, error) {
+	var major models.Major
+	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&major)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // not found
+		}
+		return nil, err
+	}
+	return &major, nil
 }
 func (r *majorRepository) FindByCodeAndFacultyID(ctx context.Context, majorCode string, facultyID primitive.ObjectID) (*models.Major, error) {
 	filter := bson.M{

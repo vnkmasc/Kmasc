@@ -41,3 +41,36 @@ type EDiploma struct {
 	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
 }
+
+type EDiplomaDTO struct {
+	ID                 primitive.ObjectID `json:"id"`
+	TemplateID         primitive.ObjectID `json:"template_id"`
+	UniversityID       primitive.ObjectID `json:"university_id"`
+	UniversityCode     string             `json:"university_code"`
+	UniversityName     string             `json:"university_name"`
+	FacultyID          primitive.ObjectID `json:"faculty_id"`
+	FacultyCode        string             `json:"faculty_code"`
+	FacultyName        string             `json:"faculty_name"`
+	MajorID            primitive.ObjectID `json:"major_id"`
+	MajorCode          string             `json:"major_code"`
+	MajorName          string             `json:"major_name"`
+	UserID             primitive.ObjectID `json:"user_id"`
+	StudentCode        string             `json:"student_code"`
+	FullName           string             `json:"full_name"`
+	CertificateType    string             `json:"certificate_type"`
+	Course             string             `json:"course"`
+	EducationType      string             `json:"education_type"`
+	GPA                float64            `json:"gpa"`
+	GraduationRank     string             `json:"graduation_rank"`
+	IssueDate          time.Time          `json:"issue_date"`
+	SerialNumber       string             `json:"serial_number"`
+	RegistrationNumber string             `json:"registration_number"`
+	FileLink           string             `json:"file_link"`
+	FileHash           string             `json:"file_hash"`
+	Signature          string             `json:"signature"`
+	Signed             bool               `json:"signed"`
+	SignedAt           time.Time          `json:"signed_at"`
+	OnBlockchain       bool               `json:"on_blockchain"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+}

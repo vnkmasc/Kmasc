@@ -77,6 +77,8 @@ func main() {
 	pdfGenerator := utils.NewPDFGenerator()      // giả định bạn có utils/pdf_generator.go
 
 	ediplomaService := service.NewEDiplomaService(
+		universityRepo,
+		majorRepo,
 		facultyRepo,
 		ediplomaRepo,
 		certificateRepo,

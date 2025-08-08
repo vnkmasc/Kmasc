@@ -129,25 +129,15 @@ func sanitizeFileName(name string) string {
 	return reg.ReplaceAllString(name, "")
 }
 
-func (s *templateService) GetTemplatesByFaculty(ctx context.Context, _, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
-	// 💡 Tra thông tin faculty để lấy university_id
-	faculty, err := s.facultyRepo.FindByID(ctx, facultyID)
+func (s *templateService) GetTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
+	// ✅ Tìm faculty theo facultyID và universityID để đảm bảo khoa thuộc đúng trường
+	faculty, err := s.facultyRepo.FindByIDAndUniversityID(ctx, facultyID, universityID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch faculty: %v", err)
+		return nil, fmt.Errorf("faculty does not belong to the university or not found: %v", err)
 	}
 
-	universityID := faculty.UniversityID
-
-	// ✅ Check lại vẫn đúng cơ chế
-	belongs, err := s.facultyService.CheckFacultyBelongsToUniversity(ctx, facultyID, universityID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to verify faculty ownership: %v", err)
-	}
-	if !belongs {
-		return nil, errors.New("faculty does not belong to any university")
-	}
-
-	return s.templateRepo.FindByUniversityAndFaculty(ctx, universityID, facultyID)
+	// ✅ Nếu tìm thấy thì truy vấn template
+	return s.templateRepo.FindByUniversityAndFaculty(ctx, universityID, faculty.ID)
 }
 
 func (s *templateService) UpdateTemplate(ctx context.Context, id string, updateData *models.DiplomaTemplate) error {

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
 	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
@@ -19,9 +20,13 @@ import (
 type EDiplomaService interface {
 	GetByID(ctx context.Context, id string) (*models.EDiploma, error)
 	GenerateEDiploma(ctx context.Context, certificateIDStr, templateIDStr string) (*models.EDiploma, error)
+	GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error)
+	GetEDiplomasByFaculty(ctx context.Context, facultyID string) ([]*models.EDiplomaDTO, error)
 }
 
 type eDiplomaService struct {
+	universityRepo  repository.UniversityRepository
+	majorRepo       repository.MajorRepository
 	facultyRepo     repository.FacultyRepository
 	repo            repository.EDiplomaRepository
 	certificateRepo repository.CertificateRepository
@@ -32,6 +37,8 @@ type eDiplomaService struct {
 }
 
 func NewEDiplomaService(
+	universityRepo repository.UniversityRepository,
+	majorRepo repository.MajorRepository,
 	facultyRepo repository.FacultyRepository,
 	repo repository.EDiplomaRepository,
 	certificateRepo repository.CertificateRepository,
@@ -41,6 +48,8 @@ func NewEDiplomaService(
 	pdfGenerator *utils.PDFGenerator,
 ) *eDiplomaService {
 	return &eDiplomaService{
+		universityRepo:  universityRepo,
+		majorRepo:       majorRepo,
 		facultyRepo:     facultyRepo,
 		repo:            repo,
 		certificateRepo: certificateRepo,
@@ -49,6 +58,41 @@ func NewEDiplomaService(
 		templateEngine:  templateEngine,
 		pdfGenerator:    pdfGenerator,
 	}
+}
+
+func (s *eDiplomaService) GetEDiplomasByFaculty(ctx context.Context, facultyIDStr string) ([]*models.EDiplomaDTO, error) {
+	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid faculty ID")
+	}
+
+	ediplomas, err := s.repo.GetByFacultyID(ctx, facultyID)
+	if err != nil {
+		return nil, err
+	}
+
+	faculty, err := s.facultyRepo.FindByID(ctx, facultyID)
+	if err != nil {
+		return nil, err
+	}
+
+	university, err := s.universityRepo.FindByID(ctx, faculty.UniversityID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*models.EDiplomaDTO
+	for _, ed := range ediplomas {
+		var major *models.Major
+		if ed.MajorID != primitive.NilObjectID {
+			major, _ = s.majorRepo.GetByID(ctx, ed.MajorID)
+		}
+
+		dto := mapper.MapEDiplomaToDTO(ed, university, faculty, major)
+		result = append(result, dto)
+	}
+
+	return result, nil
 }
 
 func (s *eDiplomaService) GetByID(ctx context.Context, id string) (*models.EDiploma, error) {
@@ -186,4 +230,113 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 
 	log.Printf("[DEBUG] EDiploma generated successfully: ID=%s", ediploma.ID.Hex())
 	return ediploma, nil
+}
+
+func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error) {
+	var result []*models.EDiploma
+
+	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid faculty ID")
+	}
+	templateID, err := primitive.ObjectIDFromHex(templateIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid template ID")
+	}
+
+	// Load template
+	template, err := s.templateRepo.GetByID(ctx, templateID)
+	if err != nil {
+		return nil, fmt.Errorf("template not found")
+	}
+	if template.FacultyID != facultyID {
+		return nil, errors.New("template does not belong to the given faculty")
+	}
+
+	// Load all certificates for this faculty
+	certificates, err := s.certificateRepo.FindByFacultyID(ctx, facultyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load certificates: %w", err)
+	}
+
+	// Download template HTML once
+	bucket, objectPath, err := parseMinioURL(template.FileLink)
+	if err != nil {
+		return nil, fmt.Errorf("invalid template file URL: %w", err)
+	}
+	htmlContent, err := s.minioClient.DownloadFile(ctx, bucket, objectPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download template HTML: %w", err)
+	}
+
+	for _, cert := range certificates {
+		data := map[string]interface{}{
+			"SoHieu":         cert.SerialNumber,
+			"SoVaoSo":        cert.RegNo,
+			"HoTen":          cert.Name,
+			"Nganh":          cert.Major,
+			"XepLoai":        cert.GraduationRank,
+			"HinhThucDaoTao": cert.EducationType,
+			"Khoa":           cert.Course,
+			"NgayCap":        cert.IssueDate.Format("02/01/2006"),
+		}
+
+		renderedHTML, err := s.templateEngine.Render(string(htmlContent), data)
+		if err != nil {
+			log.Printf("Render failed for cert %s: %v", cert.ID.Hex(), err)
+			continue // skip this cert
+		}
+
+		pdfBytes, err := s.pdfGenerator.ConvertHTMLToPDF(renderedHTML)
+		if err != nil {
+			log.Printf("PDF generation failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		hash := utils.ComputeSHA256(pdfBytes)
+		pdfPath := fmt.Sprintf("ediplomas/%s.pdf", primitive.NewObjectID().Hex())
+
+		if err := s.minioClient.UploadFile(ctx, pdfPath, pdfBytes, "application/pdf"); err != nil {
+			log.Printf("Upload failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		now := time.Now()
+		ediploma := &models.EDiploma{
+			ID:                 primitive.NewObjectID(),
+			TemplateID:         templateID,
+			UniversityID:       cert.UniversityID,
+			FacultyID:          cert.FacultyID,
+			UserID:             cert.UserID,
+			MajorID:            primitive.NilObjectID,
+			StudentCode:        cert.StudentCode,
+			FullName:           cert.Name,
+			CertificateType:    cert.CertificateType,
+			Course:             cert.Course,
+			EducationType:      cert.EducationType,
+			GPA:                cert.GPA,
+			GraduationRank:     cert.GraduationRank,
+			IssueDate:          cert.IssueDate,
+			SerialNumber:       cert.SerialNumber,
+			RegistrationNumber: cert.RegNo,
+			FileLink:           pdfPath,
+			FileHash:           hash,
+			Signed:             false,
+			Signature:          "",
+			SignedAt:           time.Time{},
+			OnBlockchain:       false,
+			BlockchainTxID:     "",
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		}
+
+		if err := s.repo.Save(ctx, ediploma); err != nil {
+			log.Printf("Save failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		result = append(result, ediploma)
+	}
+
+	return result, nil
 }

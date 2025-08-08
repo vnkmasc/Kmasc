@@ -104,6 +104,32 @@ func (h *TemplateHandler) GetTemplatesByFaculty(c *gin.Context) {
 		"data": templates,
 	})
 }
+func (h *TemplateHandler) GetTemplatesByFacultyAndUniversity(c *gin.Context) {
+	universityIDStr := c.Param("university_id")
+	facultyIDStr := c.Param("faculty_id")
+
+	universityID, err := primitive.ObjectIDFromHex(universityIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id"})
+		return
+	}
+
+	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
+		return
+	}
+
+	templates, err := h.templateService.GetTemplatesByFaculty(c.Request.Context(), universityID, facultyID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": templates,
+	})
+}
 
 func (h *TemplateHandler) CreateTemplate(c *gin.Context) {
 	name := c.PostForm("name")
