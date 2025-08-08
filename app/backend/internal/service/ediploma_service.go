@@ -31,6 +31,7 @@ type eDiplomaService struct {
 	repo            repository.EDiplomaRepository
 	certificateRepo repository.CertificateRepository
 	templateRepo    repository.TemplateRepository
+	userRepo        repository.UserRepository
 	minioClient     *database.MinioClient
 	templateEngine  *models.TemplateEngine
 	pdfGenerator    *utils.PDFGenerator
@@ -43,6 +44,7 @@ func NewEDiplomaService(
 	repo repository.EDiplomaRepository,
 	certificateRepo repository.CertificateRepository,
 	templateRepo repository.TemplateRepository,
+	userRepo repository.UserRepository,
 	minioClient *database.MinioClient,
 	templateEngine *models.TemplateEngine,
 	pdfGenerator *utils.PDFGenerator,
@@ -54,6 +56,7 @@ func NewEDiplomaService(
 		repo:            repo,
 		certificateRepo: certificateRepo,
 		templateRepo:    templateRepo,
+		userRepo:        userRepo,
 		minioClient:     minioClient,
 		templateEngine:  templateEngine,
 		pdfGenerator:    pdfGenerator,
@@ -157,11 +160,31 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		return nil, fmt.Errorf("failed to download template HTML from MinIO: %w", err)
 	}
 	log.Printf("[DEBUG] Downloaded HTML content length: %d", len(htmlContent))
+	log.Printf("[DEBUG] Getting user by ID: %s", cert.UserID.Hex())
+	user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get user: %v", err)
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	log.Printf("[DEBUG] Getting university by ID: %s", cert.UniversityID.Hex())
+	university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get university: %v", err)
+		return nil, fmt.Errorf("failed to get university: %w", err)
+	}
+	dob, err := time.Parse("2006-01-02", user.DateOfBirth)
+	if err != nil {
+		log.Printf("[ERROR] Failed to parse DateOfBirth: %v", err)
+		// fallback hoặc trả về lỗi tùy logic
+	}
 
 	data := map[string]interface{}{
 		"SoHieu":         cert.SerialNumber,
 		"SoVaoSo":        cert.RegNo,
-		"HoTen":          cert.Name,
+		"HoTen":          user.FullName,
+		"NgaySinh":       dob.Format("02/01/2006"),
+		"TenTruong":      university.UniversityName,
 		"Nganh":          cert.Major,
 		"XepLoai":        cert.GraduationRank,
 		"HinhThucDaoTao": cert.EducationType,

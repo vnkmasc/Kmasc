@@ -19,7 +19,6 @@ type FacultyRepository interface {
 	DeleteByID(ctx context.Context, id primitive.ObjectID) error
 	UpdateFaculty(ctx context.Context, id primitive.ObjectID, update bson.M) error
 	FindByFacultyCode(ctx context.Context, code string) (*models.Faculty, error)
-	FindByUniversityID(ctx context.Context, universityID primitive.ObjectID) ([]*models.Faculty, error)
 }
 
 type facultyRepository struct {
@@ -30,24 +29,6 @@ func NewFacultyRepository(db *mongo.Database) FacultyRepository {
 	return &facultyRepository{
 		col: db.Collection("faculties"),
 	}
-}
-func (r *facultyRepository) FindByUniversityID(ctx context.Context, universityID primitive.ObjectID) ([]*models.Faculty, error) {
-	filter := bson.M{"university_id": universityID}
-	cursor, err := r.col.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var faculties []*models.Faculty
-	for cursor.Next(ctx) {
-		var faculty models.Faculty
-		if err := cursor.Decode(&faculty); err != nil {
-			return nil, err
-		}
-		faculties = append(faculties, &faculty)
-	}
-	return faculties, nil
 }
 
 func (r *facultyRepository) FindByIDAndUniversityID(ctx context.Context, facultyID, universityID primitive.ObjectID) (*models.Faculty, error) {

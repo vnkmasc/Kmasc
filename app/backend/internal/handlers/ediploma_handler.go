@@ -74,5 +74,5 @@ func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, ediplomas)
+	c.JSON(http.StatusOK, gin.H{"data": ediplomas})
 }
