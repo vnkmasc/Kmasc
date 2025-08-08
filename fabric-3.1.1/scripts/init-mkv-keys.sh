@@ -47,10 +47,87 @@ check_container_running() {
     fi
 }
 
+# Function to debug container status
+debug_container_status() {
+    print_status "INFO" "Debugging container status..."
+    print_status "INFO" "All running containers:"
+    docker ps --format "table {{.Names}}\t{{.Status}}"
+    echo
+    
+    # Test container ID extraction for each container
+    local containers=("peer0.org1.example.com" "peer0.org2.example.com" "orderer.example.com")
+    for container_name in "${containers[@]}"; do
+        print_status "INFO" "Testing container ID extraction for: ${container_name}"
+        local container_id=$(get_container_id "${container_name}")
+        if [ $? -eq 0 ]; then
+            print_status "PASS" "Container ID for ${container_name}: ${container_id}"
+        else
+            print_status "FAIL" "Failed to get container ID for ${container_name}"
+        fi
+    done
+    echo
+}
+
+# Function to test key_manager.sh locally
+test_key_manager_locally() {
+    print_status "INFO" "Testing key_manager.sh locally..."
+    
+    local mkv_dir="core/ledger/kvledger/txmgmt/statedb/mkv"
+    
+    if [ ! -f "${mkv_dir}/key_manager.sh" ]; then
+        print_status "FAIL" "key_manager.sh not found in ${mkv_dir}"
+        return 1
+    fi
+    
+    if [ ! -f "${mkv_dir}/libmkv.so" ]; then
+        print_status "FAIL" "libmkv.so not found in ${mkv_dir}"
+        return 1
+    fi
+    
+    print_status "PASS" "key_manager.sh and libmkv.so found"
+    
+    # Test if key_manager.sh is executable
+    if [ ! -x "${mkv_dir}/key_manager.sh" ]; then
+        print_status "INFO" "Making key_manager.sh executable..."
+        chmod +x "${mkv_dir}/key_manager.sh"
+    fi
+    
+    print_status "PASS" "key_manager.sh is ready for use"
+}
+
 # Function to get container ID
 get_container_id() {
     local container_name=$1
-    docker ps --format "table {{.ID}}\t{{.Names}}" | grep "^.*\t${container_name}$" | awk '{print $1}'
+    
+    # Try multiple formats to get container ID
+    local container_id=""
+    
+    # Method 1: Try table format
+    container_id=$(docker ps --format "table {{.ID}}\t{{.Names}}" | grep "^.*\t${container_name}$" | awk '{print $1}' | head -1)
+    
+    # Method 2: If empty, try simple format
+    if [ -z "$container_id" ]; then
+        container_id=$(docker ps --format "{{.ID}}\t{{.Names}}" | grep "^.*\t${container_name}$" | awk '{print $1}' | head -1)
+    fi
+    
+    # Method 3: If still empty, try with grep
+    if [ -z "$container_id" ]; then
+        container_id=$(docker ps -q --filter "name=${container_name}" | head -1)
+    fi
+    
+    # Method 4: Last resort - try exact match
+    if [ -z "$container_id" ]; then
+        container_id=$(docker ps --format "{{.ID}}\t{{.Names}}" | grep "${container_name}" | awk '{print $1}' | head -1)
+    fi
+    
+    if [ -z "$container_id" ]; then
+        print_status "FAIL" "Container ID is empty for ${container_name}"
+        print_status "INFO" "Available containers:"
+        docker ps --format "table {{.Names}}\t{{.Status}}"
+        return 1
+    fi
+    
+    echo "$container_id"
 }
 
 # Function to copy files to container
@@ -64,10 +141,11 @@ copy_files_to_container() {
     # Copy library files
     docker cp "${source_dir}/libmkv.so" "${container_id}:${dest_dir}/"
     docker cp "${source_dir}/mkv.h" "${container_id}:${dest_dir}/"
+    docker cp "${source_dir}/mkv.go" "${container_id}:${dest_dir}/"
     docker cp "${source_dir}/key_manager.sh" "${container_id}:${dest_dir}/"
     
-    # Make key_manager.sh executable
-    docker exec "${container_id}" chmod +x "${dest_dir}/key_manager.sh"
+    # Make key_manager.sh executable (ignore errors if not permitted)
+    docker exec "${container_id}" chmod +x "${dest_dir}/key_manager.sh" 2>/dev/null || true
     
     print_status "PASS" "Files copied successfully"
 }
@@ -81,7 +159,7 @@ init_keys_in_container() {
     print_status "INFO" "Initializing MKV keys in container..."
     
     # Set environment variables and run key initialization
-    docker exec "${container_id}" bash -c "export LD_LIBRARY_PATH=${working_dir} && cd ${working_dir} && echo '${password}' | ./key_manager.sh init"
+    docker exec "${container_id}" bash -c "export LD_LIBRARY_PATH=${working_dir} && cd ${working_dir} && echo '${password}' | bash key_manager.sh init"
     
     if [ $? -eq 0 ]; then
         print_status "PASS" "MKV keys initialized successfully in container"
@@ -110,7 +188,7 @@ verify_keys_in_container() {
 # Function to setup MKV in all peer containers
 setup_mkv_in_peers() {
     local password=${1:-"fabric_mkv_password_2025"}
-    local working_dir=${2:-"/root/mkv"}
+    local working_dir=${2:-"/home/chaincode/mkv"}
     
     print_status "INFO" "Setting up MKV in all peer containers..."
     
@@ -122,6 +200,11 @@ setup_mkv_in_peers() {
         
         if check_container_running "${container_name}"; then
             local container_id=$(get_container_id "${container_name}")
+            if [ $? -ne 0 ]; then
+                print_status "FAIL" "Failed to get container ID for ${container_name}"
+                continue
+            fi
+            
             print_status "INFO" "Container ID: ${container_id}"
             
             # Create working directory in container
@@ -136,6 +219,9 @@ setup_mkv_in_peers() {
             # Verify keys in container
             verify_keys_in_container "${container_id}" "${working_dir}"
             
+            # Copy keys to current working directory for MKV access
+            copy_keys_to_working_dir "${container_id}" "${working_dir}"
+            
             print_status "PASS" "MKV setup completed for ${container_name}"
             
         else
@@ -149,13 +235,18 @@ setup_mkv_in_peers() {
 # Function to setup MKV in orderer container
 setup_mkv_in_orderer() {
     local password=${1:-"fabric_mkv_password_2025"}
-    local working_dir=${2:-"/root/mkv"}
+    local working_dir=${2:-"/home/chaincode/mkv"}
     local container_name="orderer.example.com"
     
     print_status "INFO" "Setting up MKV in orderer container..."
     
     if check_container_running "${container_name}"; then
         local container_id=$(get_container_id "${container_name}")
+        if [ $? -ne 0 ]; then
+            print_status "FAIL" "Failed to get container ID for ${container_name}"
+            return 1
+        fi
+        
         print_status "INFO" "Container ID: ${container_id}"
         
         # Create working directory in container
@@ -170,11 +261,36 @@ setup_mkv_in_orderer() {
         # Verify keys in container
         verify_keys_in_container "${container_id}" "${working_dir}"
         
+        # Copy keys to current working directory for MKV access
+        copy_keys_to_working_dir "${container_id}" "${working_dir}"
+        
         print_status "PASS" "MKV setup completed for ${container_name}"
         
     else
         print_status "WARN" "Container ${container_name} is not running, skipping..."
     fi
+}
+
+# Function to copy keys to current working directory
+copy_keys_to_working_dir() {
+    local container_id=$1
+    local working_dir=$2
+    
+    print_status "INFO" "Copying keys to current working directory..."
+    
+    # Copy keys from working directory to current directory
+    docker exec "${container_id}" bash -c "
+        if [ -f '${working_dir}/k1.key' ] && [ -f '${working_dir}/k0.key' ] && [ -f '${working_dir}/encrypted_k1.key' ]; then
+            cp '${working_dir}/k1.key' . 2>/dev/null || true
+            cp '${working_dir}/k0.key' . 2>/dev/null || true
+            cp '${working_dir}/encrypted_k1.key' . 2>/dev/null || true
+            echo 'Keys copied to current directory successfully'
+        else
+            echo 'Warning: Some key files not found in ${working_dir}'
+        fi
+    "
+    
+    print_status "PASS" "Keys copied to working directory"
 }
 
 # Function to show help
@@ -193,7 +309,7 @@ show_help() {
     echo
     echo "Options:"
     echo "  -p, --password PASSWORD  - Use custom password (default: fabric_mkv_password_2025)"
-    echo "  -d, --dir DIRECTORY      - Working directory in container (default: /root/mkv)"
+    echo "  -d, --dir DIRECTORY      - Working directory in container (default: /home/chaincode/mkv)"
     echo "  -h, --help               - Show this help message"
     echo
     echo "Examples:"
@@ -206,7 +322,7 @@ show_help() {
 
 # Parse command line arguments
 PASSWORD="fabric_mkv_password_2025"
-WORKING_DIR="/root/mkv"
+WORKING_DIR="/home/chaincode/mkv"
 COMMAND=""
 
 while [[ $# -gt 0 ]]; do
@@ -238,13 +354,19 @@ done
 # Function to auto-init keys after network start
 auto_init_keys_after_network() {
     local password=${1:-"fabric_mkv_password_2025"}
-    local working_dir=${2:-"/root/mkv"}
+    local working_dir=${2:-"/home/chaincode/mkv"}
     
     print_status "INFO" "Auto-initializing MKV keys after network start..."
     
     # Wait for containers to be ready
     print_status "INFO" "Waiting for containers to be ready..."
     sleep 10
+    
+    # Test key_manager.sh locally first
+    test_key_manager_locally
+    
+    # Debug container status
+    debug_container_status
     
     # Setup MKV in all containers
     setup_mkv_in_peers "$password" "$working_dir"

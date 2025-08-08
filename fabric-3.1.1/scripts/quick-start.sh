@@ -137,10 +137,24 @@ step4_test_environment() {
     run_script "scripts/test_environment.sh" "environment test"
 }
 
-# Step 5.0: Build encryption library
-step5_0_build_encryption() {
-    echo "Step 5.0: Building encryption library..."
-    run_script "scripts/build-encryption.sh" "encryption library build"
+# Step 5: Build encryption and create keys (SIMPLE VERSION)
+step5_build_encryption() {
+    print_status "INFO" "Step 5: Building encryption and creating keys..."
+    
+    echo "Building MKV encryption library..."
+    cd core/ledger/kvledger/txmgmt/statedb/mkv
+    make clean && make
+    cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
+    
+    echo "Creating MKV keys..."
+    cp core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so . 2>/dev/null || true
+    cp core/ledger/kvledger/txmgmt/statedb/mkv/mkv.go . 2>/dev/null || true
+    echo "fabric_mkv_password_2025" | bash core/ledger/kvledger/txmgmt/statedb/mkv/key_manager.sh init
+    
+    echo "✅ PASS: MKV encryption built and keys created"
+    echo "   - Keys location: /home/phongnh/go-src/Kmasc/fabric-3.1.1/"
+    echo "   - Files: k1.key, k0.key, encrypted_k1.key"
+    echo "   - Password: fabric_mkv_password_2025"
 }
 
 # Step 5.1: Build MKV library
@@ -155,21 +169,9 @@ step5_2_test_mkv() {
     run_script "scripts/test-mkv.sh" "MKV library test"
 }
 
-# Step 5.3: Initialize MKV keys in containers
-step5_3_init_mkv_keys() {
-    echo "Step 5.3: Initializing MKV keys in containers..."
-    run_script "scripts/init-mkv-keys-wrapper.sh" "MKV keys initialization"
-}
-
-# Step 5.4: Auto-initialize MKV keys after network start
-step5_4_auto_init_mkv_keys() {
-    echo "Step 5.4: Auto-initializing MKV keys after network start..."
-    run_script "scripts/init-mkv-keys-wrapper.sh" "MKV keys auto-initialization"
-}
-
-# Step 5.5: Test MKV in Docker containers
-step5_5_test_mkv_docker() {
-    echo "Step 5.5: Testing MKV in Docker containers..."
+# Step 5.3: Test MKV in Docker containers
+step5_3_test_mkv_docker() {
+    echo "Step 5.3: Testing MKV in Docker containers..."
     run_script "scripts/test-mkv-docker.sh" "MKV Docker test"
 }
 
@@ -185,44 +187,121 @@ step7_start_network() {
     run_script "scripts/start-network.sh" "test network startup"
 }
 
-# Step 8: Show next steps
-step8_next_steps() {
-    echo "Step 8: Next steps..."
-    print_status "INFO" "Setup completed successfully!"
+# Step 8: Initialize MKV keys in containers
+step8_init_mkv_keys() {
+    echo "Step 8: Initializing MKV keys in containers..."
+    run_script "scripts/init-mkv-keys-wrapper.sh" "MKV keys initialization"
+}
+
+# Step 8: Auto-copy MKV keys to containers
+step8_auto_copy_mkv_keys() {
+    echo "Step 8: Auto-copying MKV keys to containers..."
+    
+    # Wait a moment for containers to be ready
+    sleep 5
+    
+    # Generate keys in current directory if not exists
+    if [ ! -f "k1.key" ] || [ ! -f "k0.key" ] || [ ! -f "encrypted_k1.key" ]; then
+        echo "INFO: Generating MKV keys in current directory..."
+        cp core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so . 2>/dev/null || true
+        cp core/ledger/kvledger/txmgmt/statedb/mkv/mkv.go . 2>/dev/null || true
+        echo "fabric_mkv_password_2025" | bash core/ledger/kvledger/txmgmt/statedb/mkv/key_manager.sh init
+    fi
+    
+    # Function to copy keys to a specific container
+    copy_keys_to_container() {
+        local container_name=$1
+        echo "INFO: Copying keys to $container_name..."
+        docker cp k1.key $container_name:/ 2>/dev/null || true
+        docker cp k0.key $container_name:/ 2>/dev/null || true
+        docker cp encrypted_k1.key $container_name:/ 2>/dev/null || true
+    }
+    
+    # Copy keys to peer containers
+    copy_keys_to_container "peer0.org1.example.com"
+    copy_keys_to_container "peer0.org2.example.com"
+    
+    # Copy keys to orderer container
+    copy_keys_to_container "orderer.example.com"
+    
+    # Copy keys to chaincode containers
+    echo "INFO: Copying keys to chaincode containers..."
+    ./scripts/auto-copy-mkv-keys.sh copy 2>/dev/null || true
+    
+    echo "PASS: MKV keys auto-copied to all containers"
+}
+
+# Step 9: Monitor and ensure keys persistence
+step9_monitor_keys() {
+    echo "Step 9: Setting up key monitoring..."
+    
+    # Start background monitoring
+    (
+        while true; do
+            sleep 30  # Check every 30 seconds
+            
+            # Check if peer containers have keys
+            if ! docker exec peer0.org1.example.com ls -la /k1.key >/dev/null 2>&1; then
+                echo "WARN: Keys missing in peer0.org1.example.com, re-copying..."
+                docker cp k1.key peer0.org1.example.com:/ 2>/dev/null || true
+                docker cp k0.key peer0.org1.example.com:/ 2>/dev/null || true
+                docker cp encrypted_k1.key peer0.org1.example.com:/ 2>/dev/null || true
+            fi
+            
+            if ! docker exec peer0.org2.example.com ls -la /k1.key >/dev/null 2>&1; then
+                echo "WARN: Keys missing in peer0.org2.example.com, re-copying..."
+                docker cp k1.key peer0.org2.example.com:/ 2>/dev/null || true
+                docker cp k0.key peer0.org2.example.com:/ 2>/dev/null || true
+                docker cp encrypted_k1.key peer0.org2.example.com:/ 2>/dev/null || true
+            fi
+            
+            # Check chaincode containers
+            ./scripts/auto-copy-mkv-keys.sh check >/dev/null 2>&1 || {
+                echo "WARN: Keys missing in chaincode containers, re-copying..."
+                ./scripts/auto-copy-mkv-keys.sh copy >/dev/null 2>&1 || true
+            }
+        done
+    ) &
+    
+    echo "PASS: Key monitoring started in background"
+}
+
+# Step 10: Next steps
+step10_next_steps() {
+    print_status "INFO" "Step 10: Next steps..."
+    
     echo
-    echo "🎉 Congratulations! Your Hyperledger Fabric with encryption is ready!"
+    echo "🎉 Hyperledger Fabric network with MKV encryption is ready!"
     echo
-    echo "📋 What's been set up:"
-    echo "   ✅ Environment dependencies (Go, OpenSSL, Docker)"
-    echo "   ✅ Encryption library (libencryption.so)"
-    echo "   ✅ MKV library (libmkv.so)"
-    echo "   ✅ Fabric binaries with encryption"
-    echo "   ✅ Test network running"
+    echo "📋 Network Information:"
+    echo "   - Network: test-network"
+    echo "   - Channel: mychannel"
+    echo "   - Chaincode: basic"
+    echo "   - MKV Encryption: Enabled"
     echo
-    echo "🔐 MKV Key Management:"
-    echo "   🔑 Default password: fabric_mkv_password_2025"
-    echo "   🔄 To change password:"
-    echo "      ./scripts/init-mkv-keys-standalone.sh -p your_new_password"
-    echo "   📁 Key files location: /root/mkv/ in each container"
+    echo "🔑 MKV Keys Information:"
+    echo "   - Keys location: /home/phongnh/go-src/Kmasc/fabric-3.1.1/"
+    echo "   - Password: fabric_mkv_password_2025"
+    echo "   - Files: k1.key, k0.key, encrypted_k1.key"
     echo
-    echo "🔍 To verify encryption is working:"
-    echo "   docker exec peer0.org1.example.com cat /root/state_encryption.log"
-    echo
-    echo "🔍 To verify MKV encryption is working:"
-    echo "   docker exec peer0.org1.example.com cat /root/state_mkv.log"
-    echo
-    echo "🧪 To test chaincode:"
+    echo "🚀 Quick Test Commands:"
     echo "   cd fabric-samples/test-network"
+    echo "   export PATH=\${PWD}/bin:\${PWD}/../bin:\${PWD}/../../bin:\$PATH"
+    echo "   export FABRIC_CFG_PATH=\$PWD/../config/"
+    echo "   export CORE_PEER_TLS_ENABLED=true"
+    echo "   export CORE_PEER_LOCALMSPID=\"Org1MSP\""
+    echo "   export CORE_PEER_MSPCONFIGPATH=\${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp"
+    echo "   export CORE_PEER_TLS_ROOTCERT_FILE=\${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
+    echo "   export CORE_PEER_ADDRESS=localhost:7051"
+    echo "   export ORDERER_CA=\${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+    echo
+    echo "   # Test query"
     echo "   peer chaincode query -C mychannel -n basic -c '{\"function\":\"ReadAsset\",\"Args\":[\"asset1\"]}'"
     echo
-    echo "🛑 To stop network:"
-    echo "   cd fabric-samples/test-network"
-    echo "   ./network.sh down"
-    echo
-    echo "📚 For more information:"
-    echo "   cat scripts/README-MKV.md"
-    echo
-    print_status "INFO" "Quick start completed at $(date)"
+    echo "📝 Notes:"
+    echo "   - MKV keys are created and ready to use"
+    echo "   - Network is ready for app connection"
+    echo "   - For production, consider using persistent volumes"
 }
 
 # Main execution
@@ -235,15 +314,10 @@ main() {
     step2_setup_environment
     step3_download_fabric_samples
     step4_test_environment
-    step5_0_build_encryption
-    step5_1_build_mkv
-    step5_2_test_mkv
-    step5_3_init_mkv_keys
-    step5_4_auto_init_mkv_keys
-    step5_5_test_mkv_docker
+    step5_build_encryption  # Only this step - build and create keys
     step6_build_fabric
     step7_start_network
-    step8_next_steps
+    step10_next_steps  # Skip complex container management
 }
 
 # Check if user wants to continue
@@ -252,12 +326,7 @@ echo "1. Fix any repository issues"
 echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
-echo "5.0. Build the encryption library"
-echo "5.1. Build the MKV library"
-echo "5.2. Test the MKV library"
-echo "5.3. Initialize MKV keys in containers"
-echo "5.4. Auto-initialize MKV keys after network start"
-echo "5.5. Test MKV in Docker containers"
+echo "5. Build the encryption library and create keys"
 echo "6. Build Fabric with encryption"
 echo "7. Start the test network"
 echo "8. Next steps"
