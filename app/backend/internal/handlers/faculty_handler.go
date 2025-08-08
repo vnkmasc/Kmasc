@@ -62,6 +62,22 @@ func (h *FacultyHandler) CreateFaculty(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Tạo khoa thành công!"})
 }
+func (h *FacultyHandler) GetFacultiesByUniversity(c *gin.Context) {
+	universityIDHex := c.Param("university_id")
+	universityID, err := primitive.ObjectIDFromHex(universityIDHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+		return
+	}
+
+	faculties, err := h.facultyService.GetAllFaculties(c.Request.Context(), universityID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, faculties)
+}
 
 func (h *FacultyHandler) GetAllFaculties(c *gin.Context) {
 	claims, exists := c.Get("claims")

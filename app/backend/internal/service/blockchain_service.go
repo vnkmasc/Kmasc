@@ -32,7 +32,7 @@ type blockchainService struct {
 	facultyRepo    repository.FacultyRepository
 	universityRepo repository.UniversityRepository
 	fabricClient   *blockchain.FabricClient
-	minioClient    *database.MinioClient // <-- thêm dòng này
+	minioClient    *database.MinioClient 
 }
 
 func NewBlockchainService(
@@ -41,7 +41,7 @@ func NewBlockchainService(
 	facultyRepo repository.FacultyRepository,
 	universityRepo repository.UniversityRepository,
 	fabricClient *blockchain.FabricClient,
-	minioClient *database.MinioClient, // <-- thêm tham số này
+	minioClient *database.MinioClient, 
 ) BlockchainService {
 	return &blockchainService{
 		certRepo:       certRepo,
@@ -49,11 +49,14 @@ func NewBlockchainService(
 		facultyRepo:    facultyRepo,
 		universityRepo: universityRepo,
 		fabricClient:   fabricClient,
-		minioClient:    minioClient, // <-- gán vào
+		minioClient:    minioClient, 
 	}
 }
 
 func (s *blockchainService) PushCertificateToChain(ctx context.Context, certificateID primitive.ObjectID) (string, error) {
+	if s.fabricClient == nil {
+		return "", fmt.Errorf("❌ fabricClient is nil trong blockchainService")
+	}
 	cert, err := s.certRepo.GetCertificateByID(ctx, certificateID)
 	if err != nil || cert == nil {
 		return "", common.ErrCertificateNotFound
