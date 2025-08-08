@@ -30,8 +30,6 @@ import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils'
 import CertificateQrCode from './certificate-qr-code'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
-import CertificatePreview from './certificate-preview'
-import { getCertificatePreviewProps } from '@/lib/utils/format-api'
 
 interface Props {
   isBlockchain: boolean
@@ -253,7 +251,7 @@ const CertificateView: React.FC<Props> = (props) => {
                       <DialogHeader>
                         <DialogTitle>Văn bằng</DialogTitle>
                       </DialogHeader>
-                      <CertificatePreview {...getCertificatePreviewProps(currentDataQuery?.data)!} />
+                      {/* <CertificatePreview {...getCertificatePreviewProps(currentDataQuery?.data)!} /> */}
                     </DialogContent>
                   </Dialog>
                 )}

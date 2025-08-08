@@ -109,38 +109,6 @@ export const formatCertificateView = (data: any) => {
   }
 }
 
-export const getCertificatePreviewProps = (data: any) => {
-  const cert = data?.certificate
-  if (!cert) return null
-
-  // Extract graduation year from course or issue date
-  const graduationYear = cert.course
-    ? `20${cert.course.substring(2)}`
-    : cert.date
-      ? new Date(cert.date).getFullYear().toString()
-      : '2024'
-
-  // Format issue date to "Hà Nội, ngày..., tháng..., năm...."
-  const formatIssueDate = (dateStr: string) => {
-    if (!dateStr) {
-      const today = new Date()
-      return `Hà Nội, ngày ${today.getDate()}, tháng ${today.getMonth() + 1}, năm ${today.getFullYear()}`
-    }
-
-    const date = new Date(dateStr)
-    return `Hà Nội, ngày ${date.getDate()}, tháng ${date.getMonth() + 1}, năm ${date.getFullYear()}`
-  }
-
-  return {
-    degreeType: cert.certificateType || 'Văn bằng đại học',
-    major: cert.major || cert.facultyName || 'Không xác định',
-    recipientName: cert.studentName || 'Không xác định',
-    dateOfBirth: cert.dateOfBirth || '01/01/1990',
-    graduationYear: graduationYear || '2024',
-    grade: cert.graduationRank || (cert.gpa ? `GPA: ${cert.gpa}` : 'Khá'),
-    issueDate: formatIssueDate(cert.date)
-  }
-}
 
 export const formatCertificateVerifyCode = (data: any, isSendToServer: boolean = false) => {
   return isSendToServer
