@@ -299,10 +299,31 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 	}
 
 	for _, cert := range certificates {
+		// Load university
+		university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
+		if err != nil {
+			log.Printf("Load university failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		// Load user
+		user, err := s.userRepo.GetUserByID(ctx, cert.UserID) // Bạn cần đảm bảo repo có hàm này
+		if err != nil {
+			log.Printf("Load user failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		dobTime, err := time.Parse("2006-01-02", user.DateOfBirth)
+		if err != nil {
+			log.Printf("Invalid date format for user %s: %v", user.ID.Hex(), err)
+			continue // bỏ qua nếu date format sai
+		}
 		data := map[string]interface{}{
 			"SoHieu":         cert.SerialNumber,
 			"SoVaoSo":        cert.RegNo,
-			"HoTen":          cert.Name,
+			"HoTen":          user.FullName,
+			"NgaySinh":       dobTime.Format("02/01/2006"),
+			"TenTruong":      university.UniversityName,
 			"Nganh":          cert.Major,
 			"XepLoai":        cert.GraduationRank,
 			"HinhThucDaoTao": cert.EducationType,
@@ -313,7 +334,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 		renderedHTML, err := s.templateEngine.Render(string(htmlContent), data)
 		if err != nil {
 			log.Printf("Render failed for cert %s: %v", cert.ID.Hex(), err)
-			continue // skip this cert
+			continue
 		}
 
 		pdfBytes, err := s.pdfGenerator.ConvertHTMLToPDF(renderedHTML)
