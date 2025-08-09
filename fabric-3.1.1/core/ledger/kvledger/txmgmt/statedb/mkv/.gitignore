@@ -56,3 +56,5 @@ vendor/
 *.pid
 *.sock
 *.lock
+
+mkv-api-server

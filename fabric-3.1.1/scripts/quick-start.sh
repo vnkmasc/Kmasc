@@ -137,34 +137,57 @@ step4_test_environment() {
     run_script "scripts/test_environment.sh" "environment test"
 }
 
-# Step 5: Build encryption and create keys
-step5_build_encryption() {
-    echo "Step 5: Building encryption and creating keys..."
-    run_script "scripts/build-encryption.sh" "encryption build and key creation"
+# Step 5: Build MKV library
+step5_build_mkv() {
+    echo "Step 5: Building MKV library..."
+    run_script "scripts/build-mkv.sh" "MKV library build"
 }
 
-# Step 6: Build Fabric
+# Step 6: Build Fabric with MKV
 step6_build_fabric() {
-    echo "Step 6: Building Fabric..."
-    run_script "scripts/build-fabric.sh" "Fabric build"
+    echo "Step 6: Building Fabric with MKV integration..."
+    run_script "scripts/build-fabric.sh" "Fabric build with MKV"
 }
 
-# Step 7: Start network
-step7_start_network() {
-    echo "Step 7: Starting test network..."
+# Step 7: Initialize MKV system
+step7_initialize_mkv() {
+    echo "Step 7: Initializing MKV system..."
+    run_script "scripts/init-mkv-keys.sh" "MKV key initialization"
+}
+
+# Step 8: Start network
+step8_start_network() {
+    echo "Step 8: Starting test network..."
     run_script "scripts/start-network.sh" "test network startup"
 }
 
-# Step 8: Start MKV API Server
-step8_start_mkv_api() {
-    echo "Step 8: Starting MKV API Server..."
-    run_script "scripts/start-mkv-api.sh" "MKV API server startup"
+# Step 9: Test MKV integration
+step9_test_mkv() {
+    echo "Step 9: Testing MKV integration..."
+    run_script "scripts/test-mkv.sh" "MKV integration test"
 }
 
-# Step 9: Show next steps
-step9_show_next_steps() {
-    echo "Step 9: Showing next steps and usage information..."
-    run_script "scripts/show-next-steps.sh" "next steps display"
+# Step 10: Show next steps
+step10_show_next_steps() {
+    echo "Step 10: Showing next steps and usage information..."
+    print_status "INFO" "Quick start completed successfully!"
+    echo
+    echo "🎉 === FABRIC WITH MKV IS READY! ==="
+    echo
+    echo "📊 What was set up:"
+    echo "   ✅ MKV256 encryption library"
+    echo "   ✅ Fabric peer with MKV integration"
+    echo "   ✅ Test network with encryption"
+    echo "   ✅ MKV key management system"
+    echo
+    echo "🚀 Next steps:"
+    echo "   1. Test encryption: docker exec peer0.org1.example.com cat /tmp/state_mkv.log"
+    echo "   2. Run chaincode transactions to see encryption in action"
+    echo "   3. Change MKV password: cd core/ledger/kvledger/txmgmt/statedb/mkv && ./mkv_client.sh change"
+    echo
+    echo "📚 For production deployment, run:"
+    echo "   ./scripts/quick-start-production.sh"
+    echo
 }
 
 # Main execution
@@ -177,11 +200,12 @@ main() {
     step2_setup_environment
     step3_download_fabric_samples
     step4_test_environment
-    step5_build_encryption  # Only this step - build and create keys
-    step6_build_fabric
-    step7_start_network
-    step8_start_mkv_api     # Start MKV API server
-    step9_show_next_steps   # Show next steps and usage info
+    step5_build_mkv          # Build MKV library
+    step6_build_fabric       # Build Fabric with MKV
+    step7_initialize_mkv     # Initialize MKV system
+    step8_start_network      # Start test network
+    step9_test_mkv          # Test MKV integration
+    step10_show_next_steps  # Show next steps and usage info
 }
 
 # Check if user wants to continue
@@ -190,11 +214,12 @@ echo "1. Fix any repository issues"
 echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
-echo "5. Build the encryption library and create keys"
-echo "6. Build Fabric with encryption"
-echo "7. Start the test network"
-echo "8. Start MKV API server for password management"
-echo "9. Show next steps and API usage examples"
+echo "5. Build MKV256 encryption library"
+echo "6. Build Fabric with MKV integration"
+echo "7. Initialize MKV key management system"
+echo "8. Start the test network"
+echo "9. Test MKV encryption/decryption"
+echo "10. Show next steps and usage examples"
 echo
 read -p "Do you want to continue? (y/N): " -n 1 -r
 echo

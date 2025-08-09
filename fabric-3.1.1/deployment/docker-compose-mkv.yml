@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  peer0.org1.example.com:
+    image: hyperledger/fabric-peer:mkv-latest
+    build:
+      context: .
+      dockerfile: docker/peer/Dockerfile.mkv
+    environment:
+      # Standard Fabric peer environment variables
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric_test
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.org1.example.com
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.org1.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      
+      # MKV specific environment variables
+      - MKV_API_PORT=9876
+      - MKV_API_KEY=mkv_api_secret_2025
+      - MKV_KEY_PATH=/opt/mkv
+      - LD_LIBRARY_PATH=/usr/local/lib
+      
+    volumes:
+      - /var/run/:/host/var/run/
+      # Mount MKV keys directory (persistent storage)
+      - ./mkv-keys:/opt/mkv
+      # Mount logs directory
+      - ./logs:/var/log/mkv
+      # Standard Fabric mounts
+      - ./organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.org1.example.com:/var/hyperledger/production
+      
+    ports:
+      - 7051:7051
+      - 9876:9876  # MKV API port
+      
+    networks:
+      - test
+
+  # MKV Management Sidecar (Optional)
+  mkv-manager:
+    image: alpine:latest
+    command: |
+      sh -c "
+        apk add --no-cache curl jq bash
+        while true; do
+          # Health check every 30 seconds
+          curl -f http://peer0.org1.example.com:9876/api/v1/health || echo 'MKV API unhealthy'
+          sleep 30
+        done
+      "
+    networks:
+      - test
+    depends_on:
+      - peer0.org1.example.com
+
+volumes:
+  peer0.org1.example.com:
+
+networks:
+  test:

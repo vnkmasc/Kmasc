@@ -1,0 +1,38 @@
+# Dockerfile để build peer với MKV integration
+FROM hyperledger/fabric-peer:latest
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc6-dev \
+    libssl-dev \
+    curl \
+    jq
+
+# Copy MKV libraries và binaries
+COPY build/bin/peer /usr/local/bin/peer
+COPY core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so /usr/local/lib/
+COPY core/ledger/kvledger/txmgmt/statedb/mkv/mkv-api-server /usr/local/bin/
+
+# Create MKV directories
+RUN mkdir -p /opt/mkv /tmp/mkv /var/log/mkv
+
+# Copy scripts
+COPY scripts/mkv-entrypoint.sh /usr/local/bin/
+COPY scripts/mkv_client.sh /usr/local/bin/
+
+# Set permissions
+RUN chmod +x /usr/local/bin/mkv-entrypoint.sh
+RUN chmod +x /usr/local/bin/mkv_client.sh
+
+# Environment variables
+ENV LD_LIBRARY_PATH=/usr/local/lib
+ENV MKV_API_PORT=9876
+ENV MKV_KEY_PATH=/opt/mkv
+
+# Expose MKV API port
+EXPOSE 9876
+
+# Use custom entrypoint
+ENTRYPOINT ["/usr/local/bin/mkv-entrypoint.sh"]
+CMD ["peer", "node", "start"]
