@@ -292,53 +292,83 @@ export class SyncServices {
 	 * @memberof SyncServices
 	 */
 	async insertNewChannelChaincode(
-		client,
-		channel_genesis_hash,
-		discoveryResults
-	) {
-		const network_id = client.getNetworkId();
-		const channel_name = client.getChannelNameByHash(channel_genesis_hash);
-		const chaincodes = await client.fabricGateway.queryInstantiatedChaincodes(
-			channel_name
-		);
-		for (const chaincode of chaincodes.chaincodes) {
-			let path = '-';
-			if (chaincode.path !== undefined) {
-				path = chaincode.path;
-			}
-			const chaincode_row = {
-				name: chaincode.name,
-				version: chaincode.version,
-				path: path,
-				txcount: 0,
-				createdt: new Date(),
-				channel_genesis_hash
-			};
-			await this.persistence
-				.getCrudService()
-				.saveChaincode(network_id, chaincode_row);
-			if (discoveryResults?.peers_by_org) {
-				for (const org_name in discoveryResults.peers_by_org) {
-					const org = discoveryResults.peers_by_org[org_name];
-					for (const peer of org.peers) {
-						for (const c_code of peer.chaincodes) {
-							if (
-								c_code.name === chaincode.name &&
-								c_code.version === chaincode.version
-							) {
-								await this.insertNewChaincodePeerRef(
-									client,
-									c_code,
-									peer.endpoint,
-									channel_genesis_hash
-								);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+    client,
+    channel_genesis_hash,
+    discoveryResults
+) {
+    const network_id = client.getNetworkId();
+    const channel_name = client.getChannelNameByHash(channel_genesis_hash);
+    
+    // Add try-catch để handle lỗi từ queryInstantiatedChaincodes
+    let chaincodes;
+    try {
+        logger.info('Querying chaincodes for channel:', channel_name);
+        chaincodes = await client.fabricGateway.queryInstantiatedChaincodes(
+            channel_name
+        );
+        logger.info('Successfully retrieved', chaincodes?.chaincodes?.length || 0, 'chaincodes');
+    } catch (error: any) {
+        logger.warn('Failed to query chaincodes for channel', channel_name, ':', error.message);
+        logger.warn('This is normal for Fabric 3.x - continuing with empty chaincode list');
+        chaincodes = { chaincodes: [] }; // Fallback to empty array
+    }
+    
+    // Ensure chaincodes.chaincodes exists and is an array
+    if (!chaincodes || !Array.isArray(chaincodes.chaincodes)) {
+        logger.warn('Invalid chaincodes response, using empty array');
+        chaincodes = { chaincodes: [] };
+    }
+    
+    for (const chaincode of chaincodes.chaincodes) {
+        let path = '-';
+        if (chaincode.path !== undefined) {
+            path = chaincode.path;
+        }
+        const chaincode_row = {
+            name: chaincode.name,
+            version: chaincode.version,
+            path: path,
+            txcount: 0,
+            createdt: new Date(),
+            channel_genesis_hash
+        };
+        
+        try {
+            await this.persistence
+                .getCrudService()
+                .saveChaincode(network_id, chaincode_row);
+            logger.debug('Saved chaincode:', chaincode.name, 'version:', chaincode.version);
+        } catch (error: any) {
+            logger.error('Failed to save chaincode:', chaincode.name, error.message);
+        }
+        
+        // Rest of the method continues...
+        if (discoveryResults?.peers_by_org) {
+            for (const org_name in discoveryResults.peers_by_org) {
+                const org = discoveryResults.peers_by_org[org_name];
+                for (const peer of org.peers) {
+                    for (const c_code of peer.chaincodes) {
+                        if (
+                            c_code.name === chaincode.name &&
+                            c_code.version === chaincode.version
+                        ) {
+                            try {
+                                await this.insertNewChaincodePeerRef(
+                                    client,
+                                    c_code,
+                                    peer.endpoint,
+                                    channel_genesis_hash
+                                );
+                            } catch (error: any) {
+                                logger.error('Failed to insert chaincode peer ref:', error.message);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 	/**
 	 *
@@ -723,8 +753,7 @@ export class SyncServices {
 				!noDiscovery &&
 				header.channel_header.typeString ===
 					fabric_const.BLOCK_TYPE_ENDORSER_TRANSACTION &&
-				(chaincode === fabric_const.CHAINCODE_LSCC ||
-					chaincode === fabric_const.CHAINCODE_LIFECYCLE)
+				(chaincode === fabric_const.CHAINCODE_LIFECYCLE)
 			) {
 				setTimeout(
 					async (cli, chName, chGenHash) => {

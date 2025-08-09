@@ -333,29 +333,38 @@ export class FabricGateway {
 		}
 	}
 
-	async queryInstantiatedChaincodes(channelName) {
-		logger.info('queryInstantiatedChaincodes', channelName);
-		const network = await this.gateway.getNetwork(channelName);
-		let contract = network.getContract('lscc');
-		let result = await contract.evaluateTransaction('GetChaincodes');
-		let resultJson = fabprotos.protos.ChaincodeQueryResponse.decode(result);
-		if (resultJson.chaincodes.length <= 0) {
-			resultJson = { chaincodes: [], toJSON: null };
-			contract = network.getContract('_lifecycle');
-			result = await contract.evaluateTransaction('QueryChaincodeDefinitions', '');
-			const decodedReult = fabprotos.lifecycle.QueryChaincodeDefinitionsResult.decode(
-				result
-			);
-			for (const cc of decodedReult.chaincode_definitions) {
-				resultJson.chaincodes = concat(resultJson.chaincodes, {
-					name: cc.name,
-					version: cc.version
-				});
-			}
-		}
-		logger.debug('queryInstantiatedChaincodes', resultJson);
-		return resultJson;
-	}
+	async queryInstantiatedChaincodes(
+    channelName: string
+): Promise<any> {
+    logger.info('queryInstantiatedChaincodes', channelName, '- PATCHED for Fabric 3.x');
+    const network = await this.gateway.getNetwork(channelName);
+    
+    // Skip lscc completely for Fabric 3.x, go directly to _lifecycle
+    let resultJson: any = { chaincodes: [], toJSON: null };
+    
+    try {
+        logger.info('Using _lifecycle for Fabric 3.x compatibility');
+        const contract = network.getContract('_lifecycle');
+        const result = await contract.evaluateTransaction('QueryChaincodeDefinitions', '');
+        const decodedResult = fabprotos.lifecycle.QueryChaincodeDefinitionsResult.decode(result);
+        
+        for (const cc of decodedResult.chaincode_definitions) {
+            resultJson.chaincodes = concat(resultJson.chaincodes, {
+                name: cc.name,
+                version: cc.version
+            });
+        }
+        
+        logger.info('Successfully found', resultJson.chaincodes.length, 'chaincodes via _lifecycle');
+    } catch (error: any) {
+        logger.warn('_lifecycle query failed:', error.message);
+        // Return empty result for Fabric 3.x
+        resultJson = { chaincodes: [], toJSON: null };
+    }
+    
+    logger.debug('queryInstantiatedChaincodes result:', resultJson);
+    return resultJson;
+}
 
 	async queryChainInfo(channelName) {
 		try {

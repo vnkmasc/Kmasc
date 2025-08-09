@@ -1,36 +1,18 @@
 --
--- Copyright IBM Corp. All Rights Reserved.
---
--- SPDX-License-Identifier: Apache-2.0
+--    SPDX-License-Identifier: Apache-2.0
 --
 
--- Create the user if it does not exist
-DO
-$$
-BEGIN
-   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'hppoc') THEN
-      CREATE ROLE hppoc LOGIN PASSWORD 'password';
-   END IF;
-END
-$$;
-
--- Create the database if it does not exist
-DO
-$$
-BEGIN
-   IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'fabricexplorer') THEN
-      CREATE DATABASE fabricexplorer OWNER hppoc;
-   END IF;
-END
-$$;
-
--- Connect to the newly created database
-\connect fabricexplorer;
+CREATE USER :user
+WITH PASSWORD :passwd;
+DROP DATABASE IF EXISTS :dbname;
+CREATE DATABASE :dbname owner :user;
+\c :dbname;
+--
 
 -- ----------------------------
 --  Table structure for `blocks`
 -- ----------------------------
-DROP TABLE IF EXISTS blocks CASCADE;
+DROP TABLE IF EXISTS blocks;
 
 CREATE TABLE blocks
 (
@@ -47,12 +29,12 @@ CREATE TABLE blocks
   network_name varchar(255)
 );
 
-ALTER table blocks owner to hppoc;
+ALTER table blocks owner to :user;
 
 -- ----------------------------
 --  Table structure for `chaincodes`
 -- ----------------------------
-DROP TABLE IF EXISTS chaincodes CASCADE;
+DROP TABLE IF EXISTS chaincodes;
 
 CREATE TABLE chaincodes
 (
@@ -66,13 +48,13 @@ CREATE TABLE chaincodes
   network_name varchar(255)
 );
 
-ALTER table chaincodes owner to hppoc;
+ALTER table chaincodes owner to :user;
 Alter sequence chaincodes_id_seq restart with 10;
 
 -- ---------------------------
 --  Table structure for `peer_ref_chaincode`
 -- ----------------------------
-DROP TABLE IF EXISTS peer_ref_chaincode CASCADE;
+DROP TABLE IF EXISTS peer_ref_chaincode;
 
 CREATE TABLE peer_ref_chaincode
 (
@@ -84,12 +66,14 @@ CREATE TABLE peer_ref_chaincode
   createdt Timestamp DEFAULT NULL,
   network_name varchar(255)
 );
-ALTER table peer_ref_chaincode owner to hppoc;
+ALTER table peer_ref_chaincode owner to :user;
 
 -- ----------------------------
 --  Table structure for `channel`
 -- ----------------------------
-DROP TABLE IF EXISTS channel CASCADE;
+DROP TABLE IF EXISTS channel;
+
+--   state character(1) NOT NULL DEFAULT A CHECK (state in (A, D, S))
 
 CREATE TABLE channel
 (
@@ -107,12 +91,14 @@ CREATE TABLE channel
   network_name varchar(255)
 );
 
-ALTER table channel owner to hppoc;
+ALTER table channel owner to :user;
 Alter sequence channel_id_seq restart with 3;
 -- ----------------------------
 --  Table structure for `peer`
 -- ----------------------------
-DROP TABLE IF EXISTS peer CASCADE;
+DROP TABLE IF EXISTS peer;
+
+--   state character(1) NOT NULL DEFAULT A CHECK (state in (A, D, S))
 
 CREATE TABLE peer
 (
@@ -127,11 +113,11 @@ CREATE TABLE peer
   peer_type character varying(256) DEFAULT NULL,
   network_name varchar(255)
 );
-ALTER table peer owner to hppoc;
+ALTER table peer owner to :user;
 -- ---------------------------
 --  Table structure for `peer_ref_channel`
 -- ----------------------------
-DROP TABLE IF EXISTS peer_ref_channel CASCADE;
+DROP TABLE IF EXISTS peer_ref_channel;
 
 CREATE TABLE peer_ref_channel
 (
@@ -142,13 +128,15 @@ CREATE TABLE peer_ref_channel
   peer_type character varying(256) DEFAULT NULL,
   network_name varchar(255)
 );
-ALTER table peer_ref_channel owner to hppoc;
+ALTER table peer_ref_channel owner to :user;
 
 -- ====================Orderer BE-303=====================================
 -- ----------------------------
 --  Table structure for `orderer`
 -- ----------------------------
-DROP TABLE IF EXISTS orderer CASCADE;
+DROP TABLE IF EXISTS orderer;
+
+--   state character(1) NOT NULL DEFAULT A CHECK (state in (A, D, S))
 
 CREATE TABLE orderer
 (
@@ -158,13 +146,13 @@ CREATE TABLE orderer
   createdt timestamp DEFAULT NULL,
   network_name varchar(255)
 );
-ALTER table orderer owner to hppoc;
+ALTER table orderer owner to :user;
 
 --// ====================Orderer BE-303=====================================
 -- ----------------------------
 --  Table structure for `transactions`
 -- ----------------------------
-DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS transactions;
 CREATE TABLE transactions
 (
   id SERIAL PRIMARY KEY,
@@ -193,13 +181,13 @@ CREATE TABLE transactions
   network_name varchar(255)
 );
 
-ALTER table transactions owner to hppoc;
+ALTER table transactions owner to :user;
 Alter sequence transactions_id_seq restart with 6;
 
 -- ---------------------------
 --  Table structure for `users`
 -- ----------------------------
-DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS users;
 
 CREATE TABLE users
 (
@@ -215,15 +203,15 @@ CREATE TABLE users
   "createdAt" timestamp NOT NULL,
   "updatedAt" timestamp NOT NULL
 );
-ALTER table users owner to hppoc;
+ALTER table users owner to :user;
 
-DROP TABLE IF EXISTS write_lock CASCADE;
+DROP TABLE IF EXISTS write_lock;
 CREATE TABLE write_lock
 (
   write_lock SERIAl PRIMARY KEY
 );
 
-ALTER table write_lock owner to hppoc;
+ALTER table write_lock owner to :user;
 Alter sequence write_lock_write_lock_seq restart with 2;
 
 DROP INDEX IF EXISTS blocks_blocknum_idx;
@@ -267,4 +255,4 @@ DROP INDEX IF EXISTS channel_channel_hash_idx;
 CREATE INDEX ON channel
 (channel_hash);
 
-GRANT SELECT, INSERT, UPDATE,DELETE ON ALL TABLES IN SCHEMA PUBLIC TO hppoc;
+GRANT SELECT, INSERT, UPDATE,DELETE ON ALL TABLES IN SCHEMA PUBLIC to :user;
