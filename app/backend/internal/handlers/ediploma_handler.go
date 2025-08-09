@@ -94,6 +94,50 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomas(c *gin.Context) {
 	c.JSON(http.StatusOK, ediplomas)
 }
 
+func (h *EDiplomaHandler) GenerateBulkEDiplomasLocal(c *gin.Context) {
+	var req generateBulkEDiplomaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	ediplomas, err := h.ediplomaService.GenerateBulkEDiplomasLocal(
+		c.Request.Context(),
+		req.FacultyID,
+		req.TemplateID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(ediplomas) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No diplomas generated",
+			"count":   0,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Bulk e-diplomas generated successfully",
+		"count":   len(ediplomas),
+		"data":    ediplomas,
+	})
+}
+
+func (h *EDiplomaHandler) UploadLocalEDiplomas(c *gin.Context) {
+	results := h.ediplomaService.UploadLocalEDiplomas(c.Request.Context())
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_files": len(results),
+		"results":     results,
+	})
+}
+
 func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {
 	facultyID := c.Param("faculty_id")
 	if facultyID == "" {

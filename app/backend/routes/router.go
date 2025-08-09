@@ -148,6 +148,8 @@ func SetupRouter(
 	ediplomaGroup.Use(middleware.JWTAuthMiddleware())
 	ediplomaGroup.POST("/generate", ediplomaHandler.GenerateEDiploma)
 	ediplomaGroup.POST("/generate-bulk", ediplomaHandler.GenerateBulkEDiplomas)
+	ediplomaGroup.POST("/generate-bulk-local", ediplomaHandler.GenerateBulkEDiplomasLocal)
+	ediplomaGroup.POST("/upload-local", ediplomaHandler.UploadLocalEDiplomas)
 	ediplomaGroup.GET("/faculty/:faculty_id", ediplomaHandler.GetEDiplomasByFaculty)
 	ediplomaGroup.GET("/search", ediplomaHandler.SearchEDiplomas)
 	return r
