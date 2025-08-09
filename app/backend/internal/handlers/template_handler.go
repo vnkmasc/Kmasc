@@ -31,6 +31,21 @@ func NewTemplateHandler(
 		facultyService:  facultyService,
 	}
 }
+
+func (h *TemplateHandler) GetTemplateByID(c *gin.Context) {
+	id := c.Param("id")
+
+	template, err := h.templateService.GetTemplateByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID or template not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": template,
+	})
+}
+
 func (h *TemplateHandler) UpdateTemplate(c *gin.Context) {
 	templateIDHex := c.Param("id")
 	templateID, err := primitive.ObjectIDFromHex(templateIDHex)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -41,6 +42,10 @@ func (s *facultyService) CheckFacultyBelongsToUniversity(ctx context.Context, fa
 	if err != nil {
 		return false, err
 	}
+	if faculty == nil {
+		return false, fmt.Errorf("faculty not found")
+	}
+
 	return faculty.UniversityID == universityID, nil
 }
 

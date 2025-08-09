@@ -76,7 +76,9 @@ func (h *FacultyHandler) GetFacultiesByUniversity(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, faculties)
+	c.JSON(http.StatusOK, gin.H{
+		"data": faculties,
+	})
 }
 
 func (h *FacultyHandler) GetAllFaculties(c *gin.Context) {

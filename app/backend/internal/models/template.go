@@ -16,7 +16,7 @@ type DiplomaTemplate struct {
 	Hash              string             `bson:"hash" json:"hash"`
 	SignatureOfUni    string             `bson:"signature_of_uni,omitempty" json:"signatureOfUni,omitempty"`
 	SignatureOfMinEdu string             `bson:"signature_of_minedu,omitempty" json:"signatureOfMinEdu,omitempty"`
-	Status            string             `bson:"status" json:"status"` // PENDING, VERIFIED,...
+	Status            string             `bson:"status" json:"status"`
 	IsLocked          bool               `bson:"is_locked" json:"isLocked"`
 	CreatedAt         time.Time          `bson:"created_at" json:"createdAt"`
 	UpdatedAt         time.Time          `bson:"updated_at" json:"updatedAt"`

@@ -83,6 +83,7 @@ func main() {
 		ediplomaRepo,
 		certificateRepo,
 		templateRepo,
+		userRepo,
 		minioClient,
 		templateEngine,
 		pdfGenerator,

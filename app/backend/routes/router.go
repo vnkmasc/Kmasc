@@ -141,6 +141,7 @@ func SetupRouter(
 	templateGroup.GET("/:id/file", templateHandler.GetTemplateFile)
 	templateGroup.GET("/view/:id", templateHandler.GetTemplateView)
 	templateGroup.PUT("/:id", templateHandler.UpdateTemplate)
+	templateGroup.GET("/:id", templateHandler.GetTemplateByID)
 
 	ediplomaGroup := api.Group("/ediplomas")
 	ediplomaGroup.Use(middleware.JWTAuthMiddleware())
