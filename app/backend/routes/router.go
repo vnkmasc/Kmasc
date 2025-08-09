@@ -152,5 +152,6 @@ func SetupRouter(
 	ediplomaGroup.POST("/upload-local", ediplomaHandler.UploadLocalEDiplomas)
 	ediplomaGroup.GET("/faculty/:faculty_id", ediplomaHandler.GetEDiplomasByFaculty)
 	ediplomaGroup.GET("/search", ediplomaHandler.SearchEDiplomas)
+	ediplomaGroup.GET("/:id", ediplomaHandler.GetEDiplomaByID)
 	return r
 }

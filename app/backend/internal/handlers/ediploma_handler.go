@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"math"
 	"net/http"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type EDiplomaHandler struct {
@@ -152,4 +154,19 @@ func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": ediplomas})
+}
+func (h *EDiplomaHandler) GetEDiplomaByID(c *gin.Context) {
+	id := c.Param("id")
+
+	dto, err := h.ediplomaService.GetEDiplomaDTOByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "EDiploma not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, dto)
 }

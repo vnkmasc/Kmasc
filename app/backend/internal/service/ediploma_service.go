@@ -21,6 +21,7 @@ import (
 
 type EDiplomaService interface {
 	GetByID(ctx context.Context, id string) (*models.EDiploma, error)
+	GetEDiplomaDTOByID(ctx context.Context, id string) (*models.EDiplomaDTO, error)
 	GenerateEDiploma(ctx context.Context, certificateIDStr, templateIDStr string) (*models.EDiploma, error)
 	GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error)
 	GetEDiplomasByFaculty(ctx context.Context, facultyID string) ([]*models.EDiplomaDTO, error)
@@ -66,6 +67,29 @@ func NewEDiplomaService(
 		templateEngine:  templateEngine,
 		pdfGenerator:    pdfGenerator,
 	}
+}
+
+func (s *eDiplomaService) GetEDiplomaDTOByID(ctx context.Context, id string) (*models.EDiplomaDTO, error) {
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ID format")
+	}
+
+	ediploma, err := s.repo.FindByID(ctx, objID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Lấy thông tin liên quan
+	university, _ := s.universityRepo.FindByID(ctx, ediploma.UniversityID)
+	faculty, _ := s.facultyRepo.FindByID(ctx, ediploma.FacultyID)
+
+	var major *models.Major
+	if ediploma.MajorID != primitive.NilObjectID {
+		major, _ = s.majorRepo.GetByID(ctx, ediploma.MajorID)
+	}
+
+	return mapper.MapEDiplomaToDTO(ediploma, university, faculty, major), nil
 }
 
 func (s *eDiplomaService) GetEDiplomasByFaculty(ctx context.Context, facultyIDStr string) ([]*models.EDiplomaDTO, error) {
