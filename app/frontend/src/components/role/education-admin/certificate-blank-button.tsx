@@ -1,6 +1,6 @@
 'use client'
 import useSWRMutation from 'swr/mutation'
-import { Button } from '../ui/button'
+import { Button } from '@/components/ui/button'
 import { FileTextIcon, DownloadIcon } from 'lucide-react'
 import { showNotification } from '@/lib/utils/common'
 

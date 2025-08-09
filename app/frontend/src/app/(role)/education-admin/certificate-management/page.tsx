@@ -1,5 +1,5 @@
 'use client'
-import CertificateActionButton from '@/components/common/certificate-action-button'
+import CertificateActionButton from '@/components/role/education-admin/certificate-action-button'
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'

@@ -1,3 +1,4 @@
+import { DegreeTemplateType } from '@/types/common'
 import { format } from 'date-fns'
 
 export const formatStudent = (data: any, isSendToServer: boolean = false) => {
@@ -61,6 +62,13 @@ export const formatFacultyOptions = (data: any) => {
   }))
 }
 
+export const formatFacultyOptionsByID = (data: any) => {
+  return data.map((item: any) => ({
+    label: item.name,
+    value: item.id
+  }))
+}
+
 export const formatCertificate = (data: any, isSendToServer: boolean = false) => {
   return isSendToServer
     ? {
@@ -108,7 +116,6 @@ export const formatCertificateView = (data: any) => {
     educationType: data.education_type
   }
 }
-
 
 export const formatCertificateVerifyCode = (data: any, isSendToServer: boolean = false) => {
   return isSendToServer
@@ -169,4 +176,15 @@ export const formatRewardDiscipline = (data: any, isSendToServer: boolean = fals
         disciplineLevel: String(data.discipline_level),
         createdAt: format(new Date(data.created_at), 'dd/MM/yyyy HH:mm:ss')
       }
+}
+
+export const formatDegreeTemplateFormData = (data: DegreeTemplateType, isCreate: boolean = true) => {
+  const formData = new FormData()
+
+  formData.append('name', data.name)
+  if (data.description) formData.append('description', data.description)
+  if (isCreate) formData.append('faculty_id', data.facultyId)
+  formData.append('file', data.file)
+
+  return formData
 }

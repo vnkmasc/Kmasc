@@ -3,12 +3,11 @@ import { Loader2 } from 'lucide-react'
 interface Props {
   html?: string | null
   loading?: boolean
-  heightClass?: string
   // sandbox để an toàn khi render HTML từ server
   sandbox?: boolean
 }
 
-const HtmlView: React.FC<Props> = ({ html, loading = false, heightClass = 'min-h-[500px]', sandbox = true }) => {
+const HtmlView: React.FC<Props> = ({ html, loading = false, sandbox = true }) => {
   if (!html && !loading) {
     return (
       <div className='h-full w-full'>
@@ -37,8 +36,8 @@ const HtmlView: React.FC<Props> = ({ html, loading = false, heightClass = 'min-h
   const iframeSandbox = sandbox ? 'allow-same-origin allow-popups allow-forms allow-scripts' : undefined
 
   return (
-    <div className={`h-full w-full ${heightClass}`}>
-      <iframe className='h-full w-full rounded' srcDoc={getHTMLDoc()} sandbox={iframeSandbox} />
+    <div className={'h-full min-h-[700px] w-full overflow-x-scroll'}>
+      <iframe className='h-full w-full' srcDoc={getHTMLDoc()} sandbox={iframeSandbox} />
     </div>
   )
 }

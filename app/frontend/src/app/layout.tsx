@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider'
 import SWRConfig from '@/components/providers/swr-config'
 import './globals.css'
 import { Toaster } from 'sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -38,10 +39,12 @@ export default async function RootLayout({
           disableTransitionOnChange
           storageKey='theme'
         >
-          <SWRConfig>
-            {children}
-            <Toaster expand={true} />
-          </SWRConfig>
+          <TooltipProvider>
+            <SWRConfig>
+              {children}
+              <Toaster expand={true} />
+            </SWRConfig>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

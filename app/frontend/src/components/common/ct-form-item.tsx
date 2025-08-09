@@ -4,13 +4,14 @@ import { Input } from '../ui/input'
 import { FormDescription, FormMessage, FormControl, FormField, FormLabel, FormItem } from '../ui/form'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select'
 import QuerySelect from './query-select'
-import { Check, ChevronsUpDown, Eye, EyeOff } from 'lucide-react'
+import { Check, ChevronsUpDown, Eye, EyeOff, Trash } from 'lucide-react'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Button } from '../ui/button'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { Textarea } from '../ui/textarea'
+import { formatBytes } from '@/lib/utils/common'
 
 const CustomFormItem: React.FC<CustomFormItem> = (props) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -184,6 +185,48 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
               <FormLabel>{props.label}</FormLabel>
               <FormControl>
                 <Textarea {...field} placeholder={props.placeholder} disabled={props.disabled} rows={3} />
+              </FormControl>
+              {props.description && <FormDescription>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+            </FormItem>
+          )}
+        />
+      )
+    case 'file':
+      return (
+        <FormField
+          control={props.control}
+          name={props.name}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{props.label}</FormLabel>
+              <FormControl>
+                <div>
+                  <Input
+                    type='file'
+                    accept={props.setting?.file?.accept}
+                    disabled={props.disabled}
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null
+                      field.onChange(file)
+                    }}
+                  />
+                  {field.value ? (
+                    <div className='mt-2 flex items-center justify-between rounded-md border px-3 py-2 text-sm'>
+                      <div className='min-w-0'>
+                        <div className='truncate font-medium'>{(field.value as File).name}</div>
+                        <div className='text-muted-foreground'>
+                          {((field.value as File).type || 'Unknown type') +
+                            ' • ' +
+                            formatBytes((field.value as File).size)}
+                        </div>
+                      </div>
+                      <Button type='button' variant='destructive' size='icon' onClick={() => field.onChange(null)}>
+                        <Trash />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               </FormControl>
               {props.description && <FormDescription>{props.description}</FormDescription>}
               <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />

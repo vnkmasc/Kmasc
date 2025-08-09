@@ -70,3 +70,18 @@ export const REWARD_DISCIPLINE_LEVEL_SETTING = {
     ]
   }
 }
+
+export const DEGREE_TEMPLATE_STATUS = {
+  PENDING: {
+    variant: 'outline',
+    label: 'Chưa ký'
+  },
+  SIGNED_BY_UNI: {
+    variant: 'secondary',
+    label: 'Đã ký bởi trường đại học'
+  },
+  SIGNED_BY_MINEDU: {
+    variant: 'default',
+    label: 'Đã ký bởi trường đại học và bộ giáo dục'
+  }
+}
