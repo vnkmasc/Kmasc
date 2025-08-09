@@ -1,5 +1,6 @@
 #!/bin/bash
 pm2 stop nextjs-fe
+nvm use 24
 cd /root/Kmasc/app/frontend || exit 1
 
 if [ "$1" = "reinstall" ]; then
