@@ -137,42 +137,10 @@ step4_test_environment() {
     run_script "scripts/test_environment.sh" "environment test"
 }
 
-# Step 5: Build encryption and create keys (SIMPLE VERSION)
+# Step 5: Build encryption and create keys
 step5_build_encryption() {
-    print_status "INFO" "Step 5: Building encryption and creating keys..."
-    
-    echo "Building MKV encryption library..."
-    cd core/ledger/kvledger/txmgmt/statedb/mkv
-    make clean && make
-    cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
-    
-    echo "Creating MKV keys..."
-    cp core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so . 2>/dev/null || true
-    cp core/ledger/kvledger/txmgmt/statedb/mkv/mkv.go . 2>/dev/null || true
-    echo "fabric_mkv_password_2025" | bash core/ledger/kvledger/txmgmt/statedb/mkv/key_manager.sh init
-    
-    echo "✅ PASS: MKV encryption built and keys created"
-    echo "   - Keys location: /home/phongnh/go-src/Kmasc/fabric-3.1.1/"
-    echo "   - Files: k1.key, k0.key, encrypted_k1.key"
-    echo "   - Password: fabric_mkv_password_2025"
-}
-
-# Step 5.1: Build MKV library
-step5_1_build_mkv() {
-    echo "Step 5.1: Building MKV library..."
-    run_script "scripts/build-mkv.sh" "MKV library build"
-}
-
-# Step 5.2: Test MKV library
-step5_2_test_mkv() {
-    echo "Step 5.2: Testing MKV library..."
-    run_script "scripts/test-mkv.sh" "MKV library test"
-}
-
-# Step 5.3: Test MKV in Docker containers
-step5_3_test_mkv_docker() {
-    echo "Step 5.3: Testing MKV in Docker containers..."
-    run_script "scripts/test-mkv-docker.sh" "MKV Docker test"
+    echo "Step 5: Building encryption and creating keys..."
+    run_script "scripts/build-encryption.sh" "encryption build and key creation"
 }
 
 # Step 6: Build Fabric
