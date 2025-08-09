@@ -63,7 +63,7 @@ export class NotificationsPanel extends Component {
 	/* istanbul ignore next */
 	render() {
 		const { classes, notifications } = this.props;
-		if (notifications.length === 0) {
+		if (notifications?.length === 0) {
 			return (
 				<div className={classes.panel}>
 					<div className={classes.root}>
@@ -84,7 +84,7 @@ export class NotificationsPanel extends Component {
 			<div className={classes.panel}>
 				<div className={classes.root}>
 					<List component="nav" className={classes.panel}>
-						{notifications.map((notify, index) => (
+						{notifications?.map((notify, index) => (
 							<div>
 								<ListItem key={index} button className={classes.panel}>
 									{this.avatarIcon(notify.type, classes)}

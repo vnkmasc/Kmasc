@@ -37,7 +37,7 @@ const styles = theme => {
 
 function intConversion(str) {
 	let value = 0;
-	for (let i = 0; i < str.length; i++) {
+	for (let i = 0; i < str?.length; i++) {
 		value = str.charCodeAt(i) + ((value << 5) - value);
 	}
 	return value;
@@ -45,7 +45,7 @@ function intConversion(str) {
 
 function getRGBColor(i) {
 	const c = (i & 0x00ffffff).toString(16).toUpperCase();
-	return '#' + '00000'.substring(0, 6 - c.length) + c;
+	return '#' + '00000'.substring(0, 6 - c?.length) + c;
 }
 
 function convertSha256(str) {

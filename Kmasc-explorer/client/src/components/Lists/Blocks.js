@@ -248,10 +248,10 @@ export class Blocks extends Component {
 	}
 
 	handleCustomRender(selected, options) {
-		if (selected.length === 0) {
+		if (selected?.length === 0) {
 			return 'Select Orgs';
 		}
-		if (selected.length === options.length) {
+		if (selected?.length === options?.length) {
 			return 'All Orgs Selected';
 		}
 
@@ -267,7 +267,7 @@ export class Blocks extends Component {
 						this.state.to
 				  ).toString()}`
 				: ``;
-			for (let i = 0; i < this.state.orgs.length; i++) {
+			for (let i = 0; i < this.state.orgs?.length; i++) {
 				query += `&orgs=${this.state.orgs[i]}`;
 			}
 			this.setState({ queryFlag: false });
@@ -449,7 +449,7 @@ export class Blocks extends Component {
 						<div className={classes.fullHash} id="showTransactionId">
 							{row.value}
 						</div>{' '}
-						{row.value.slice(0, 6)} {!row.value ? '' : '... '}
+						{row.value?.slice(0, 6)} {!row.value ? '' : '... '}
 					</ul>{' '}
 				</span>
 			),
@@ -477,7 +477,7 @@ export class Blocks extends Component {
 						<div className={classes.fullHash} id="showTransactionId">
 							{row.value}
 						</div>{' '}
-						{row.value.slice(0, 6)} {!row.value ? '' : '... '}
+						{row.value?.slice(0, 6)} {!row.value ? '' : '... '}
 					</a>{' '}
 				</span>
 			),
@@ -504,7 +504,7 @@ export class Blocks extends Component {
 						<div className={classes.fullHash} id="showTransactionId">
 							{row.value}
 						</div>{' '}
-						{row.value.slice(0, 6)} {!row.value ? '' : '... '}
+						{row.value?.slice(0, 6)} {!row.value ? '' : '... '}
 					</ul>{' '}
 				</span>
 			),
@@ -525,7 +525,7 @@ export class Blocks extends Component {
 			Cell: row => (
 				<ul>
 					{!isNull(row.value)
-						? row.value.map(tid => (
+						? row.value?.map(tid => (
 								<li
 									key={tid}
 									style={{
@@ -542,7 +542,7 @@ export class Blocks extends Component {
 										<div className={classes.lastFullHash} id="showTransactionId">
 											{tid}
 										</div>{' '}
-										{tid.slice(0, 6)} {!tid ? '' : '... '}
+										{tid?.slice(0, 6)} {!tid ? '' : '... '}
 									</a>
 								</li>
 						  ))
@@ -578,12 +578,12 @@ export class Blocks extends Component {
 			typeof this.props.blockRangeSearch !== 'string' &&
 			this.props.blockRangeLoaded
 				? this.props.blockRangeSearch
-						.slice()
+						?.slice()
 						.sort()
 						.reverse()
 				: [];
 		const blockList = this.state.brs
-			? reversedBlockRangeList.slice(
+			? reversedBlockRangeList?.slice(
 					this.state.page * this.state.rowsPerPage,
 					(this.state.page + 1) * this.state.rowsPerPage
 			  )
@@ -591,7 +591,7 @@ export class Blocks extends Component {
 		const noOfPages = this.state.brs
 			? typeof this.props.blockRangeSearch !== 'string' &&
 			  this.props.blockRangeLoaded &&
-			  Math.ceil(this.props.blockRangeSearch.length / this.state.rowsPerPage)
+			  Math.ceil(this.props.blockRangeSearch?.length / this.state.rowsPerPage)
 			: this.props.blockListSearchTotalPages;
 		const { transaction, txnList, classes } = this.props;
 		const { blockHash, dialogOpen, dialogOpenBlockHash } = this.state;
@@ -724,7 +724,7 @@ export class Blocks extends Component {
 							inputProps={{ 'aria-label': 'Without label' }}
 							disableUnderline
 						>
-							{rangeLimitOptions.map(opt => (
+							{rangeLimitOptions?.map(opt => (
 								<MenuItem key={opt} value={opt}>
 									{opt}
 								</MenuItem>
@@ -799,7 +799,7 @@ export class Blocks extends Component {
 						this.state.brs
 							? this.props.blockRangeLoaded &&
 							  typeof this.props.blockRangeSearch !== 'string' &&
-							  this.props.blockRangeSearch.length
+							  this.props.blockRangeSearch?.length
 							: this.state.rowsPerPage
 					}
 					list

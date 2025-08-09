@@ -73,11 +73,11 @@ export class ChannelCommitterView extends Component {
 		const { channelPeerData, classes } = this.props;
 		if (channelPeerData) {
 			const { committers } = channelPeerData;
-			const noCol = Math.ceil(committers.length / 10);
+			const noCol = Math.ceil(committers?.length / 10);
 			const col = [];
 			for (let i = 0; i < noCol; i++) {
 				const starti = i * 10;
-				const endi = Math.min((i + 1) * 10, committers.length);
+				const endi = Math.min((i + 1) * 10, committers?.length);
 				col.push(
 					<div key={i} className={classes.tableWrap}>
 						<Table

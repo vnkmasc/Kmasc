@@ -77,7 +77,7 @@ export class ChartStats extends Component {
 
 	timeDataSetup = (chartData = []) => {
 		let dataMax = 0;
-		const displayData = chartData.map(data => {
+		const displayData = chartData?.map(data => {
 			if (parseInt(data.count, 10) > dataMax) {
 				dataMax = parseInt(data.count, 10);
 			}

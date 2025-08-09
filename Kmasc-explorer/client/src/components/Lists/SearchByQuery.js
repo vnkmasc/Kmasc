@@ -91,7 +91,7 @@ const SearchByQuery = props => {
 		e.preventDefault();
 		if (
 			!search ||
-			(selectedOp === 'Block No' && (isNaN(search) || search.length > 9))
+			(selectedOp === 'Block No' && (isNaN(search) || search?.length > 9))
 		) {
 			setError('Please enter valid txn hash/block no/block hash/block by txn Id');
 			return;
@@ -150,7 +150,7 @@ const SearchByQuery = props => {
 									getContentAnchorEl: null
 								}}
 							>
-								{options.map(option => (
+								{options?.map(option => (
 									<MenuItem key={option} value={option}>
 										{option}
 									</MenuItem>

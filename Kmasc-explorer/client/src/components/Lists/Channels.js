@@ -167,14 +167,14 @@ class Channels extends Component {
 				),
 			filterAll: true,
 			Cell: ({ value }) => {
-				const cts = value.slice(0, 5);
-				const rcc = value.length - cts.length;
+				const cts = value?.slice(0, 5);
+				const rcc = value?.length - cts?.length;
 
 				return (
 					<span>
-						{cts.map((committer, i) => (
+						{cts?.map((committer, i) => (
 							<>
-								{value.length > 1 && `${i + 1}. `}
+								{value?.length > 1 && `${i + 1}. `}
 								{i > 0 && ' '}
 								{committer}
 								<br />
@@ -210,12 +210,12 @@ class Channels extends Component {
 					{ threshold: matchSorter.rankings.SIMPLEMATCH }
 				),
 			Cell: ({ value }) => {
-				const etc = value.slice(0, 5);
-				const rec = value.length - etc.length;
+				const etc = value?.slice(0, 5);
+				const rec = value?.length - etc?.length;
 
 				return (
 					<span>
-						{etc.map((endorser, i) => (
+						{etc?.map((endorser, i) => (
 							<>
 								{i > 0 && ' '}
 								{i + 1}. {endorser}
@@ -265,7 +265,7 @@ class Channels extends Component {
 					defaultPageSize={5}
 					filterable
 					minRows={0}
-					showPagination={channels.length >= 5}
+					showPagination={channels?.length >= 5}
 				/>
 				<Dialog
 					open={dialogOpenEndorser}

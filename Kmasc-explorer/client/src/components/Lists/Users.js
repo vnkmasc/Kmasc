@@ -172,7 +172,7 @@ export class Users extends Component {
 						) : null}
 					</MuiDialogTitle>
 					<List className={classes.root}>
-						{this.state.userlists.map(user => (
+						{this.state.userlists?.map(user => (
 							<ListItem key={user.username}>
 								{user.roles === 'admin' ? (
 									<ListItemAvatar className={classes.adminIcon}>

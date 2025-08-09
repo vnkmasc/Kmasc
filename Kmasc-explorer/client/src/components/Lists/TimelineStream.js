@@ -78,7 +78,7 @@ export class TimelineStream extends Component {
 			<div>
 				<div className={classes.scrollable}>
 					<Timeline>
-						{notifications.map(item => (
+						{notifications?.map(item => (
 							<TimelineEvent
 								key={item.title}
 								title={item.title}

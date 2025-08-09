@@ -131,7 +131,7 @@ export class Register extends Component {
 		let password2 = {};
 		if (name === 'password') {
 			if (
-				this.state.password2.value.length &&
+				this.state.password2.value?.length &&
 				value !== this.state.password2.value
 			) {
 				password2 = {
@@ -143,7 +143,7 @@ export class Register extends Component {
 			}
 		} else if (name === 'password2') {
 			if (
-				this.state.password.value.length &&
+				this.state.password.value?.length &&
 				value !== this.state.password.value
 			) {
 				password2 = { value, error: 'The password confirmation does not match.' };
@@ -397,7 +397,7 @@ export class Register extends Component {
 								onChange={e => this.handleChange(e)}
 								margin="dense"
 							>
-								{rolesList.map(item => (
+								{rolesList?.map(item => (
 									<MenuItem key={item} value={item}>
 										{item}
 									</MenuItem>

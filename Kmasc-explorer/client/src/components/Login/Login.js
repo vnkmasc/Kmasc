@@ -173,7 +173,7 @@ export class Login extends Component {
 		 * autoLoginAttempted is a safety to prevent multiple tries
 		 */
 		if (
-			networks.length === 1 &&
+			networks?.length === 1 &&
 			!networks[0].authEnabled &&
 			!autoLoginAttempted
 		) {
@@ -228,7 +228,7 @@ export class Login extends Component {
 									shrink: 'true'
 								}}
 							>
-								{networks.map(item => (
+								{networks?.map(item => (
 									<MenuItem key={item.name} value={item.name}>
 										{item.name}
 									</MenuItem>

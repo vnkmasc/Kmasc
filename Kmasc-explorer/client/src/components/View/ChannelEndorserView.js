@@ -73,11 +73,11 @@ export class ChannelEndorserView extends Component {
 		const { channelPeerData, classes } = this.props;
 		if (channelPeerData) {
 			const { endorsers } = channelPeerData;
-			const nocol = Math.ceil(endorsers.length / 10);
+			const nocol = Math.ceil(endorsers?.length / 10);
 			const cols = [];
 			for (let i = 0; i < nocol; i++) {
 				const starti = i * 10;
-				const endi = Math.min((i + 1) * 10, endorsers.length);
+				const endi = Math.min((i + 1) * 10, endorsers?.length);
 				cols.push(
 					<div key={i} className={classes.tbleWraps}>
 						<Table

@@ -168,10 +168,10 @@ export class Transactions extends Component {
 	}
 
 	handleCustomRender(selected, options) {
-		if (selected.length === 0) {
+		if (selected?.length === 0) {
 			return 'Select Orgs';
 		}
-		if (selected.length === options.length) {
+		if (selected?.length === options?.length) {
 			return 'All Orgs Selected';
 		}
 
@@ -187,7 +187,7 @@ export class Transactions extends Component {
 						this.state.to
 				  ).toString()}`
 				: ``;
-			for (let i = 0; i < this.state.orgs.length; i++) {
+			for (let i = 0; i < this.state.orgs?.length; i++) {
 				query += `&orgs=${this.state.orgs[i]}`;
 			}
 			this.setState({ queryFlag: false });
@@ -300,7 +300,7 @@ export class Transactions extends Component {
 							<div className={classes.fullHash} id="showTransactionId">
 								{row.value}
 							</div>{' '}
-							{row.value.slice(0, 6)}
+							{row.value?.slice(0, 6)}
 							{!row.value ? '' : '... '}
 						</a>
 					</span>
@@ -502,7 +502,7 @@ export class Transactions extends Component {
 					style={{ height: '750px' }}
 					showPaginationBottom={false}
 				/>
-				{transactionList.length > 0 && (
+				{transactionList?.length > 0 && (
 					<TablePagination
 						page={this.state.page}
 						sx={tablePaginationStyle}

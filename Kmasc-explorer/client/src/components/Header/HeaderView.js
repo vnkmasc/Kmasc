@@ -29,7 +29,7 @@ import Dialog from '@material-ui/core/Dialog';
 import Loader from 'react-loader-spinner';
 import Select from '../Styled/Select';
 import NotificationsPanel from '../Panels/NotificationsPanel';
-import Logo from '../../static/images/Explorer_Logo.svg';
+import Logo from '../../static/images/logoKMA.png';
 import AdminPanel from '../Panels/AdminPanel';
 import { chartOperations, chartSelectors } from '../../state/redux/charts';
 import { tableOperations, tableSelectors } from '../../state/redux/tables';
@@ -94,15 +94,23 @@ const styles = theme => {
 	};
 	return {
 		logo: {
-			width: 260,
+			width: 50,
 			height: 50,
 			'@media (max-width: 1415px) and (min-width: 990px)': {
 				width: 200,
 				height: 40
 			}
 		},
+		logoTitle: {
+			color: 'red',
+			fontWeight: '700',
+			fontSize: '1.5rem',
+			display: 'inline-block',
+			
+			marginLeft: 10,
+		},
 		navbarHeader: {
-			backgroundColor: '#e8e8e8',
+			backgroundColor: '#ffffff',
 			...darkNavbar
 		},
 		tab: {
@@ -120,7 +128,8 @@ const styles = theme => {
 		},
 		activeTab: {
 			color: '#ffffff',
-			backgroundColor: dark ? '#453e68' : '#58c5c2',
+			backgroundColor: '#f02e2a',
+			border: '1px solid red',
 			height: 60,
 			marginTop: 20,
 			padding: 10,
@@ -290,7 +299,7 @@ export class HeaderView extends Component {
 		const { currentChannel, getChangeChannel } = this.props;
 		const options = [];
 		let selectedValue = {};
-		if (nextProps.channels.length > 0) {
+		if (nextProps.channels?.length > 0) {
 			nextProps.channels.forEach(element => {
 				options.push({
 					value: element.channel_genesis_hash,
@@ -355,7 +364,7 @@ export class HeaderView extends Component {
 	closeToggle = () => this.state.isOpen && this.toggle();
 
 	handleChange = async selectedChannel => {
-		if (this.state.channels.length > 1) {
+		if (this.state.channels?.length > 1) {
 			const { getChangeChannel } = this.props;
 			clearInterval(this.interVal);
 			await this.handleOpen();
@@ -550,6 +559,7 @@ export class HeaderView extends Component {
 						<Navbar className={classes.navbarHeader} expand="lg" fixed="top">
 							<NavbarBrand href="/">
 								<img src={Logo} className={classes.logo} alt="Hyperledger Logo" />
+								<h2 className={classes.logoTitle} style={{ color: 'red' }}>Kmasc</h2>
 							</NavbarBrand>
 							<NavbarToggler onClick={this.toggle}>
 								<FontAwesome name="bars" className={classes.toggleIcon} />
@@ -560,7 +570,7 @@ export class HeaderView extends Component {
 									navbar
 									onMouseLeave={this.closeToggle}
 								>
-									{links.map(({ to, label, ...props }) => (
+									{links?.map(({ to, label, ...props }) => (
 										<NavItem key={to}>
 											<NavLink
 												to={to}
