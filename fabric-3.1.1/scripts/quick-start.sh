@@ -143,10 +143,10 @@ step5_build_mkv() {
     run_script "scripts/build-mkv.sh" "MKV library build"
 }
 
-# Step 6: Build Fabric with MKV
-step6_build_fabric() {
-    echo "Step 6: Building Fabric with MKV integration..."
-    run_script "scripts/build-fabric.sh" "Fabric build with MKV"
+# Step 6: Build MKV-enabled Peer Container
+step6_build_mkv_container() {
+    echo "Step 6: Building MKV-enabled Peer Container..."
+    run_script "scripts/build-mkv-container.sh" "MKV peer container build"
 }
 
 # Step 7: Initialize MKV system
@@ -155,10 +155,10 @@ step7_initialize_mkv() {
     run_script "scripts/init-mkv-keys.sh" "MKV key initialization"
 }
 
-# Step 8: Start network
-step8_start_network() {
-    echo "Step 8: Starting test network..."
-    run_script "scripts/start-network.sh" "test network startup"
+# Step 8: Start MKV-enabled network
+step8_start_mkv_network() {
+    echo "Step 8: Starting MKV-enabled test network..."
+    run_script "scripts/start-mkv-network.sh" "MKV network startup"
 }
 
 # Step 9: Test MKV integration
@@ -176,14 +176,19 @@ step10_show_next_steps() {
     echo
     echo "📊 What was set up:"
     echo "   ✅ MKV256 encryption library"
-    echo "   ✅ Fabric peer with MKV integration"
-    echo "   ✅ Test network with encryption"
-    echo "   ✅ MKV key management system"
+    echo "   ✅ MKV-enabled Peer Containers"
+    echo "   ✅ Test network with MKV encryption"
+    echo "   ✅ MKV API servers in containers"
     echo
     echo "🚀 Next steps:"
-    echo "   1. Test encryption: docker exec peer0.org1.example.com cat /tmp/state_mkv.log"
-    echo "   2. Run chaincode transactions to see encryption in action"
-    echo "   3. Change MKV password: cd core/ledger/kvledger/txmgmt/statedb/mkv && ./mkv_client.sh change"
+    echo "   1. Test MKV APIs:"
+    echo "      • Org1: curl http://localhost:9876/api/v1/health"
+    echo "      • Org2: curl http://localhost:9877/api/v1/health"
+    echo "   2. Change password via API:"
+    echo "      curl -X POST -H 'X-API-Key: mkv_api_secret_2025' -H 'Content-Type: application/json' \\"
+    echo "           -d '{\"old_password\":\"current_pass\",\"new_password\":\"new_pass\"}' \\"
+    echo "           http://localhost:9876/api/v1/change-password"
+    echo "   3. Monitor encryption logs: docker exec peer0.org1.example.com cat /var/log/mkv/api.log"
     echo
     echo "📚 For production deployment, run:"
     echo "   ./scripts/quick-start-production.sh"
@@ -201,9 +206,9 @@ main() {
     step3_download_fabric_samples
     step4_test_environment
     step5_build_mkv          # Build MKV library
-    step6_build_fabric       # Build Fabric with MKV
+    step6_build_mkv_container       # Build Fabric with MKV
     step7_initialize_mkv     # Initialize MKV system
-    step8_start_network      # Start test network
+    step8_start_mkv_network  # Start MKV-enabled network
     step9_test_mkv          # Test MKV integration
     step10_show_next_steps  # Show next steps and usage info
 }
@@ -215,9 +220,9 @@ echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
 echo "5. Build MKV256 encryption library"
-echo "6. Build Fabric with MKV integration"
+echo "6. Build MKV-enabled Peer Container"
 echo "7. Initialize MKV key management system"
-echo "8. Start the test network"
+echo "8. Start MKV-enabled test network"
 echo "9. Test MKV encryption/decryption"
 echo "10. Show next steps and usage examples"
 echo
