@@ -155,121 +155,16 @@ step7_start_network() {
     run_script "scripts/start-network.sh" "test network startup"
 }
 
-# Step 8: Initialize MKV keys in containers
-step8_init_mkv_keys() {
-    echo "Step 8: Initializing MKV keys in containers..."
-    run_script "scripts/init-mkv-keys-wrapper.sh" "MKV keys initialization"
+# Step 8: Start MKV API Server
+step8_start_mkv_api() {
+    echo "Step 8: Starting MKV API Server..."
+    run_script "scripts/start-mkv-api.sh" "MKV API server startup"
 }
 
-# Step 8: Auto-copy MKV keys to containers
-step8_auto_copy_mkv_keys() {
-    echo "Step 8: Auto-copying MKV keys to containers..."
-    
-    # Wait a moment for containers to be ready
-    sleep 5
-    
-    # Generate keys in current directory if not exists
-    if [ ! -f "k1.key" ] || [ ! -f "k0.key" ] || [ ! -f "encrypted_k1.key" ]; then
-        echo "INFO: Generating MKV keys in current directory..."
-        cp core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so . 2>/dev/null || true
-        cp core/ledger/kvledger/txmgmt/statedb/mkv/mkv.go . 2>/dev/null || true
-        echo "fabric_mkv_password_2025" | bash core/ledger/kvledger/txmgmt/statedb/mkv/key_manager.sh init
-    fi
-    
-    # Function to copy keys to a specific container
-    copy_keys_to_container() {
-        local container_name=$1
-        echo "INFO: Copying keys to $container_name..."
-        docker cp k1.key $container_name:/ 2>/dev/null || true
-        docker cp k0.key $container_name:/ 2>/dev/null || true
-        docker cp encrypted_k1.key $container_name:/ 2>/dev/null || true
-    }
-    
-    # Copy keys to peer containers
-    copy_keys_to_container "peer0.org1.example.com"
-    copy_keys_to_container "peer0.org2.example.com"
-    
-    # Copy keys to orderer container
-    copy_keys_to_container "orderer.example.com"
-    
-    # Copy keys to chaincode containers
-    echo "INFO: Copying keys to chaincode containers..."
-    ./scripts/auto-copy-mkv-keys.sh copy 2>/dev/null || true
-    
-    echo "PASS: MKV keys auto-copied to all containers"
-}
-
-# Step 9: Monitor and ensure keys persistence
-step9_monitor_keys() {
-    echo "Step 9: Setting up key monitoring..."
-    
-    # Start background monitoring
-    (
-        while true; do
-            sleep 30  # Check every 30 seconds
-            
-            # Check if peer containers have keys
-            if ! docker exec peer0.org1.example.com ls -la /k1.key >/dev/null 2>&1; then
-                echo "WARN: Keys missing in peer0.org1.example.com, re-copying..."
-                docker cp k1.key peer0.org1.example.com:/ 2>/dev/null || true
-                docker cp k0.key peer0.org1.example.com:/ 2>/dev/null || true
-                docker cp encrypted_k1.key peer0.org1.example.com:/ 2>/dev/null || true
-            fi
-            
-            if ! docker exec peer0.org2.example.com ls -la /k1.key >/dev/null 2>&1; then
-                echo "WARN: Keys missing in peer0.org2.example.com, re-copying..."
-                docker cp k1.key peer0.org2.example.com:/ 2>/dev/null || true
-                docker cp k0.key peer0.org2.example.com:/ 2>/dev/null || true
-                docker cp encrypted_k1.key peer0.org2.example.com:/ 2>/dev/null || true
-            fi
-            
-            # Check chaincode containers
-            ./scripts/auto-copy-mkv-keys.sh check >/dev/null 2>&1 || {
-                echo "WARN: Keys missing in chaincode containers, re-copying..."
-                ./scripts/auto-copy-mkv-keys.sh copy >/dev/null 2>&1 || true
-            }
-        done
-    ) &
-    
-    echo "PASS: Key monitoring started in background"
-}
-
-# Step 10: Next steps
-step10_next_steps() {
-    print_status "INFO" "Step 10: Next steps..."
-    
-    echo
-    echo "🎉 Hyperledger Fabric network with MKV encryption is ready!"
-    echo
-    echo "📋 Network Information:"
-    echo "   - Network: test-network"
-    echo "   - Channel: mychannel"
-    echo "   - Chaincode: basic"
-    echo "   - MKV Encryption: Enabled"
-    echo
-    echo "🔑 MKV Keys Information:"
-    echo "   - Keys location: /home/phongnh/go-src/Kmasc/fabric-3.1.1/"
-    echo "   - Password: fabric_mkv_password_2025"
-    echo "   - Files: k1.key, k0.key, encrypted_k1.key"
-    echo
-    echo "🚀 Quick Test Commands:"
-    echo "   cd fabric-samples/test-network"
-    echo "   export PATH=\${PWD}/bin:\${PWD}/../bin:\${PWD}/../../bin:\$PATH"
-    echo "   export FABRIC_CFG_PATH=\$PWD/../config/"
-    echo "   export CORE_PEER_TLS_ENABLED=true"
-    echo "   export CORE_PEER_LOCALMSPID=\"Org1MSP\""
-    echo "   export CORE_PEER_MSPCONFIGPATH=\${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp"
-    echo "   export CORE_PEER_TLS_ROOTCERT_FILE=\${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
-    echo "   export CORE_PEER_ADDRESS=localhost:7051"
-    echo "   export ORDERER_CA=\${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
-    echo
-    echo "   # Test query"
-    echo "   peer chaincode query -C mychannel -n basic -c '{\"function\":\"ReadAsset\",\"Args\":[\"asset1\"]}'"
-    echo
-    echo "📝 Notes:"
-    echo "   - MKV keys are created and ready to use"
-    echo "   - Network is ready for app connection"
-    echo "   - For production, consider using persistent volumes"
+# Step 9: Show next steps
+step9_show_next_steps() {
+    echo "Step 9: Showing next steps and usage information..."
+    run_script "scripts/show-next-steps.sh" "next steps display"
 }
 
 # Main execution
@@ -285,7 +180,8 @@ main() {
     step5_build_encryption  # Only this step - build and create keys
     step6_build_fabric
     step7_start_network
-    step10_next_steps  # Skip complex container management
+    step8_start_mkv_api     # Start MKV API server
+    step9_show_next_steps   # Show next steps and usage info
 }
 
 # Check if user wants to continue
@@ -297,7 +193,8 @@ echo "4. Test the environment"
 echo "5. Build the encryption library and create keys"
 echo "6. Build Fabric with encryption"
 echo "7. Start the test network"
-echo "8. Next steps"
+echo "8. Start MKV API server for password management"
+echo "9. Show next steps and API usage examples"
 echo
 read -p "Do you want to continue? (y/N): " -n 1 -r
 echo
