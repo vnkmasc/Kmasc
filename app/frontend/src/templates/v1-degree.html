@@ -25,7 +25,7 @@
         <p style="font-size: 14px; font-weight: 600; letter-spacing: 0.05em">Độc lập - Tự do - Hạnh phúc</p>
         <div style="margin: 0.5rem auto; height: 1px; width: 96px; background-color: #4b5563"></div>
 
-        <p style="margin-top: 2rem; font-size: 18px; font-weight: 600">{{ .TenTruong }}</p>
+        <p style="margin-top: 2rem; font-size: 18px; font-weight: 600; text-transform: uppercase">{{ .TenTruong }}</p>
         <p style="margin-top: 1rem; font-size: 16px">cấp</p>
 
         <h1
@@ -35,6 +35,7 @@
             text-transform: uppercase;
             color: #b91c1c;
             font-family: 'Playfair Display', serif;
+            text-transform: uppercase;
           "
         >
           {{ .LoaiVanBang }}
@@ -94,7 +95,7 @@
                 font-weight: bold;
               "
             >
-              {{ .Khoa }}
+              {{ .Chuyên ngành }}
             </span>
           </div>
           <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
@@ -143,8 +144,9 @@
       </div>
 
       <!-- Góc dưới bên trái -->
-      <div style="position: absolute; bottom: 1.5rem; left: 2rem; font-size: 14px">
-        <p>Số hiệu: {{ .SoHieu }} | Số vào sổ: {{ .SoVaoSo }}</p>
+      <div style="position: absolute; bottom: 0rem; left: 2rem; font-size: 12px">
+        <p style="font-weight: 600">Số hiệu: {{ .SoHieu }}</p>
+        <p style="font-weight: 600">Số vào sổ: {{ .SoVaoSo }}</p>
       </div>
     </div>
   </body>

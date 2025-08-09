@@ -13,8 +13,8 @@ export const formatStudent = (data: any, isSendToServer: boolean = false) => {
         ethnicity: data.ethnicity,
         current_address: data.currentAddress,
         birth_address: data.birthAddress,
-        union_join_date: data.unionJoinDate,
-        party_join_date: data.partyJoinDate,
+        union_join_date: data.unionJoinDate ? format(new Date(data.unionJoinDate), 'dd/MM/yyyy') : undefined,
+        party_join_date: data.partyJoinDate ? format(new Date(data.partyJoinDate), 'dd/MM/yyyy') : undefined,
         description: data.description,
         date_of_birth: data.dateOfBirth ? format(new Date(data.dateOfBirth), 'dd/MM/yyyy') : undefined,
         gender: Boolean(data.gender)
@@ -63,6 +63,13 @@ export const formatFacultyOptions = (data: any) => {
 }
 
 export const formatFacultyOptionsByID = (data: any) => {
+  return data.map((item: any) => ({
+    label: item.name,
+    value: item.id
+  }))
+}
+
+export const formatDegreeTemplateOptions = (data: any) => {
   return data.map((item: any) => ({
     label: item.name,
     value: item.id
@@ -187,4 +194,23 @@ export const formatDegreeTemplateFormData = (data: DegreeTemplateType, isCreate:
   formData.append('file', data.file)
 
   return formData
+}
+
+export const formatDegreeTemplateHTML = (html: string) => {
+  const newHtml = html
+    .replace('{{ .TenTruong }}', 'GIÁM ĐỐC HỌC VIỆN KỸ THUẬT MẬT MÃ')
+    .replace('{{ .LoaiVanBang }}', 'BẰNG KỸ SƯ')
+    .replace('{{ .Nganh }}', 'Công nghệ thông tin')
+    .replace('{{ .HoTen }}', 'Nguyễn Văn A')
+    .replace('{{ .NgaySinh }}', '01/01/2003')
+    .replace('{{ .NgayCap }}', '01/01/2026')
+    .replace('{{ .NgayHetHan }}', '01/01/2030')
+    .replace('{{ .SoHieu }}', 'KMA CT060999')
+    .replace('{{ .Chuyên ngành }}', '01/01/2021')
+    .replace('{{ .NgayHetHan }}', '01/01/2030')
+    .replace('{{ .HinhThucDaoTao }}', 'Chính quy')
+    .replace('{{ .SoVaoSo }}', '1234567890')
+    .replace('{{ .XepLoai }}', 'Giỏi')
+
+  return newHtml
 }

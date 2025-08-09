@@ -191,7 +191,7 @@ const StudentManagementPage: React.FC = () => {
               select: {
                 groups: [
                   {
-                    label: 'Hệ đào tạo',
+                    label: 'Chuyên ngành',
                     options: formatFacultyOptions(UseData().facultyList)
                   }
                 ]
@@ -201,12 +201,12 @@ const StudentManagementPage: React.FC = () => {
           {
             type: 'input',
             name: 'year',
-            placeholder: 'Nhập năm nhập học',
-            setting: {
-              input: {
-                type: 'number'
-              }
-            }
+            placeholder: 'Nhập khóa'
+            // setting: {
+            //   input: {
+            //     type: 'number'
+            //   }
+            // }
           },
 
           {
@@ -237,8 +237,8 @@ const StudentManagementPage: React.FC = () => {
           },
           { header: 'Họ và tên', value: 'name', className: 'min-w-[200px]' },
           { header: 'Email', value: 'email', className: 'min-w-[200px]' },
-          { header: 'Tên khoa', value: 'facultyName', className: 'min-w-[200px]' },
-          { header: 'Năm nhập học', value: 'year', className: 'min-w-[150px]' },
+          { header: 'Chuyên ngành', value: 'facultyName', className: 'min-w-[200px]' },
+          { header: 'Khóa', value: 'year', className: 'min-w-[150px]' },
           {
             header: 'Trạng thái',
             value: 'status',
@@ -361,14 +361,14 @@ const StudentManagementPage: React.FC = () => {
           },
           {
             type: 'select',
-            label: 'Tên khoa',
+            label: 'Chuyên ngành',
             placeholder: 'Chọn chuyên ngành',
             name: 'faculty',
             setting: {
               select: {
                 groups: [
                   {
-                    label: 'Hệ đào tạo',
+                    label: 'Chuyên ngành',
                     options: formatFacultyOptions(UseData().facultyList)
                   }
                 ]

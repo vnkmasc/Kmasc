@@ -37,7 +37,7 @@ const HtmlView: React.FC<Props> = ({ html, loading = false, sandbox = true }) =>
 
   return (
     <div className={'h-full min-h-[700px] w-full overflow-x-scroll'}>
-      <iframe className='h-full w-full' srcDoc={getHTMLDoc()} sandbox={iframeSandbox} />
+      <iframe className='h-full min-h-[700px] w-full' srcDoc={getHTMLDoc()} sandbox={iframeSandbox} />
     </div>
   )
 }

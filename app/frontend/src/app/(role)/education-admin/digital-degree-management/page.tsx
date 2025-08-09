@@ -1,17 +1,16 @@
-import HtmlView from '@/components/common/html-view'
-import PageHeader from '@/components/common/page-header'
-import DegreeTemplate from '@/components/role/education-admin/degree-template/degree-template'
+import DegreeTemplate from '@/components/role/education-admin/digital-degree-management/template/degree-template'
+import DigitalDegreeView from '@/components/role/education-admin/digital-degree-management/degree/digital-degree-view'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-const DigitalCertificateManagementPage = () => {
+const DigitalDegreeManagementPage = () => {
   return (
-    <Tabs defaultValue='template'>
+    <Tabs defaultValue='degree'>
       <TabsList>
-        <TabsTrigger value='certificate'>Văn bằng số</TabsTrigger>
+        <TabsTrigger value='degree'>Văn bằng số</TabsTrigger>
         <TabsTrigger value='template'>Mẫu bằng số</TabsTrigger>
       </TabsList>
-      <TabsContent value='certificate'>
-        <PageHeader title='Quản lý văn bằng số' />
+      <TabsContent value='degree'>
+        <DigitalDegreeView />
       </TabsContent>
       <TabsContent value='template'>
         <DegreeTemplate />
@@ -20,4 +19,4 @@ const DigitalCertificateManagementPage = () => {
   )
 }
 
-export default DigitalCertificateManagementPage
+export default DigitalDegreeManagementPage

@@ -26,7 +26,7 @@ const Header: React.FC<Props> = (props) => {
   const { md, lg } = UseBreakpoint()
   const educationAdminPages: { title: string; href: string }[] = [
     {
-      title: 'Khoa',
+      title: 'Chuyên ngành',
       href: '/education-admin/faculty-management'
     },
     {
@@ -68,19 +68,19 @@ const Header: React.FC<Props> = (props) => {
 
   const adminPages: { title: string; href: string }[] = [
     {
-      title: 'Quản lý tài khoản đào tạo',
+      title: 'Tài khoản đào tạo',
       href: '/admin/education-management'
+    },
+    {
+      title: 'Mẫu bằng số',
+      href: '/admin/degree-template-management'
     }
-    // {
-    //   title: 'Quản lý tài khoản sinh viên',
-    //   href: '/admin/student--management'
-    // }
   ]
   const navList =
     props.role === 'university_admin' ? educationAdminPages : props.role === 'admin' ? adminPages : studentPages
   return (
     <div className='fixed top-0 z-10 h-16 w-full shadow-lg'>
-      <header className='container flex h-full items-center justify-between'>
+      <header className='container flex h-full items-center justify-between bg-white dark:bg-black'>
         {props.role !== null ? (
           <div className='flex gap-2 md:hidden'>
             <Sheet>

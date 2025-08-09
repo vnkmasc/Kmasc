@@ -1,5 +1,5 @@
 'use client'
-import CertificateActionButton from '@/components/role/education-admin/certificate-action-button'
+import CertificateActionButton from '@/components/role/education-admin/certificate-management/certificate-action-button'
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'
@@ -262,7 +262,7 @@ const CertificateManagementPage = () => {
               select: {
                 groups: [
                   {
-                    label: 'Hệ đào tạo',
+                    label: 'Chuyên ngành',
                     options: formatFacultyOptions(UseData().facultyList)
                   }
                 ]
@@ -319,7 +319,7 @@ const CertificateManagementPage = () => {
         items={[
           { header: 'Mã SV', value: 'studentCode', className: 'min-w-[80px] font-semibold text-blue-500' },
           { header: 'Họ và tên', value: 'studentName', className: 'min-w-[200px]' },
-          { header: 'Tên khoa', value: 'facultyName', className: 'min-w-[150px]' },
+          { header: 'Chuyên ngành', value: 'facultyName', className: 'min-w-[150px]' },
           {
             header: 'Phân loại',
             value: 'isDegree',
@@ -352,6 +352,8 @@ const CertificateManagementPage = () => {
           }
         ]}
         data={queryCertificates.data?.data || []}
+        page={queryCertificates.data?.page || 1}
+        pageSize={queryCertificates.data?.page_size || PAGE_SIZE}
       />
       <CommonPagination
         page={queryCertificates.data?.page || 1}

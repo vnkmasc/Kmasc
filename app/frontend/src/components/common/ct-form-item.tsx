@@ -234,69 +234,6 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
           )}
         />
       )
-    // case 'date':
-    //   return (
-    //     <FormField
-    //       control={props.control}
-    //       name={props.name}
-    //       render={({ field }) => (
-    //         <FormItem>
-    //           <FormLabel>{props.label}</FormLabel>
-    //           <Popover>
-    //             <PopoverTrigger asChild>
-    //               <FormControl>
-    //                 <Button
-    //                   variant={'outline'}
-    //                   className={cn(
-    //                     'w-full pl-3 text-left font-normal hover:bg-background',
-    //                     !field.value && 'text-muted-foreground hover:text-muted-foreground'
-    //                   )}
-    //                 >
-    //                   {field.value ? (
-    //                     props.setting?.date?.mode === 'range' ? (
-    //                       field.value.to ? (
-    //                         <>
-    //                           {dayjs(field.value.from).format('DD/MM/YYYY')} -{' '}
-    //                           {dayjs(field.value.to).format('DD/MM/YYYY')}
-    //                         </>
-    //                       ) : (
-    //                         dayjs(field.value).format('DD/MM/YYYY')
-    //                       )
-    //                     ) : (
-    //                       dayjs(field.value).format('DD/MM/YYYY')
-    //                     )
-    //                   ) : (
-    //                     <span>{props.placeholder}</span>
-    //                   )}
-    //                   <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
-    //                 </Button>
-    //               </FormControl>
-    //             </PopoverTrigger>
-    //             <PopoverContent className='w-auto p-0' align='start'>
-    //               <Calendar
-    //                 mode={props.setting?.date?.mode || 'single'}
-    //                 selected={field.value}
-    //                 onSelect={field.onChange}
-    //                 initialFocus
-    //                 disabled={(date) => {
-    //                   if (props.setting?.date?.min && dayjs(date).isBefore(props.setting?.date?.min)) {
-    //                     return true
-    //                   }
-    //                   if (props.setting?.date?.max && dayjs(date).isAfter(props.setting?.date?.max)) {
-    //                     return true
-    //                   }
-    //                   return false
-    //                 }}
-    //                 numberOfMonths={props.setting?.date?.mode === 'range' ? 2 : 1}
-    //               />
-    //             </PopoverContent>
-    //           </Popover>
-    //           {props.description && <FormDescription>{props.description}</FormDescription>}
-    //           <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
-    //         </FormItem>
-    //       )}
-    //     />
-    //   )
     default:
       return null
   }
