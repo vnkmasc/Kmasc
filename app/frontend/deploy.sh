@@ -1,6 +1,11 @@
 #!/bin/bash
-pm2 stop nextjs-fe
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 nvm use 24
+
+pm2 stop nextjs-fe
 cd /root/Kmasc/app/frontend || exit 1
 
 if [ "$1" = "reinstall" ]; then
