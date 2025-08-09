@@ -12,6 +12,7 @@ import (
 )
 
 type TemplateRepository interface {
+	FindByIDAndUniversity(ctx context.Context, templateID, universityID primitive.ObjectID) (*models.DiplomaTemplate, error)
 	Create(ctx context.Context, template *models.DiplomaTemplate) error
 	UpdateIfNotLocked(ctx context.Context, id primitive.ObjectID, updated *models.DiplomaTemplate) error
 	GetByID(ctx context.Context, id primitive.ObjectID) (*models.DiplomaTemplate, error)
@@ -116,6 +117,16 @@ func (r *templateRepository) FindByUniversityAndFaculty(ctx context.Context, uni
 func (r *templateRepository) Create(ctx context.Context, template *models.DiplomaTemplate) error {
 	_, err := r.collection.InsertOne(ctx, template)
 	return err
+}
+
+func (r *templateRepository) FindByIDAndUniversity(ctx context.Context, templateID, universityID primitive.ObjectID) (*models.DiplomaTemplate, error) {
+	filter := bson.M{"_id": templateID, "university_id": universityID}
+	var template models.DiplomaTemplate
+	err := r.collection.FindOne(ctx, filter).Decode(&template)
+	if err != nil {
+		return nil, err
+	}
+	return &template, nil
 }
 
 func (r *templateRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.DiplomaTemplate, error) {

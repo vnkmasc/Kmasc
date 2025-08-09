@@ -70,7 +70,7 @@ func main() {
 	rewardDisciplineRepo := repository.NewRewardDisciplineRepository(db)
 	majorRepo := repository.NewMajorRepository(db)
 	templateRepo := repository.NewTemplateRepository(db)
-	ediplomaRepo := repository.NewEDiplomaRepository(db)
+	ediplomaRepo := repository.NewEDiplomaRepository(db, facultyRepo)
 
 	// Services
 	templateEngine := models.NewTemplateEngine() // giả định bạn có utils/template_engine.go

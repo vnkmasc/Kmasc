@@ -22,6 +22,7 @@ type EDiplomaService interface {
 	GenerateEDiploma(ctx context.Context, certificateIDStr, templateIDStr string) (*models.EDiploma, error)
 	GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error)
 	GetEDiplomasByFaculty(ctx context.Context, facultyID string) ([]*models.EDiplomaDTO, error)
+	SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error)
 }
 
 type eDiplomaService struct {
@@ -259,6 +260,29 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 
 	log.Printf("[DEBUG] EDiploma generated successfully: ID=%s", ediploma.ID.Hex())
 	return ediploma, nil
+}
+
+func (s *eDiplomaService) SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error) {
+	ediplomas, total, err := s.repo.SearchByFilters(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var dtoList []*models.EDiplomaDTO
+	for _, ed := range ediplomas {
+		university, _ := s.universityRepo.FindByID(ctx, ed.UniversityID)
+		faculty, _ := s.facultyRepo.FindByID(ctx, ed.FacultyID)
+
+		var major *models.Major
+		if !ed.MajorID.IsZero() {
+			major, _ = s.majorRepo.GetByID(ctx, ed.MajorID)
+		}
+
+		dto := mapper.MapEDiplomaToDTO(ed, university, faculty, major)
+		dtoList = append(dtoList, dto)
+	}
+
+	return dtoList, total, nil
 }
 
 func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error) {

@@ -142,12 +142,13 @@ func SetupRouter(
 	templateGroup.GET("/view/:id", templateHandler.GetTemplateView)
 	templateGroup.PUT("/:id", templateHandler.UpdateTemplate)
 	templateGroup.GET("/:id", templateHandler.GetTemplateByID)
+	templateGroup.POST("/:template_id/sign", templateHandler.SignTemplateByID)
 
 	ediplomaGroup := api.Group("/ediplomas")
 	ediplomaGroup.Use(middleware.JWTAuthMiddleware())
 	ediplomaGroup.POST("/generate", ediplomaHandler.GenerateEDiploma)
 	ediplomaGroup.POST("/generate-bulk", ediplomaHandler.GenerateBulkEDiplomas)
 	ediplomaGroup.GET("/faculty/:faculty_id", ediplomaHandler.GetEDiplomasByFaculty)
-
+	ediplomaGroup.GET("/search", ediplomaHandler.SearchEDiplomas)
 	return r
 }
