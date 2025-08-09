@@ -21,6 +21,7 @@ var (
 )
 
 type TemplateService interface {
+	SignTemplateByID(ctx context.Context, universityID, templateID primitive.ObjectID) (*models.DiplomaTemplate, error)
 	GetTemplateByID(ctx context.Context, id string) (*models.DiplomaTemplate, error)
 	UpdateTemplate(ctx context.Context, templateID, universityID primitive.ObjectID, name, description, originalFilename string, fileBytes []byte) (*models.DiplomaTemplate, error)
 	CreateTemplate(ctx context.Context, name, description string, universityID, facultyID primitive.ObjectID, originalFilename string, fileBytes []byte) (*models.DiplomaTemplate, error)
@@ -200,6 +201,34 @@ func (s *templateService) SignAllPendingTemplatesOfUniversity(ctx context.Contex
 		count++
 	}
 	return count, nil
+}
+func (s *templateService) SignTemplateByID(ctx context.Context, universityID, templateID primitive.ObjectID) (*models.DiplomaTemplate, error) {
+	// Lấy template
+	template, err := s.templateRepo.FindByIDAndUniversity(ctx, templateID, universityID)
+	if err != nil {
+		return nil, err
+	}
+
+	if template.Status != "PENDING" {
+		return nil, fmt.Errorf("template is not pending or already signed")
+	}
+
+	// Sinh chữ ký giả lập
+	signature := "SIMULATED_SIGNATURE_" + template.ID.Hex()
+	status := "SIGNED_BY_UNI"
+
+	// Update vào DB
+	err = s.templateRepo.UpdateStatusAndSignatureByID(ctx, template.ID, status, signature)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cập nhật lại giá trị trong struct
+	template.Status = status
+	template.SignatureOfUni = signature
+	template.UpdatedAt = time.Now()
+
+	return template, nil
 }
 
 func (s *templateService) SignAllTemplatesByMinEdu(ctx context.Context, universityID primitive.ObjectID) (int, error) {

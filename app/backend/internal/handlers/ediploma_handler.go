@@ -1,10 +1,15 @@
 package handlers
 
 import (
+	"errors"
+	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type EDiplomaHandler struct {
@@ -22,6 +27,36 @@ func NewEDiplomaHandler(
 type generateEDiplomaRequest struct {
 	CertificateID string `json:"certificate_id"`
 	TemplateID    string `json:"template_id"`
+}
+
+func (h *EDiplomaHandler) SearchEDiplomas(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	filters := models.EDiplomaSearchFilter{
+		StudentCode:     c.Query("student_code"),
+		FacultyCode:     c.Query("faculty_code"),
+		CertificateType: c.Query("certificate_type"),
+		Course:          c.Query("course"),
+		Page:            page,
+		PageSize:        pageSize,
+	}
+
+	dtoList, total, err := h.ediplomaService.SearchEDiplomaDTOs(c.Request.Context(), filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	totalPage := int(math.Ceil(float64(total) / float64(pageSize)))
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":       dtoList,
+		"page":       page,
+		"page_size":  pageSize,
+		"total":      total,
+		"total_page": totalPage,
+	})
 }
 
 func (h *EDiplomaHandler) GenerateEDiploma(c *gin.Context) {
@@ -61,6 +96,50 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomas(c *gin.Context) {
 	c.JSON(http.StatusOK, ediplomas)
 }
 
+func (h *EDiplomaHandler) GenerateBulkEDiplomasLocal(c *gin.Context) {
+	var req generateBulkEDiplomaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	ediplomas, err := h.ediplomaService.GenerateBulkEDiplomasLocal(
+		c.Request.Context(),
+		req.FacultyID,
+		req.TemplateID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(ediplomas) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No diplomas generated",
+			"count":   0,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Bulk e-diplomas generated successfully",
+		"count":   len(ediplomas),
+		"data":    ediplomas,
+	})
+}
+
+func (h *EDiplomaHandler) UploadLocalEDiplomas(c *gin.Context) {
+	results := h.ediplomaService.UploadLocalEDiplomas(c.Request.Context())
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_files": len(results),
+		"results":     results,
+	})
+}
+
 func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {
 	facultyID := c.Param("faculty_id")
 	if facultyID == "" {
@@ -75,4 +154,19 @@ func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": ediplomas})
+}
+func (h *EDiplomaHandler) GetEDiplomaByID(c *gin.Context) {
+	id := c.Param("id")
+
+	dto, err := h.ediplomaService.GetEDiplomaDTOByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "EDiploma not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, dto)
 }

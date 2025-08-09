@@ -302,6 +302,44 @@ func (h *TemplateHandler) SignTemplatesByFaculty(c *gin.Context) {
 	})
 }
 
+func (h *TemplateHandler) SignTemplateByID(c *gin.Context) {
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+		return
+	}
+
+	templateIDHex := c.Param("template_id")
+	templateID, err := primitive.ObjectIDFromHex(templateIDHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	// Gọi service, lấy template đã ký
+	template, err := h.templateService.SignTemplateByID(c.Request.Context(), universityID, templateID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Successfully signed template: %s", template.Name),
+	})
+}
+
 func (h *TemplateHandler) SignAllPendingTemplatesOfUniversity(c *gin.Context) {
 	claimsRaw, exists := c.Get("claims")
 	if !exists {

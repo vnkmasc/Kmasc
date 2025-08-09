@@ -84,3 +84,11 @@ type EDiplomaDTO struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+type EDiplomaSearchFilter struct {
+	StudentCode     string `json:"student_code"`
+	FacultyCode     string `json:"faculty_code"`
+	CertificateType string `json:"certificate_type"`
+	Course          string `json:"course"`
+	Page            int    `json:"page"`
+	PageSize        int    `json:"page_size"`
+}

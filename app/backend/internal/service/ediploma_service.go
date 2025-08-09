@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	urlpkg "net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,9 +21,13 @@ import (
 
 type EDiplomaService interface {
 	GetByID(ctx context.Context, id string) (*models.EDiploma, error)
+	GetEDiplomaDTOByID(ctx context.Context, id string) (*models.EDiplomaDTO, error)
 	GenerateEDiploma(ctx context.Context, certificateIDStr, templateIDStr string) (*models.EDiploma, error)
 	GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error)
 	GetEDiplomasByFaculty(ctx context.Context, facultyID string) ([]*models.EDiplomaDTO, error)
+	SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error)
+	GenerateBulkEDiplomasLocal(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error)
+	UploadLocalEDiplomas(ctx context.Context) []map[string]interface{}
 }
 
 type eDiplomaService struct {
@@ -61,6 +67,29 @@ func NewEDiplomaService(
 		templateEngine:  templateEngine,
 		pdfGenerator:    pdfGenerator,
 	}
+}
+
+func (s *eDiplomaService) GetEDiplomaDTOByID(ctx context.Context, id string) (*models.EDiplomaDTO, error) {
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ID format")
+	}
+
+	ediploma, err := s.repo.FindByID(ctx, objID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Lấy thông tin liên quan
+	university, _ := s.universityRepo.FindByID(ctx, ediploma.UniversityID)
+	faculty, _ := s.facultyRepo.FindByID(ctx, ediploma.FacultyID)
+
+	var major *models.Major
+	if ediploma.MajorID != primitive.NilObjectID {
+		major, _ = s.majorRepo.GetByID(ctx, ediploma.MajorID)
+	}
+
+	return mapper.MapEDiplomaToDTO(ediploma, university, faculty, major), nil
 }
 
 func (s *eDiplomaService) GetEDiplomasByFaculty(ctx context.Context, facultyIDStr string) ([]*models.EDiplomaDTO, error) {
@@ -261,6 +290,29 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 	return ediploma, nil
 }
 
+func (s *eDiplomaService) SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error) {
+	ediplomas, total, err := s.repo.SearchByFilters(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var dtoList []*models.EDiplomaDTO
+	for _, ed := range ediplomas {
+		university, _ := s.universityRepo.FindByID(ctx, ed.UniversityID)
+		faculty, _ := s.facultyRepo.FindByID(ctx, ed.FacultyID)
+
+		var major *models.Major
+		if !ed.MajorID.IsZero() {
+			major, _ = s.majorRepo.GetByID(ctx, ed.MajorID)
+		}
+
+		dto := mapper.MapEDiplomaToDTO(ed, university, faculty, major)
+		dtoList = append(dtoList, dto)
+	}
+
+	return dtoList, total, nil
+}
+
 func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error) {
 	var result []*models.EDiploma
 
@@ -389,4 +441,222 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 	}
 
 	return result, nil
+}
+
+func (s *eDiplomaService) GenerateBulkEDiplomasLocal(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error) {
+	var result []*models.EDiploma
+
+	// Chuyển đổi ID
+	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid faculty ID")
+	}
+	templateID, err := primitive.ObjectIDFromHex(templateIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid template ID")
+	}
+
+	// Lấy template
+	template, err := s.templateRepo.GetByID(ctx, templateID)
+	if err != nil {
+		return nil, fmt.Errorf("template not found")
+	}
+	if template.FacultyID != facultyID {
+		return nil, errors.New("template does not belong to the given faculty")
+	}
+
+	// Lấy certificates của faculty
+	certificates, err := s.certificateRepo.FindByFacultyID(ctx, facultyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load certificates: %w", err)
+	}
+
+	// Tải template HTML từ MinIO
+	bucket, objectPath, err := parseMinioURL(template.FileLink)
+	if err != nil {
+		return nil, fmt.Errorf("invalid template file URL: %w", err)
+	}
+	htmlContent, err := s.minioClient.DownloadFile(ctx, bucket, objectPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download template HTML: %w", err)
+	}
+
+	localFolder := os.Getenv("EDIPLOMA_LOCAL_FOLDER")
+	if localFolder == "" {
+		return nil, fmt.Errorf("EDIPLOMA_LOCAL_FOLDER not set in environment")
+	}
+
+	if err := os.MkdirAll(localFolder, os.ModePerm); err != nil {
+		return nil, fmt.Errorf("failed to create local folder: %w", err)
+	}
+
+	for _, cert := range certificates {
+		// Load university
+		university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
+		if err != nil {
+			log.Printf("Load university failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		// Load user
+		user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
+		if err != nil {
+			log.Printf("Load user failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		// Parse ngày sinh
+		dobTime, err := time.Parse("2006-01-02", user.DateOfBirth)
+		if err != nil {
+			log.Printf("Invalid date format for user %s: %v", user.ID.Hex(), err)
+			continue
+		}
+
+		// Data render template
+		data := map[string]interface{}{
+			"SoHieu":         cert.SerialNumber,
+			"SoVaoSo":        cert.RegNo,
+			"HoTen":          user.FullName,
+			"NgaySinh":       dobTime.Format("02/01/2006"),
+			"TenTruong":      university.UniversityName,
+			"Nganh":          cert.Major,
+			"XepLoai":        cert.GraduationRank,
+			"HinhThucDaoTao": cert.EducationType,
+			"Khoa":           cert.Course,
+			"NgayCap":        cert.IssueDate.Format("02/01/2006"),
+		}
+
+		// Render HTML
+		renderedHTML, err := s.templateEngine.Render(string(htmlContent), data)
+		if err != nil {
+			log.Printf("Render failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		// Convert sang PDF
+		pdfBytes, err := s.pdfGenerator.ConvertHTMLToPDF(renderedHTML)
+		if err != nil {
+			log.Printf("PDF generation failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		hash := utils.ComputeSHA256(pdfBytes)
+
+		// Lưu PDF xuống local
+		localFileName := fmt.Sprintf("%s.pdf", primitive.NewObjectID().Hex())
+		localFilePath := filepath.Join(localFolder, localFileName)
+		if err := os.WriteFile(localFilePath, pdfBytes, 0644); err != nil {
+			log.Printf("Save PDF failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		now := time.Now()
+		ediploma := &models.EDiploma{
+			ID:                 primitive.NewObjectID(),
+			TemplateID:         templateID,
+			UniversityID:       cert.UniversityID,
+			FacultyID:          cert.FacultyID,
+			UserID:             cert.UserID,
+			MajorID:            primitive.NilObjectID,
+			StudentCode:        cert.StudentCode,
+			FullName:           cert.Name,
+			CertificateType:    cert.CertificateType,
+			Course:             cert.Course,
+			EducationType:      cert.EducationType,
+			GPA:                cert.GPA,
+			GraduationRank:     cert.GraduationRank,
+			IssueDate:          cert.IssueDate,
+			SerialNumber:       cert.SerialNumber,
+			RegistrationNumber: cert.RegNo,
+			FileLink:           localFilePath,
+			FileHash:           hash,
+			Signed:             false,
+			Signature:          "",
+			SignedAt:           time.Time{},
+			OnBlockchain:       false,
+			BlockchainTxID:     "",
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		}
+
+		if err := s.repo.Save(ctx, ediploma); err != nil {
+			log.Printf("Save failed for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
+		result = append(result, ediploma)
+	}
+
+	return result, nil
+}
+
+func (s *eDiplomaService) UploadLocalEDiplomas(ctx context.Context) []map[string]interface{} {
+	localFolder := os.Getenv("EDIPLOMA_LOCAL_FOLDER")
+	if localFolder == "" {
+		return []map[string]interface{}{
+			{"error": "EDIPLOMA_LOCAL_FOLDER not set in .env"},
+		}
+	}
+
+	files, err := os.ReadDir(localFolder)
+	if err != nil {
+		return []map[string]interface{}{
+			{"error": fmt.Sprintf("failed to read folder: %v", err)},
+		}
+	}
+
+	var results []map[string]interface{}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		filePath := filepath.Join(localFolder, file.Name())
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			results = append(results, map[string]interface{}{
+				"file":  file.Name(),
+				"error": fmt.Sprintf("read failed: %v", err),
+			})
+			continue
+		}
+
+		hash := utils.ComputeSHA256(data) // SHA256 -> string
+
+		// Upload file lên MinIO
+		minioPath := fmt.Sprintf("ediplomas/%s", file.Name())
+		if err := s.minioClient.UploadFile(ctx, minioPath, data, "application/pdf"); err != nil {
+			results = append(results, map[string]interface{}{
+				"file":  file.Name(),
+				"error": fmt.Sprintf("upload failed: %v", err),
+			})
+			continue
+		}
+
+		// Lưu vào DB
+		ediploma := &models.EDiploma{
+			ID:        primitive.NewObjectID(),
+			FileLink:  minioPath,
+			FileHash:  hash,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := s.repo.Save(ctx, ediploma); err != nil {
+			results = append(results, map[string]interface{}{
+				"file":  file.Name(),
+				"error": fmt.Sprintf("DB save failed: %v", err),
+			})
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"file":   file.Name(),
+			"hash":   hash,
+			"link":   minioPath,
+			"status": "uploaded",
+		})
+	}
+
+	return results
 }
