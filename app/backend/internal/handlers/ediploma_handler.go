@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -96,41 +97,6 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomas(c *gin.Context) {
 	c.JSON(http.StatusOK, ediplomas)
 }
 
-func (h *EDiplomaHandler) GenerateBulkEDiplomasLocal(c *gin.Context) {
-	var req generateBulkEDiplomaRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid input",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	ediplomas, err := h.ediplomaService.GenerateBulkEDiplomasLocal(
-		c.Request.Context(),
-		req.FacultyID,
-		req.TemplateID,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if len(ediplomas) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "No diplomas generated",
-			"count":   0,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Bulk e-diplomas generated successfully",
-		"count":   len(ediplomas),
-		"data":    ediplomas,
-	})
-}
-
 func (h *EDiplomaHandler) UploadLocalEDiplomas(c *gin.Context) {
 	results := h.ediplomaService.UploadLocalEDiplomas(c.Request.Context())
 
@@ -169,4 +135,32 @@ func (h *EDiplomaHandler) GetEDiplomaByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto)
+}
+
+func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
+	var req struct {
+		FacultyID  string `json:"faculty_id" binding:"required"`
+		TemplateID string `json:"template_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	zipFilePath, err := h.ediplomaService.GenerateBulkEDiplomasZip(
+		c.Request.Context(),
+		req.FacultyID,
+		req.TemplateID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Đọc file ZIP để trả về client
+	c.FileAttachment(zipFilePath, "ediplomas.zip")
+
+	// Optional: Xóa file ZIP sau khi gửi xong
+	_ = os.Remove(zipFilePath)
 }
