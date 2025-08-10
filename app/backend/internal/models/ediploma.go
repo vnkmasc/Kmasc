@@ -50,6 +50,7 @@ type EDiploma struct {
 type EDiplomaDTO struct {
 	ID                 primitive.ObjectID `json:"id"`
 	TemplateID         primitive.ObjectID `json:"template_id"`
+	TemplateName       string             `json:"template_name"`
 	UniversityID       primitive.ObjectID `json:"university_id"`
 	UniversityCode     string             `json:"university_code"`
 	UniversityName     string             `json:"university_name"`
@@ -60,6 +61,7 @@ type EDiplomaDTO struct {
 	MajorCode          string             `json:"major_code"`
 	MajorName          string             `json:"major_name"`
 	UserID             primitive.ObjectID `json:"user_id"`
+	StudentName        string             `json:"student_name"`
 	StudentCode        string             `json:"student_code"`
 	FullName           string             `json:"full_name"`
 	CertificateType    string             `json:"certificate_type"`

@@ -7,6 +7,8 @@ func MapEDiplomaToDTO(
 	university *models.University,
 	faculty *models.Faculty,
 	major *models.Major,
+	template *models.DiplomaTemplate,
+	user *models.User,
 ) *models.EDiplomaDTO {
 	return &models.EDiplomaDTO{
 		ID:             ed.ID,
@@ -17,13 +19,16 @@ func MapEDiplomaToDTO(
 		FacultyID:      ed.FacultyID,
 		FacultyCode:    faculty.FacultyCode,
 		FacultyName:    faculty.FacultyName,
-		MajorID:        ed.MajorID,
+		// MajorID:        ed.MajorID,
 		// MajorCode:      ifMajorNotNil(major, major.MajorCode),
 		// MajorName:      ifMajorNotNil(major, major.MajorName),
 
-		UserID:             ed.UserID,
-		StudentCode:        ed.StudentCode,
-		FullName:           ed.FullName,
+		UserID:       ed.UserID,
+		StudentCode:  ed.StudentCode,
+		FullName:     ed.FullName,
+		StudentName:  user.FullName,
+		TemplateName: template.Name,
+
 		CertificateType:    ed.CertificateType,
 		Course:             ed.Course,
 		EducationType:      ed.EducationType,
@@ -41,7 +46,6 @@ func MapEDiplomaToDTO(
 		CreatedAt:          ed.CreatedAt,
 		UpdatedAt:          ed.UpdatedAt,
 
-		// New fields from Template
 		SignatureOfUni:    ed.SignatureOfUni,
 		SignatureOfMinEdu: ed.SignatureOfMinEdu,
 	}
