@@ -137,49 +137,34 @@ step4_test_environment() {
     run_script "scripts/test_environment.sh" "environment test"
 }
 
-# Step 5: Build encryption library
+# Step 5: Build MKV encryption library
 step5_build_encryption() {
-    echo "Step 5: Building encryption library..."
-    run_script "scripts/build-encryption.sh" "encryption library build"
+    echo "Step 5: Building MKV encryption library..."
+    ./scripts/build-mkv-encryption.sh
 }
 
-# Step 6: Build Fabric
-step6_build_fabric() {
-    echo "Step 6: Building Fabric..."
+# Step 6: Initialize MKV keys
+step6_init_mkv_keys() {
+    echo "Step 6: Initializing MKV encryption keys..."
+    ./scripts/init-mkv-keys.sh
+}
+
+# Step 7: Build Fabric
+step7_build_fabric() {
+    echo "Step 7: Building Fabric..."
     run_script "scripts/build-fabric.sh" "Fabric build"
 }
 
-# Step 7: Start network
-step7_start_network() {
-    echo "Step 7: Starting test network..."
+# Step 8: Start network
+step8_start_network() {
+    echo "Step 8: Starting test network..."
     run_script "scripts/start-network.sh" "test network startup"
 }
 
-# Step 8: Show next steps
-step8_next_steps() {
-    echo "Step 8: Next steps..."
-    print_status "INFO" "Setup completed successfully!"
-    echo
-    echo "🎉 Congratulations! Your Hyperledger Fabric with encryption is ready!"
-    echo
-    echo "📋 What's been set up:"
-    echo "   ✅ Environment dependencies (Go, OpenSSL, Docker)"
-    echo "   ✅ Encryption library (libencryption.so)"
-    echo "   ✅ Fabric binaries with encryption"
-    echo "   ✅ Test network running"
-    echo
-    echo "🔍 To verify encryption is working:"
-    echo "   docker exec peer0.org1.example.com cat /root/state_encryption.log"
-    echo
-    echo "🧪 To test chaincode:"
-    echo "   cd fabric-samples/test-network"
-    echo "   peer chaincode query -C mychannel -n basic -c '{\"function\":\"ReadAsset\",\"Args\":[\"asset1\"]}'"
-    echo
-    echo "🛑 To stop network:"
-    echo "   cd fabric-samples/test-network"
-    echo "   ./network.sh down"
-    echo
-    print_status "INFO" "Quick start completed at $(date)"
+# Step 9: Next steps
+step9_next_steps() {
+    echo "Step 9: Showing next steps..."
+    ./scripts/next-steps.sh
 }
 
 # Main execution
@@ -192,10 +177,11 @@ main() {
     step2_setup_environment
     step3_download_fabric_samples
     step4_test_environment
-    step5_build_encryption
-    step6_build_fabric
-    step7_start_network
-    step8_next_steps
+    step5_build_encryption  # Build MKV library
+    step6_init_mkv_keys     # Initialize MKV keys
+    step7_build_fabric      # Build Fabric
+    step8_start_network     # Start network
+    step9_next_steps        # Show next steps
 }
 
 # Check if user wants to continue
@@ -204,9 +190,11 @@ echo "1. Fix any repository issues"
 echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
-echo "5. Build the encryption library"
-echo "6. Build Fabric with encryption"
-echo "7. Start the test network"
+echo "5. Build the MKV encryption library"
+echo "6. Initialize MKV encryption keys"
+echo "7. Build Fabric with encryption"
+echo "8. Start the test network"
+echo "9. Next steps"
 echo
 read -p "Do you want to continue? (y/N): " -n 1 -r
 echo

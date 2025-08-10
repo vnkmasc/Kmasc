@@ -83,3 +83,9 @@ MKV256.o
 crypto-config/
 fabric-samples/
 my-network/
+
+# Encryption key files
+*.key
+encrypted_k1.key
+k0.key
+k1.key

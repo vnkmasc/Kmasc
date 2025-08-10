@@ -8,6 +8,7 @@ Dự án này tích hợp mã hóa/giải mã sử dụng OpenSSL thông qua CGO
 
 - ✅ Mã hóa/giải mã tự động cho state database
 - ✅ Sử dụng OpenSSL AES-256-CBC
+- ✅ Hỗ trợ MKV256 encryption algorithm
 - ✅ Tích hợp CGO với thư viện C tùy chỉnh
 - ✅ Tương thích với Hyperledger Fabric 3.1.1
 - ✅ Test network hoạt động đầy đủ
@@ -50,6 +51,9 @@ Dự án này bao gồm một bộ scripts modular để dễ dàng setup và qu
 - `quick-start.sh` - Setup hoàn chỉnh từ đầu
 - `setup-environment.sh` - Cài đặt dependencies
 - `build-fabric.sh` - Build Fabric với encryption
+- `build-mkv.sh` - Build MKV library
+- `test-mkv.sh` - Test MKV library
+- `build-all-libraries.sh` - Build cả encryption và MKV libraries
 - `start-network.sh` - Khởi động test network
 
 ### Scripts tiện ích
@@ -86,11 +90,17 @@ sudo usermod -aG docker $USER
 ./fabric-samples-install.sh
 ```
 
-### Bước 3: Build encryption library
+### Bước 3: Build encryption libraries
 ```bash
+# Build encryption library
 cd core/ledger/kvledger/txmgmt/statedb
 make clean && make
 cd ../../../../../..
+
+# Build MKV library
+cd core/ledger/kvledger/txmgmt/statedb/mkv
+make clean && make
+cd ../../../../../../..
 ```
 
 ### Bước 4: Build Fabric
@@ -109,8 +119,13 @@ make native
 
 ### Test encryption integration
 ```bash
+# Test encryption library
 cd core/ledger/kvledger/txmgmt/statedb
 ./run_tests.sh
+
+# Test MKV library
+cd mkv
+LD_LIBRARY_PATH=. go test -v
 ```
 
 ## Sử dụng
@@ -152,7 +167,15 @@ fabric-3.1.1/
 │   ├── encrypt.c           # C functions cho encryption
 │   ├── encrypt.h           # Header file
 │   ├── Makefile            # Build script
-│   └── README_ENCRYPTION.md # Chi tiết encryption
+│   ├── README_ENCRYPTION.md # Chi tiết encryption
+│   └── mkv/                # MKV encryption module
+│       ├── mkv.go          # Go wrapper cho MKV
+│       ├── mkv.c           # C functions cho MKV
+│       ├── mkv.h           # Header file cho MKV
+│       ├── MKV256.c        # MKV256 algorithm
+│       ├── MKV256.h        # MKV256 header
+│       ├── Makefile        # Build script cho MKV
+│       └── README.md       # Chi tiết MKV
 ├── *.sh                    # Scripts setup và quản lý
 ├── README_SCRIPTS.md       # Hướng dẫn chi tiết scripts
 └── README.md              # Tài liệu này

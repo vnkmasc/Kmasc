@@ -78,7 +78,11 @@ func couchDocToKeyValue(doc *couchDoc, namespace string) (*keyValue, error) {
 		return nil, err
 	}
 	// Decrypt value and metadata after reading using MKV
-	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+	mkvKey, err := mkv.GetCurrentK1("statedb_couchdb_password")
+	if err != nil {
+		// Fallback to hardcoded key if key management not initialized
+		mkvKey = []byte("1234567890abcdef1234567890abcdef")
+	}
 	val := mkv.DecryptValueMKV(docFields.value, mkvKey)
 	meta := mkv.DecryptValueMKV(metadata, mkvKey)
 	return &keyValue{
@@ -144,7 +148,11 @@ func keyValToCouchDoc(kv *keyValue, namespace string) (*couchDoc, error) {
 	jsonMap := make(jsonValue)
 
 	// Encrypt value and metadata before storing using MKV
-	mkvKey := []byte("1234567890abcdef1234567890abcdef") // 32 bytes for MKV256
+	mkvKey, err := mkv.GetCurrentK1("statedb_couchdb_password")
+	if err != nil {
+		// Fallback to hardcoded key if key management not initialized
+		mkvKey = []byte("1234567890abcdef1234567890abcdef")
+	}
 	if value != nil {
 		value = mkv.EncryptValueMKV(value, mkvKey)
 	}

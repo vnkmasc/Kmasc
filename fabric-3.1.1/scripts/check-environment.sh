@@ -263,9 +263,9 @@ check_fabric_files() {
         fi
         
         if file_exists "$ENCRYPTION_DIR/libencryption.so"; then
-            print_status "PASS" "libencryption.so found"
+            print_status "PASS" "libencryption.so found (legacy)"
         else
-            print_status "WARN" "libencryption.so not found (run make in $ENCRYPTION_DIR)"
+            print_status "INFO" "libencryption.so not found (not required for MKV)"
         fi
         
     else

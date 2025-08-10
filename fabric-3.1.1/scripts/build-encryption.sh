@@ -1,14 +1,9 @@
 #!/bin/bash
 
-# Build Encryption Library Script
-# Author: Phong Ngo
-# Date: June 15, 2025
+# Build Encryption Libraries and Create MKV Keys
+# This script builds the encryption libraries and initializes the MKV key management system
 
 set -e
-
-echo "=== Build Encryption Library ==="
-echo "Date: $(date)"
-echo
 
 # Colors for output
 RED='\033[0;31m'
@@ -23,93 +18,122 @@ print_status() {
     local message=$2
     case $status in
         "PASS")
-            echo -e "${GREEN}✅ PASS${NC}: $message"
+            echo -e "${GREEN}✅ PASS:${NC} $message"
             ;;
         "FAIL")
-            echo -e "${RED}❌ FAIL${NC}: $message"
+            echo -e "${RED}❌ FAIL:${NC} $message"
             ;;
         "INFO")
-            echo -e "${BLUE}ℹ️  INFO${NC}: $message"
+            echo -e "${BLUE}ℹ️  INFO:${NC} $message"
             ;;
         "WARN")
-            echo -e "${YELLOW}⚠️  WARN${NC}: $message"
+            echo -e "${YELLOW}⚠️  WARN:${NC} $message"
             ;;
     esac
 }
 
-# Function to check if file exists
-file_exists() {
-    [ -f "$1" ]
-}
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Function to check if directory exists
-dir_exists() {
-    [ -d "$1" ]
-}
+echo "🔐 Building MKV Encryption System..."
+echo "   - Script directory: $SCRIPT_DIR"
+echo "   - Fabric root: $ROOT_DIR"
 
-# Main function to build encryption library
-build_encryption() {
-    echo "Step 5: Building encryption library..."
-    
-    # Save current directory
-    ROOT_DIR=$(pwd)
-    
-    # Ensure we're in the correct directory
-    if [ ! -f "go.mod" ]; then
-        print_status "FAIL" "Not in Fabric root directory. Please run from fabric-3.1.1/"
-        exit 1
-    fi
-    
-    ENCRYPTION_DIR="core/ledger/kvledger/txmgmt/statedb"
-    
-    if dir_exists "$ENCRYPTION_DIR"; then
-        print_status "INFO" "Building encryption library..."
-        cd "$ROOT_DIR/$ENCRYPTION_DIR"
-        
-        # Check if Makefile exists
-        if file_exists "Makefile"; then
-            print_status "INFO" "Found Makefile, running make clean && make..."
-            make clean && make
-            
-            # Check if library was created
-            if file_exists "libencryption.so"; then
-                print_status "PASS" "libencryption.so created successfully"
-                ls -la libencryption.so
-                
-                # Check library dependencies
-                if command -v ldd >/dev/null 2>&1; then
-                    print_status "INFO" "Checking library dependencies..."
-                    ldd libencryption.so
-                fi
-                
-            else
-                print_status "FAIL" "libencryption.so was not created"
-                exit 1
-            fi
-            
-        else
-            print_status "FAIL" "Makefile not found in $ENCRYPTION_DIR"
-            print_status "INFO" "Available files:"
-            ls -la
-            exit 1
-        fi
-        
-        cd "$ROOT_DIR"
-        print_status "PASS" "Encryption library built successfully"
-        
+# Step 1: Build encryption library
+print_status "INFO" "Step 1: Building encryption library..."
+cd "$ROOT_DIR/core/ledger/kvledger/txmgmt/statedb"
+
+if [ -f "Makefile" ]; then
+    make clean 2>/dev/null || true
+    make
+    print_status "PASS" "Encryption library built successfully"
+else
+    print_status "FAIL" "Makefile not found in encryption directory"
+    exit 1
+fi
+
+# Step 2: Build MKV library
+print_status "INFO" "Step 2: Building MKV library..."
+cd "$ROOT_DIR/core/ledger/kvledger/txmgmt/statedb/mkv"
+
+if [ -f "Makefile" ]; then
+    make clean 2>/dev/null || true
+    make
+    print_status "PASS" "MKV library built successfully"
+else
+    print_status "FAIL" "Makefile not found in MKV directory"
+    exit 1
+fi
+
+# Step 3: Verify libraries were built
+print_status "INFO" "Step 3: Verifying built libraries..."
+
+cd "$ROOT_DIR"
+
+# Check encryption library (optional - for backward compatibility)
+if [ -f "core/ledger/kvledger/txmgmt/statedb/libencryption.so" ]; then
+    print_status "PASS" "libencryption.so verified (legacy)"
+    ls -la core/ledger/kvledger/txmgmt/statedb/libencryption.so
+else
+    print_status "INFO" "libencryption.so not found (not required for MKV)"
+fi
+
+# Check MKV library
+if [ -f "core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so" ]; then
+    print_status "PASS" "libmkv.so verified"
+    ls -la core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so
+else
+    print_status "FAIL" "libmkv.so not found"
+    exit 1
+fi
+
+# Step 4: Create MKV keys
+print_status "INFO" "Step 4: Creating MKV keys..."
+
+# Files remain in their proper location (no copying needed)
+print_status "INFO" "Library files kept in proper location: $MKV_DIR/"
+
+# mkv.go remains in proper location within mkv directory
+
+    # Initialize keys using key_manager.sh in proper directory
+    MKV_DIR="core/ledger/kvledger/txmgmt/statedb/mkv"
+    if [ -f "$MKV_DIR/key_manager.sh" ]; then
+        # Change to MKV directory to create keys in the right location
+        cd "$MKV_DIR"
+        ./key_manager.sh init fabric123
+        cd - > /dev/null # Go back to previous directory
+        print_status "PASS" "MKV keys created successfully"
     else
-        print_status "FAIL" "statedb directory not found at $ENCRYPTION_DIR"
-        print_status "INFO" "Current directory: $(pwd)"
-        print_status "INFO" "Available directories in core/ledger/kvledger/txmgmt/:"
-        ls -la core/ledger/kvledger/txmgmt/ 2>/dev/null || echo "Directory not accessible"
+        print_status "FAIL" "key_manager.sh not found"
         exit 1
     fi
-    
-    echo
-    print_status "INFO" "Encryption library build completed at $(date)"
-}
 
-# Check if script is being run directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    build_encryption
-fi 
+# Step 5: Verify keys were created
+print_status "INFO" "Step 5: Verifying MKV keys..."
+
+    # Verify keys were created in MKV directory
+    if [ -f "$MKV_DIR/k1.key" ] && [ -f "$MKV_DIR/k0.key" ] && [ -f "$MKV_DIR/encrypted_k1.key" ]; then
+        print_status "PASS" "All MKV keys verified"
+        echo "   - Keys location: $(pwd)/$MKV_DIR/"
+        echo "   - Files: k1.key, k0.key, encrypted_k1.key"
+        echo "   - Password: fabric123"
+    else
+        print_status "FAIL" "Some MKV keys are missing"
+        ls -la "$MKV_DIR"/k*.key "$MKV_DIR"/encrypted_k*.key 2>/dev/null || true
+        exit 1
+    fi
+
+print_status "PASS" "Step 5 completed successfully"
+
+echo ""
+echo "🔑 MKV Encryption Summary:"
+echo "   - Library: libmkv.so (built)"
+echo "   - Keys: k1.key, k0.key, encrypted_k1.key (created)"
+echo "   - Password: fabric123"
+echo "   - Location: $(pwd)/$MKV_DIR/"
+echo ""
+echo "✅ MKV Encryption System built and initialized successfully!"
+echo "   - Libraries are ready for use"
+echo "   - Keys are generated and secured"
+echo "   - System is ready for Fabric integration"

@@ -91,13 +91,12 @@ else
     exit 1
 fi
 
-# Check if library was created
+# Check if library was created (optional - for backward compatibility)
 if [ -f "libencryption.so" ]; then
-    print_status "PASS" "libencryption.so created"
+    print_status "PASS" "libencryption.so created (legacy)"
     ls -la libencryption.so
 else
-    print_status "FAIL" "libencryption.so not found"
-    exit 1
+    print_status "INFO" "libencryption.so not found (not required for MKV)"
 fi
 
 echo
@@ -106,16 +105,16 @@ echo
 echo "3. Checking library dependencies..."
 print_status "INFO" "Verifying library dependencies"
 
-if command_exists ldd; then
+if [ -f "libencryption.so" ] && command_exists ldd; then
     ldd_output=$(ldd libencryption.so 2>/dev/null || echo "ldd failed")
     if echo "$ldd_output" | grep -q "libssl\|libcrypto"; then
-        print_status "PASS" "OpenSSL libraries linked correctly"
+        print_status "PASS" "OpenSSL libraries linked correctly (legacy)"
     else
         print_status "WARN" "OpenSSL libraries not found in ldd output"
         echo "$ldd_output"
     fi
 else
-    print_status "WARN" "ldd not available, skipping dependency check"
+    print_status "INFO" "Skipping libencryption.so dependency check (not required for MKV)"
 fi
 
 echo
