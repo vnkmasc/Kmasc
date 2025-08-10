@@ -286,61 +286,7 @@ verify_installations() {
     fi
 }
 
-# Function to create test script
-create_test_script() {
-    print_status "INFO" "Creating environment test script..."
-    
-    cat > test_environment.sh << 'EOF'
-#!/bin/bash
 
-echo "=== Environment Test ==="
-
-# Test Go
-echo "Testing Go..."
-if command -v go >/dev/null 2>&1; then
-    echo "✅ Go: $(go version)"
-else
-    echo "❌ Go not found"
-fi
-
-# Test GCC
-echo "Testing GCC..."
-if command -v gcc >/dev/null 2>&1; then
-    echo "✅ GCC: $(gcc --version | head -n1)"
-else
-    echo "❌ GCC not found"
-fi
-
-# Test OpenSSL
-echo "Testing OpenSSL..."
-if pkg-config --modversion openssl >/dev/null 2>&1; then
-    echo "✅ OpenSSL: $(pkg-config --modversion openssl)"
-else
-    echo "❌ OpenSSL not found"
-fi
-
-# Test Docker
-echo "Testing Docker..."
-if command -v docker >/dev/null 2>&1; then
-    echo "✅ Docker: $(docker --version)"
-else
-    echo "❌ Docker not found"
-fi
-
-# Test CGO
-echo "Testing CGO..."
-if [ "$CGO_ENABLED" = "1" ]; then
-    echo "✅ CGO is enabled"
-else
-    echo "❌ CGO is not enabled"
-fi
-
-echo "=== Test Complete ==="
-EOF
-
-    chmod +x test_environment.sh
-    print_status "PASS" "Test script created: test_environment.sh"
-}
 
 # Main execution
 main() {
@@ -357,7 +303,6 @@ main() {
     install_docker
     setup_go_env
     verify_installations
-    create_test_script
     
     echo
     echo "=== Setup Complete ==="
@@ -365,9 +310,9 @@ main() {
     echo
     echo "Next steps:"
     echo "1. Log out and log back in (for docker group)"
-    echo "2. Run: ./test_environment.sh"
-    echo "3. Run: ./build-fabric.sh"
-    echo "4. Run: ./start-network.sh"
+    echo "2. Run: ./scripts/test_environment.sh"
+    echo "3. Run: ./scripts/build-fabric.sh"
+    echo "4. Run: ./scripts/start-network.sh"
     echo
     print_status "INFO" "Setup completed at $(date)"
 }

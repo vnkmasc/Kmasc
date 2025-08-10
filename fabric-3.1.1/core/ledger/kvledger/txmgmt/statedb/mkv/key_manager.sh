@@ -219,15 +219,18 @@ EOF
 
 # Function to initialize key management system
 initialize_key_management() {
+    local password="$1"
     print_info "Initializing Key Management System..."
     
-    # Get password from user
-    read -s -p "Enter password for K0 generation: " password
-    echo
-    
+    # Get password from argument or user input
     if [ -z "$password" ]; then
-        print_error "Password cannot be empty"
-        return 1
+        read -s -p "Enter password for K0 generation: " password
+        echo
+        
+        if [ -z "$password" ]; then
+            print_error "Password cannot be empty"
+            return 1
+        fi
     fi
     
     # Generate K1
@@ -242,8 +245,8 @@ initialize_key_management() {
     print_success "Key Management System initialized successfully!"
     print_info "Files created:"
     print_info "  - k1.key (plaintext K1)"
-    print_info "  - k0.key (K0 derived from password)"
     print_info "  - encrypted_k1.key (K1 encrypted with K0)"
+    print_info "  - Password used: $password"
 }
 
 # Function to change password
@@ -507,7 +510,8 @@ show_help() {
     echo "  help     - Show this help message"
     echo
     echo "Examples:"
-    echo "  $0 init                    # Initialize with new password"
+    echo "  $0 init                    # Initialize with new password (interactive)"
+    echo "  $0 init fabric123          # Initialize with password 'fabric123'"
     echo "  $0 change                  # Change existing password"
     echo "  $0 status                  # Check current status"
     echo "  $0 test_encryption data.txt # Test encryption with data.txt"
@@ -520,7 +524,7 @@ main() {
     
     case "${1:-help}" in
         init)
-            initialize_key_management
+            initialize_key_management "$2"
             ;;
         change)
             change_password
