@@ -61,11 +61,10 @@ build_encryption() {
             make clean && make
             
             if file_exists "libencryption.so"; then
-                print_status "PASS" "libencryption.so created successfully"
+                print_status "PASS" "libencryption.so created successfully (legacy)"
                 ls -la libencryption.so
             else
-                print_status "FAIL" "libencryption.so was not created"
-                return 1
+                print_status "INFO" "libencryption.so was not created (not required for MKV)"
             fi
             
         else
@@ -133,12 +132,11 @@ build_mkv() {
 verify_libraries() {
     echo "Verifying all libraries..."
     
-    # Check encryption library
+    # Check encryption library (optional - for backward compatibility)
     if file_exists "core/ledger/kvledger/txmgmt/statedb/libencryption.so"; then
-        print_status "PASS" "libencryption.so verified"
+        print_status "PASS" "libencryption.so verified (legacy)"
     else
-        print_status "FAIL" "libencryption.so not found"
-        return 1
+        print_status "INFO" "libencryption.so not found (not required for MKV)"
     fi
     
     # Check MKV library
@@ -151,8 +149,10 @@ verify_libraries() {
     
     # Show library info
     print_status "INFO" "Library information:"
-    echo "libencryption.so:"
-    ls -la core/ledger/kvledger/txmgmt/statedb/libencryption.so
+    if file_exists "core/ledger/kvledger/txmgmt/statedb/libencryption.so"; then
+        echo "libencryption.so:"
+        ls -la core/ledger/kvledger/txmgmt/statedb/libencryption.so
+    fi
     echo "libmkv.so:"
     ls -la core/ledger/kvledger/txmgmt/statedb/mkv/libmkv.so
     

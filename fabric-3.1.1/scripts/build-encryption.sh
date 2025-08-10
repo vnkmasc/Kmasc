@@ -71,13 +71,12 @@ print_status "INFO" "Step 3: Verifying built libraries..."
 
 cd "$ROOT_DIR"
 
-# Check encryption library
+# Check encryption library (optional - for backward compatibility)
 if [ -f "core/ledger/kvledger/txmgmt/statedb/libencryption.so" ]; then
-    print_status "PASS" "libencryption.so verified"
+    print_status "PASS" "libencryption.so verified (legacy)"
     ls -la core/ledger/kvledger/txmgmt/statedb/libencryption.so
 else
-    print_status "FAIL" "libencryption.so not found"
-    exit 1
+    print_status "INFO" "libencryption.so not found (not required for MKV)"
 fi
 
 # Check MKV library
