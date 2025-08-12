@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
 	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
@@ -24,12 +22,12 @@ type TemplateService interface {
 	SignTemplateByID(ctx context.Context, universityID, templateID primitive.ObjectID) (*models.DiplomaTemplate, error)
 	GetTemplateByID(ctx context.Context, id string) (*models.DiplomaTemplate, error)
 	CreateTemplate(ctx context.Context, name, description string, universityID, facultyID primitive.ObjectID, htmlContent string) (*models.DiplomaTemplate, error)
-	UpdateTemplate(ctx context.Context, templateID, universityID primitive.ObjectID, name, description, originalFilename string, fileBytes []byte) (*models.DiplomaTemplate, error)
 	GetTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	SignTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) (int, error)
 	SignAllPendingTemplatesOfUniversity(ctx context.Context, universityID primitive.ObjectID) (int, error)
 	SignAllTemplatesByMinEdu(ctx context.Context, universityID primitive.ObjectID) (int, error)
 	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
+	UpdateTemplate(ctx context.Context, templateID, universityID primitive.ObjectID, name, description, htmlContent string) (*models.DiplomaTemplate, error)
 }
 
 type templateService struct {
@@ -228,8 +226,7 @@ func (s *templateService) SignAllTemplatesByMinEdu(ctx context.Context, universi
 func (s *templateService) UpdateTemplate(
 	ctx context.Context,
 	templateID, universityID primitive.ObjectID,
-	name, description, originalFilename string,
-	fileBytes []byte,
+	name, description, htmlContent string,
 ) (*models.DiplomaTemplate, error) {
 	// 1. Lấy template hiện tại
 	template, err := s.templateRepo.GetByID(ctx, templateID)
@@ -251,7 +248,7 @@ func (s *templateService) UpdateTemplate(
 		return nil, errors.New("template is locked and cannot be updated")
 	}
 
-	// 4. Cập nhật tên và mô tả nếu có
+	// 4. Cập nhật các trường cơ bản
 	if name != "" {
 		template.Name = name
 	}
@@ -259,44 +256,10 @@ func (s *templateService) UpdateTemplate(
 		template.Description = description
 	}
 
-	// 5. Nếu có file mới thì xử lý file
-	if len(fileBytes) > 0 && originalFilename != "" {
-		// 5.1. Lấy thông tin trường và khoa
-		university, err := s.universityRepo.FindByID(ctx, universityID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch university: %v", err)
-		}
-		faculty, err := s.facultyRepo.FindByID(ctx, template.FacultyID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch faculty: %v", err)
-		}
-
-		// 5.2. Xoá file cũ khỏi MinIO (nếu có)
-		oldPath := extractObjectPathFromURL(template.FileLink)
-		if oldPath != "" {
-			if err := s.minioClient.RemoveFile(ctx, oldPath); err != nil {
-				// Ghi log nếu cần, nhưng không fail
-				fmt.Printf("Warning: failed to remove old file from MinIO: %v\n", err)
-			}
-		}
-
-		// 5.3. Tạo tên file mới ngẫu nhiên
-		ext := filepath.Ext(originalFilename)
-		if ext == "" {
-			ext = ".html"
-		}
-		randomName := fmt.Sprintf("%s_template%s", uuid.New().String(), ext)
-
-		objectPath := fmt.Sprintf("diploma_template/%s/%s/%s", university.UniversityCode, faculty.FacultyCode, randomName)
-
-		// 5.4. Upload file mới lên MinIO
-		if err := s.minioClient.UploadFile(ctx, objectPath, fileBytes, "text/html"); err != nil {
-			return nil, fmt.Errorf("failed to upload to MinIO: %v", err)
-		}
-
-		// 5.5. Cập nhật thông tin file trong DB
-		template.FileLink = s.minioClient.GetFileURL(objectPath)
-		template.HashTemplate = utils.ComputeSHA256(fileBytes)
+	// 5. Nếu có HTML content mới thì cập nhật & tính lại hash
+	if htmlContent != "" {
+		template.HTMLContent = htmlContent
+		template.HashTemplate = utils.ComputeSHA256([]byte(htmlContent))
 	}
 
 	// 6. Cập nhật thời gian

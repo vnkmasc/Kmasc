@@ -72,33 +72,25 @@ func (h *TemplateHandler) UpdateTemplate(c *gin.Context) {
 		return
 	}
 
-	name := c.PostForm("name")
-	description := c.PostForm("description")
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		HTMLContent string `json:"html_content"`
+	}
 
-	var fileBytes []byte
-	var originalFilename string
-
-	file, header, err := c.Request.FormFile("file")
-	if err == nil {
-		defer file.Close()
-		fileBytes, err = io.ReadAll(file)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read uploaded file"})
-			return
-		}
-		originalFilename = header.Filename
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
 	}
 
 	updatedTemplate, err := h.templateService.UpdateTemplate(
 		c.Request.Context(),
 		templateID,
 		universityID,
-		name,
-		description,
-		originalFilename,
-		fileBytes,
+		req.Name,
+		req.Description,
+		req.HTMLContent,
 	)
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
