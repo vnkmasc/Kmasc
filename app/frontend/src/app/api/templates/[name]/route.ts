@@ -15,17 +15,27 @@ export async function GET(_req: Request, context: { params: Promise<{ name: stri
   }
 
   const fileName = `${name}.html`
-  const filePath = path.join(process.cwd(), 'src', 'templates', fileName)
 
-  try {
-    const content = await fs.readFile(filePath, 'utf8')
-    return new NextResponse(content, {
-      status: 200,
-      headers: {
-        'content-type': 'text/html; charset=utf-8'
-      }
-    })
-  } catch {
-    return new NextResponse('Template not found', { status: 404 })
+  // Try multiple paths for different deployment scenarios
+  const possiblePaths = [
+    path.join(process.cwd(), 'public', 'templates', fileName),
+    path.join(process.cwd(), 'src', 'templates', fileName),
+    path.join(process.cwd(), 'app', 'frontend', 'public', 'templates', fileName),
+    path.join(process.cwd(), 'app', 'frontend', 'src', 'templates', fileName)
+  ]
+
+  for (const filePath of possiblePaths) {
+    try {
+      const content = await fs.readFile(filePath, 'utf8')
+      return new NextResponse(content, {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8'
+        }
+      })
+    } catch {
+      continue
+    }
   }
+  return new NextResponse('Template not found', { status: 404 })
 }
