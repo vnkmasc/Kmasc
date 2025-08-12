@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 const ALLOWED_TEMPLATES = new Set(['v1-degree', 'v2-degree', 'v3-degree'])
 
-export async function GET(_req: Request, context: { params: { name: string } }) {
+export async function GET(_req: Request, context: { params: Promise<{ name: string }> }) {
   const { name } = await context.params
 
   if (!ALLOWED_TEMPLATES.has(name)) {

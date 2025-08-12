@@ -24,7 +24,7 @@ const CodeView: React.FC<Props> = ({ code }) => {
       setHtml(html)
     }
     fetchHtml()
-  }, [code])
+  }, [code, theme])
 
   return (
     <div
