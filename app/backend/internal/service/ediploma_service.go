@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	urlpkg "net/url"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/minio/minio-go/v7"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
@@ -28,6 +30,7 @@ type EDiplomaService interface {
 	SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error)
 	UploadLocalEDiplomas(ctx context.Context) []map[string]interface{}
 	GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, templateIDStr string) (string, error)
+	GetDiplomaPDF(ctx context.Context, id primitive.ObjectID) (io.ReadCloser, int64, string, error)
 }
 
 type eDiplomaService struct {
@@ -162,64 +165,41 @@ func parseMinioURL(url string) (bucket, object string, err error) {
 	return parts[0], parts[1], nil
 }
 
-// --- Main function ---
 func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr, templateIDStr string) (*models.EDiploma, error) {
-	log.Printf("[DEBUG] Parsing certificateID: %s", certificateIDStr)
 	certificateID, err := primitive.ObjectIDFromHex(certificateIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate ID")
 	}
-
-	log.Printf("[DEBUG] Parsing templateID: %s", templateIDStr)
 	templateID, err := primitive.ObjectIDFromHex(templateIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid template ID")
 	}
 
-	log.Printf("[DEBUG] Getting certificate by ID: %s", certificateID.Hex())
 	cert, err := s.certificateRepo.GetCertificateByID(ctx, certificateID)
 	if err != nil {
 		return nil, fmt.Errorf("certificate not found")
 	}
 
-	log.Printf("[DEBUG] Getting template by ID: %s", templateID.Hex())
 	template, err := s.templateRepo.GetByID(ctx, templateID)
 	if err != nil {
 		return nil, fmt.Errorf("template not found")
 	}
-	log.Printf("[DEBUG] Template file link: %s", template.FileLink)
 
-	bucket, objectPath, err := parseMinioURL(template.FileLink)
-	if err != nil {
-		log.Printf("[ERROR] Failed to parse MinIO URL: %v", err)
-		return nil, fmt.Errorf("invalid template file URL: %w", err)
+	calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
+	if calculatedHash != template.HashTemplate {
+		return nil, fmt.Errorf("template content hash mismatch - data may be corrupted")
 	}
-	log.Printf("[DEBUG] Parsed MinIO URL - bucket: %s, object: %s", bucket, objectPath)
-
-	htmlContent, err := s.minioClient.DownloadFile(ctx, bucket, objectPath)
-	if err != nil {
-		log.Printf("[ERROR] Failed to download HTML from MinIO: objectPath=%s, err=%v", objectPath, err)
-		return nil, fmt.Errorf("failed to download template HTML from MinIO: %w", err)
-	}
-	log.Printf("[DEBUG] Downloaded HTML content length: %d", len(htmlContent))
-	log.Printf("[DEBUG] Getting user by ID: %s", cert.UserID.Hex())
 	user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
 	if err != nil {
-		log.Printf("[ERROR] Failed to get user: %v", err)
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	log.Printf("[DEBUG] Getting university by ID: %s", cert.UniversityID.Hex())
 	university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
 	if err != nil {
-		log.Printf("[ERROR] Failed to get university: %v", err)
 		return nil, fmt.Errorf("failed to get university: %w", err)
 	}
-	dob, err := time.Parse("2006-01-02", user.DateOfBirth)
-	if err != nil {
-		log.Printf("[ERROR] Failed to parse DateOfBirth: %v", err)
-		// fallback hoặc trả về lỗi tùy logic
-	}
+
+	dob, _ := time.Parse("2006-01-02", user.DateOfBirth)
 
 	data := map[string]interface{}{
 		"SoHieu":         cert.SerialNumber,
@@ -234,34 +214,26 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		"NgayCap":        cert.IssueDate.Format("02/01/2006"),
 	}
 
-	log.Printf("[DEBUG] Template data prepared: %+v", data)
-
-	renderedHTML, err := s.templateEngine.Render(string(htmlContent), data)
+	renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
 	if err != nil {
-		log.Printf("[ERROR] Failed to render HTML: %v", err)
 		return nil, fmt.Errorf("failed to render HTML: %w", err)
 	}
 
 	pdfBytes, err := s.pdfGenerator.ConvertHTMLToPDF(renderedHTML)
 	if err != nil {
-		log.Printf("[ERROR] Failed to convert HTML to PDF: %v", err)
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
-	log.Printf("[DEBUG] Generated PDF size: %d bytes", len(pdfBytes))
 
 	hash := utils.ComputeSHA256(pdfBytes)
-	pdfPath := fmt.Sprintf("ediplomas/%s.pdf", primitive.NewObjectID().Hex())
 
-	log.Printf("[DEBUG] Uploading PDF to MinIO at path: %s", pdfPath)
+	pdfPath := fmt.Sprintf("ediplomas/%s.pdf", primitive.NewObjectID().Hex())
 	if err := s.minioClient.UploadFile(ctx, pdfPath, pdfBytes, "application/pdf"); err != nil {
-		log.Printf("[ERROR] Failed to upload PDF to MinIO: %v", err)
-		return nil, fmt.Errorf("failed to upload PDF to MinIO: %w", err)
+		return nil, fmt.Errorf("failed to upload PDF: %w", err)
 	}
-	log.Printf("[DEBUG] Locking template after diploma generation")
-	err = s.templateRepo.UpdateIsLocked(ctx, templateID, true)
-	if err != nil {
-		log.Printf("[ERROR] Failed to lock template: %v", err)
-	}
+
+	_ = s.templateRepo.UpdateIsLocked(ctx, templateID, true)
+
+	// Lưu EDiploma
 	now := time.Now()
 	ediploma := &models.EDiploma{
 		ID:                 primitive.NewObjectID(),
@@ -293,13 +265,10 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		UpdatedAt:          now,
 	}
 
-	log.Printf("[DEBUG] Saving EDiploma record to DB")
 	if err := s.repo.Save(ctx, ediploma); err != nil {
-		log.Printf("[ERROR] Failed to save EDiploma: %v", err)
 		return nil, fmt.Errorf("failed to save EDiploma: %w", err)
 	}
 
-	log.Printf("[DEBUG] EDiploma generated successfully: ID=%s", ediploma.ID.Hex())
 	return ediploma, nil
 }
 
@@ -333,6 +302,7 @@ func (s *eDiplomaService) SearchEDiplomaDTOs(ctx context.Context, filter models.
 func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error) {
 	var result []*models.EDiploma
 
+	// Parse ID
 	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid faculty ID")
@@ -342,7 +312,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 		return nil, fmt.Errorf("invalid template ID")
 	}
 
-	// Load template
+	// 1. Load template từ MongoDB
 	template, err := s.templateRepo.GetByID(ctx, templateID)
 	if err != nil {
 		return nil, fmt.Errorf("template not found")
@@ -351,20 +321,16 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 		return nil, errors.New("template does not belong to the given faculty")
 	}
 
-	// Load all certificates for this faculty
+	// 2. Xác minh hash của HTMLContent
+	calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
+	if calculatedHash != template.HashTemplate {
+		return nil, fmt.Errorf("template content hash mismatch - data may be corrupted")
+	}
+
+	// 3. Load tất cả certificates của faculty
 	certificates, err := s.certificateRepo.FindByFacultyID(ctx, facultyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load certificates: %w", err)
-	}
-
-	// Download template HTML once
-	bucket, objectPath, err := parseMinioURL(template.FileLink)
-	if err != nil {
-		return nil, fmt.Errorf("invalid template file URL: %w", err)
-	}
-	htmlContent, err := s.minioClient.DownloadFile(ctx, bucket, objectPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to download template HTML: %w", err)
 	}
 
 	for _, cert := range certificates {
@@ -376,17 +342,20 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 		}
 
 		// Load user
-		user, err := s.userRepo.GetUserByID(ctx, cert.UserID) // Bạn cần đảm bảo repo có hàm này
+		user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
 		if err != nil {
 			log.Printf("Load user failed for cert %s: %v", cert.ID.Hex(), err)
 			continue
 		}
 
+		// Parse ngày sinh
 		dobTime, err := time.Parse("2006-01-02", user.DateOfBirth)
 		if err != nil {
 			log.Printf("Invalid date format for user %s: %v", user.ID.Hex(), err)
-			continue // bỏ qua nếu date format sai
+			continue
 		}
+
+		// Map dữ liệu render
 		data := map[string]interface{}{
 			"SoHieu":         cert.SerialNumber,
 			"SoVaoSo":        cert.RegNo,
@@ -400,21 +369,25 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			"NgayCap":        cert.IssueDate.Format("02/01/2006"),
 		}
 
-		renderedHTML, err := s.templateEngine.Render(string(htmlContent), data)
+		// Render HTML
+		renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
 		if err != nil {
 			log.Printf("Render failed for cert %s: %v", cert.ID.Hex(), err)
 			continue
 		}
 
+		// Convert sang PDF
 		pdfBytes, err := s.pdfGenerator.ConvertHTMLToPDF(renderedHTML)
 		if err != nil {
 			log.Printf("PDF generation failed for cert %s: %v", cert.ID.Hex(), err)
 			continue
 		}
 
+		// Hash PDF
 		hash := utils.ComputeSHA256(pdfBytes)
-		pdfPath := fmt.Sprintf("ediplomas/%s.pdf", primitive.NewObjectID().Hex())
 
+		// 📌 Nếu vẫn muốn lưu PDF ở MinIO
+		pdfPath := fmt.Sprintf("ediplomas/%s/%s.pdf", university.UniversityCode, cert.StudentCode)
 		if err := s.minioClient.UploadFile(ctx, pdfPath, pdfBytes, "application/pdf"); err != nil {
 			log.Printf("Upload failed for cert %s: %v", cert.ID.Hex(), err)
 			continue
@@ -445,6 +418,8 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			SignedAt:           time.Time{},
 			OnBlockchain:       false,
 			BlockchainTxID:     "",
+			SignatureOfUni:     template.SignatureOfUni,
+			SignatureOfMinEdu:  template.SignatureOfMinEdu,
 			CreatedAt:          now,
 			UpdatedAt:          now,
 		}
@@ -458,6 +433,42 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 	}
 
 	return result, nil
+}
+
+func (s *eDiplomaService) GetDiplomaPDF(ctx context.Context, id primitive.ObjectID) (io.ReadCloser, int64, string, error) {
+	diploma, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("diploma not found: %w", err)
+	}
+	if diploma.FileLink == "" {
+		return nil, 0, "", fmt.Errorf("no file link for diploma")
+	}
+
+	log.Printf("[DEBUG] Getting file from MinIO - Bucket=%s, Object=%s", s.minioClient.Bucket, diploma.FileLink)
+
+	statInfo, err := s.minioClient.Client.StatObject(
+		ctx,
+		s.minioClient.Bucket,
+		diploma.FileLink,
+		minio.StatObjectOptions{},
+	)
+	if err != nil {
+		log.Printf("[ERROR] StatObject failed: %v", err)
+		return nil, 0, "", fmt.Errorf("failed to stat file on MinIO: %w", err)
+	}
+
+	obj, err := s.minioClient.Client.GetObject(
+		ctx,
+		s.minioClient.Bucket,
+		diploma.FileLink,
+		minio.GetObjectOptions{},
+	)
+	if err != nil {
+		log.Printf("[ERROR] GetObject failed: %v", err)
+		return nil, 0, "", fmt.Errorf("failed to get file from MinIO: %w", err)
+	}
+
+	return obj, statInfo.Size, statInfo.ContentType, nil
 }
 
 func (s *eDiplomaService) UploadLocalEDiplomas(ctx context.Context) []map[string]interface{} {
@@ -549,6 +560,10 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 		return "", errors.New("template does not belong to the given faculty")
 	}
 
+	if template.HTMLContent == "" {
+		return "", errors.New("template has no HTML content")
+	}
+
 	certificates, err := s.certificateRepo.FindByFacultyID(ctx, facultyID)
 	if err != nil {
 		return "", fmt.Errorf("failed to load certificates: %w", err)
@@ -558,16 +573,6 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 	tmpDir, err := os.MkdirTemp("", "ediplomas_*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
-	}
-	// defer os.RemoveAll(tmpDir) // Có thể xóa sau nếu muốn
-
-	bucket, objectPath, err := parseMinioURL(template.FileLink)
-	if err != nil {
-		return "", fmt.Errorf("invalid template file URL: %w", err)
-	}
-	htmlContent, err := s.minioClient.DownloadFile(ctx, bucket, objectPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to download template HTML: %w", err)
 	}
 
 	var generatedFilePaths []string
@@ -599,7 +604,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 			"NgayCap":        cert.IssueDate.Format("02/01/2006"),
 		}
 
-		renderedHTML, err := s.templateEngine.Render(string(htmlContent), data)
+		renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
 		if err != nil {
 			continue
 		}
@@ -609,8 +614,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 			continue
 		}
 
-		// Lưu PDF vào tmpDir
-		fileName := fmt.Sprintf("%s.pdf", primitive.NewObjectID().Hex())
+		fileName := fmt.Sprintf("%s.pdf", cert.StudentCode) // dùng Mã sinh viên làm tên file
 		filePath := filepath.Join(tmpDir, fileName)
 		if err := os.WriteFile(filePath, pdfBytes, 0644); err != nil {
 			continue

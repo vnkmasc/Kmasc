@@ -27,6 +27,7 @@ type TemplateRepository interface {
 	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
 	UpdateIsLocked(ctx context.Context, id primitive.ObjectID, isLocked bool) error
 	Update(ctx context.Context, template *models.DiplomaTemplate) error
+	DeleteByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error)
 }
 
 type templateRepository struct {
@@ -39,15 +40,20 @@ func NewTemplateRepository(db *mongo.Database) TemplateRepository {
 	}
 }
 
+func (r *templateRepository) DeleteByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error) {
+	filter := bson.M{"_id": id}
+	return r.collection.DeleteOne(ctx, filter)
+}
+
 func (r *templateRepository) Update(ctx context.Context, template *models.DiplomaTemplate) error {
 	filter := bson.M{"_id": template.ID}
 	update := bson.M{
 		"$set": bson.M{
-			"name":        template.Name,
-			"description": template.Description,
-			"file_link":   template.FileLink,
-			"hash":        template.Hash,
-			"updated_at":  template.UpdatedAt,
+			"name":          template.Name,
+			"description":   template.Description,
+			"file_link":     template.FileLink,
+			"hash_template": template.HashTemplate,
+			"updated_at":    template.UpdatedAt,
 		},
 	}
 	_, err := r.collection.UpdateOne(ctx, filter, update)

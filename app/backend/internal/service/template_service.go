@@ -23,8 +23,8 @@ var (
 type TemplateService interface {
 	SignTemplateByID(ctx context.Context, universityID, templateID primitive.ObjectID) (*models.DiplomaTemplate, error)
 	GetTemplateByID(ctx context.Context, id string) (*models.DiplomaTemplate, error)
+	CreateTemplate(ctx context.Context, name, description string, universityID, facultyID primitive.ObjectID, htmlContent string) (*models.DiplomaTemplate, error)
 	UpdateTemplate(ctx context.Context, templateID, universityID primitive.ObjectID, name, description, originalFilename string, fileBytes []byte) (*models.DiplomaTemplate, error)
-	CreateTemplate(ctx context.Context, name, description string, universityID, facultyID primitive.ObjectID, originalFilename string, fileBytes []byte) (*models.DiplomaTemplate, error)
 	GetTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	SignTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) (int, error)
 	SignAllPendingTemplatesOfUniversity(ctx context.Context, universityID primitive.ObjectID) (int, error)
@@ -55,6 +55,7 @@ func NewTemplateService(
 		minioClient:    minioClient,
 	}
 }
+
 func (s *templateService) GetTemplateByID(ctx context.Context, id string) (*models.DiplomaTemplate, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -71,11 +72,10 @@ func (s *templateService) CreateTemplate(
 	ctx context.Context,
 	name, description string,
 	universityID, facultyID primitive.ObjectID,
-	originalFilename string,
-	fileBytes []byte,
+	htmlContent string,
 ) (*models.DiplomaTemplate, error) {
 
-	// 1. Check ownership
+	// 1. Kiểm tra khoa có thuộc trường không
 	belongs, err := s.facultyService.CheckFacultyBelongsToUniversity(ctx, facultyID, universityID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify faculty ownership: %v", err)
@@ -84,42 +84,16 @@ func (s *templateService) CreateTemplate(
 		return nil, errors.New("faculty does not belong to your university")
 	}
 
-	// 2. Get university & faculty info
-	university, err := s.universityRepo.FindByID(ctx, universityID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch university: %v", err)
-	}
+	// 2. Tính hash của nội dung HTML
+	hash := utils.ComputeSHA256([]byte(htmlContent))
 
-	faculty, err := s.facultyRepo.FindByID(ctx, facultyID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch faculty: %v", err)
-	}
-
-	// 3. Generate unique filename
-	ext := filepath.Ext(originalFilename)
-	if ext == "" {
-		ext = ".html" // hoặc .pdf tùy định dạng mặc định
-	}
-	randomName := fmt.Sprintf("%s_template%s", uuid.New().String(), ext)
-
-	objectPath := fmt.Sprintf("diploma_template/%s/%s/%s", university.UniversityCode, faculty.FacultyCode, randomName)
-
-	// 4. Upload
-	err = s.minioClient.UploadFile(ctx, objectPath, fileBytes, "application/pdf") // hoặc "text/html"
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload to MinIO: %v", err)
-	}
-
-	fileURL := s.minioClient.GetFileURL(objectPath)
-	hash := utils.ComputeSHA256(fileBytes)
-
-	// 5. Save to DB
+	// 3. Lưu vào MongoDB
 	template := &models.DiplomaTemplate{
 		ID:           primitive.NewObjectID(),
 		Name:         name,
 		Description:  description,
-		FileLink:     fileURL,
-		Hash:         hash,
+		HTMLContent:  htmlContent,
+		HashTemplate: hash,
 		Status:       "PENDING",
 		IsLocked:     false,
 		CreatedAt:    time.Now(),
@@ -322,7 +296,7 @@ func (s *templateService) UpdateTemplate(
 
 		// 5.5. Cập nhật thông tin file trong DB
 		template.FileLink = s.minioClient.GetFileURL(objectPath)
-		template.Hash = utils.ComputeSHA256(fileBytes)
+		template.HashTemplate = utils.ComputeSHA256(fileBytes)
 	}
 
 	// 6. Cập nhật thời gian

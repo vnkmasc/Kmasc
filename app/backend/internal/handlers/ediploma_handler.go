@@ -2,14 +2,18 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -67,7 +71,11 @@ func (h *EDiplomaHandler) GenerateEDiploma(c *gin.Context) {
 		return
 	}
 
-	ediploma, err := h.ediplomaService.GenerateEDiploma(c.Request.Context(), req.CertificateID, req.TemplateID)
+	ediploma, err := h.ediplomaService.GenerateEDiploma(
+		c.Request.Context(),
+		req.CertificateID,
+		req.TemplateID,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -104,6 +112,33 @@ func (h *EDiplomaHandler) UploadLocalEDiplomas(c *gin.Context) {
 		"total_files": len(results),
 		"results":     results,
 	})
+}
+
+func (h *EDiplomaHandler) ViewEDiploma(c *gin.Context) {
+	ctx := c.Request.Context()
+	diplomaID := c.Param("id")
+
+	objID, err := primitive.ObjectIDFromHex(diplomaID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid diploma ID"})
+		return
+	}
+
+	obj, size, contentType, err := h.ediplomaService.GetDiplomaPDF(ctx, objID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	defer obj.Close()
+
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, filepath.Base(diplomaID+".pdf")))
+	c.Header("Content-Length", fmt.Sprintf("%d", size))
+
+	if _, err := io.Copy(c.Writer, obj); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error streaming file"})
+		return
+	}
 }
 
 func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {

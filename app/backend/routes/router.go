@@ -152,6 +152,7 @@ func SetupRouter(
 	ediplomaGroup.GET("/faculty/:faculty_id", ediplomaHandler.GetEDiplomasByFaculty)
 	ediplomaGroup.GET("/search", ediplomaHandler.SearchEDiplomas)
 	ediplomaGroup.GET("/:id", ediplomaHandler.GetEDiplomaByID)
+	ediplomaGroup.GET("/file/:id", ediplomaHandler.ViewEDiploma)
 	ediplomaGroup.POST("/generate-bulk-zip", ediplomaHandler.GenerateBulkEDiplomasZip)
 	return r
 }

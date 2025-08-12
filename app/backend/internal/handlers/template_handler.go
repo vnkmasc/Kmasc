@@ -214,6 +214,12 @@ func (h *TemplateHandler) CreateTemplate(c *gin.Context) {
 	name := c.PostForm("name")
 	description := c.PostForm("description")
 	facultyIDStr := c.PostForm("faculty_id")
+	htmlContent := c.PostForm("html_content")
+
+	if htmlContent == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "html_content is required"})
+		return
+	}
 
 	claimsRaw, exists := c.Get("claims")
 	if !exists {
@@ -227,32 +233,29 @@ func (h *TemplateHandler) CreateTemplate(c *gin.Context) {
 		return
 	}
 
+	// Chuyển UniversityID từ token sang ObjectID
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id in token"})
 		return
 	}
 
+	// Chuyển FacultyID từ form sang ObjectID
 	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
 		return
 	}
 
-	file, header, err := c.Request.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
-		return
-	}
-	defer file.Close()
-
-	fileBytes, err := io.ReadAll(file)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
-		return
-	}
-
-	template, err := h.templateService.CreateTemplate(c.Request.Context(), name, description, universityID, facultyID, header.Filename, fileBytes)
+	// Gọi service để tạo template
+	template, err := h.templateService.CreateTemplate(
+		c.Request.Context(),
+		name,
+		description,
+		universityID,
+		facultyID,
+		htmlContent,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -399,20 +402,17 @@ func (h *TemplateHandler) GetTemplateView(c *gin.Context) {
 		return
 	}
 
-	bucket, objectPath, err := parseMinioURL(template.FileLink)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid file link format"})
+	calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
+	if calculatedHash != template.HashTemplate {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "template content hash mismatch - data may be corrupted",
+		})
 		return
 	}
 
-	data, err := h.minioClient.DownloadFile(ctx, bucket, objectPath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file from MinIO"})
-		return
-	}
-
-	c.Data(http.StatusOK, "text/html; charset=utf-8", data)
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(template.HTMLContent))
 }
+
 func parseMinioURL(urlStr string) (bucket, objectPath string, err error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
