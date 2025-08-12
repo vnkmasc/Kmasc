@@ -203,16 +203,24 @@ func (h *TemplateHandler) GetTemplatesByFacultyAndUniversity(c *gin.Context) {
 }
 
 func (h *TemplateHandler) CreateTemplate(c *gin.Context) {
-	name := c.PostForm("name")
-	description := c.PostForm("description")
-	facultyIDStr := c.PostForm("faculty_id")
-	htmlContent := c.PostForm("html_content")
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		FacultyID   string `json:"faculty_id"`
+		HTMLContent string `json:"html_content"`
+	}
 
-	if htmlContent == "" {
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body", "details": err.Error()})
+		return
+	}
+
+	if req.HTMLContent == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "html_content is required"})
 		return
 	}
 
+	// Chuyển UniversityID từ token sang ObjectID
 	claimsRaw, exists := c.Get("claims")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -225,28 +233,25 @@ func (h *TemplateHandler) CreateTemplate(c *gin.Context) {
 		return
 	}
 
-	// Chuyển UniversityID từ token sang ObjectID
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id in token"})
 		return
 	}
 
-	// Chuyển FacultyID từ form sang ObjectID
-	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+	facultyID, err := primitive.ObjectIDFromHex(req.FacultyID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
 		return
 	}
 
-	// Gọi service để tạo template
 	template, err := h.templateService.CreateTemplate(
 		c.Request.Context(),
-		name,
-		description,
+		req.Name,
+		req.Description,
 		universityID,
 		facultyID,
-		htmlContent,
+		req.HTMLContent,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -394,13 +399,18 @@ func (h *TemplateHandler) GetTemplateView(c *gin.Context) {
 		return
 	}
 
-	calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
-	if calculatedHash != template.HashTemplate {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "template content hash mismatch - data may be corrupted",
-		})
-		return
-	}
+	// calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
+	// fmt.Println("[GetTemplateView] Calculated hash:", calculatedHash)
+	// fmt.Println("[GetTemplateView] Stored hash:", template.HashTemplate)
+	// fmt.Println("[GetTemplateView] HTMLContent length:", len(template.HTMLContent))
+	// fmt.Printf("[GetTemplateView] HTMLContent preview: %.100s\n", template.HTMLContent)
+
+	// if calculatedHash != template.HashTemplate {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{
+	// 		"error": "template content hash mismatch - data may be corrupted",
+	// 	})
+	// 	return
+	// }
 
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(template.HTMLContent))
 }

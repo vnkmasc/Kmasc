@@ -258,8 +258,13 @@ func (s *templateService) UpdateTemplate(
 
 	// 5. Nếu có HTML content mới thì cập nhật & tính lại hash
 	if htmlContent != "" {
+		newHash := utils.ComputeSHA256([]byte(htmlContent))
+		fmt.Println("[UpdateTemplate] New HTMLContent hash:", newHash)
 		template.HTMLContent = htmlContent
 		template.HashTemplate = utils.ComputeSHA256([]byte(htmlContent))
+		fmt.Println("[UpdateTemplate] HTMLContent length:", len(htmlContent))
+		fmt.Printf("[UpdateTemplate] HTMLContent preview: %.100s\n", htmlContent)
+
 	}
 
 	// 6. Cập nhật thời gian
