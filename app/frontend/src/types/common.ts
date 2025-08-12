@@ -40,6 +40,9 @@ export interface CustomFormItem {
     file?: {
       accept?: string
     }
+    textarea?: {
+      rows?: number
+    }
   }
 }
 
@@ -68,6 +71,6 @@ export type CertificateType = {
 export type DegreeTemplateType = {
   name: string
   description?: string
-  facultyId: string
-  file: File
+  faculty_id: string
+  html_content: string
 }

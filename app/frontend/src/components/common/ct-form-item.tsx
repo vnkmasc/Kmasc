@@ -184,7 +184,12 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
             <FormItem>
               <FormLabel>{props.label}</FormLabel>
               <FormControl>
-                <Textarea {...field} placeholder={props.placeholder} disabled={props.disabled} rows={3} />
+                <Textarea
+                  {...field}
+                  placeholder={props.placeholder}
+                  disabled={props.disabled}
+                  rows={props.setting?.textarea?.rows || 3}
+                />
               </FormControl>
               {props.description && <FormDescription>{props.description}</FormDescription>}
               <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />

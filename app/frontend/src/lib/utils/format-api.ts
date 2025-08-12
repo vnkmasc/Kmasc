@@ -190,13 +190,13 @@ export const formatDegreeTemplateFormData = (data: DegreeTemplateType, isCreate:
 
   formData.append('name', data.name)
   if (data.description) formData.append('description', data.description)
-  if (isCreate) formData.append('faculty_id', data.facultyId)
-  formData.append('file', data.file)
+  if (isCreate) formData.append('faculty_id', data.faculty_id)
+  formData.append('html_content', data.html_content)
 
   return formData
 }
 
-export const formatDegreeTemplateHTML = (html: string) => {
+export const formatExampleTemplateHTML = (html: string) => {
   const newHtml = html
     .replace('{{ .TenTruong }}', 'GIÁM ĐỐC HỌC VIỆN KỸ THUẬT MẬT MÃ')
     .replace('{{ .LoaiVanBang }}', 'BẰNG KỸ SƯ')
@@ -211,6 +211,7 @@ export const formatDegreeTemplateHTML = (html: string) => {
     .replace('{{ .HinhThucDaoTao }}', 'Chính quy')
     .replace('{{ .SoVaoSo }}', '1234567890')
     .replace('{{ .XepLoai }}', 'Giỏi')
+    .replace('{{ .Khoa }}', 'AT18')
 
   return newHtml
 }

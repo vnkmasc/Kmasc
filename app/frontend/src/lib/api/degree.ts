@@ -1,9 +1,8 @@
 import { queryString } from '../utils/common'
-import { formatDegreeTemplateFormData } from '../utils/format-api'
 import apiService from './root'
 
 export const createDegreeTemplate = async (data: any) => {
-  const res = await apiService('POST', 'templates', formatDegreeTemplateFormData(data))
+  const res = await apiService('POST', 'templates', data)
   return res
 }
 
@@ -13,7 +12,7 @@ export const getDegreeTemplateById = async (id: string) => {
 }
 
 export const updateDegreeTemplate = async (id: string, data: any) => {
-  const res = await apiService('PUT', `templates/${id}`, formatDegreeTemplateFormData(data, false))
+  const res = await apiService('PUT', `templates/${id}`, data)
   return res
 }
 export const searchDegreeTemplateByFaculty = async (facultyId: string) => {
@@ -22,8 +21,13 @@ export const searchDegreeTemplateByFaculty = async (facultyId: string) => {
 }
 
 export const getDegreeTemplateView = async (id: string) => {
-  const res = await apiService('GET', `templates/view/${id}`, undefined, true, { Accept: 'text/html' })
+  const res = await apiService('GET', `templates/${id}`)
 
+  return res.data?.html_content
+}
+
+export const deleteDegreeTemplate = async (id: string) => {
+  const res = await apiService('DELETE', `templates/${id}`)
   return res
 }
 
@@ -52,5 +56,36 @@ export const issueDigitalDegreeFaculty = async (facultyId: string, templateId: s
     faculty_id: facultyId,
     template_id: templateId
   })
+  return res
+}
+
+export const downloadDegreeZip = async (facultyId: string, templateId: string) => {
+  const blob = await apiService(
+    'POST',
+    `ediplomas/generate-bulk-zip`,
+    {
+      faculty_id: facultyId,
+      template_id: templateId
+    },
+    true,
+    { Accept: 'application/zip' },
+    true // isBlob = true to get blob response
+  )
+
+  // Tự động tải file về
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `degrees-${facultyId}-${templateId}.zip`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  window.URL.revokeObjectURL(url)
+
+  return blob
+}
+
+export const uploadDegreeToMinio = async () => {
+  const res = await apiService('POST', `ediplomas/upload-local`)
   return res
 }
