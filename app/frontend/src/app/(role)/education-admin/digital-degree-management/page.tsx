@@ -5,8 +5,9 @@ import DigitalDegreeView from '@/components/role/education-admin/digital-degree-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import ExampleTemplate from '@/components/role/education-admin/digital-degree-management/example-template/example-template'
+import { Suspense } from 'react'
 
-const DigitalDegreeManagementPage = () => {
+const DigitalDegreeManagementContent = () => {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -31,6 +32,14 @@ const DigitalDegreeManagementPage = () => {
         <ExampleTemplate />
       </TabsContent>
     </Tabs>
+  )
+}
+
+const DigitalDegreeManagementPage = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DigitalDegreeManagementContent />
+    </Suspense>
   )
 }
 
