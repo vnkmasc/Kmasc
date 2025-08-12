@@ -12,17 +12,17 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog'
 import { useEffect, useState } from 'react'
-import { KeyRound } from 'lucide-react'
 import { UseData } from '@/components/providers/data-provider'
 import { formatDegreeTemplateOptions, formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import useSWR from 'swr'
-import { issueDigitalDegreeFaculty, searchDegreeTemplateByFaculty } from '@/lib/api/degree'
+import { downloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/degree'
 import { showNotification } from '@/lib/utils/common'
 import CommonSelect from '../../common-select'
 import { Label } from '@/components/ui/label'
 import useSWRMutation from 'swr/mutation'
+import { Download } from 'lucide-react'
 
-const SignDegreeDialog: React.FC = () => {
+const DownloadDialog: React.FC = () => {
   const [openSignDialog, setOpenSignDialog] = useState(false)
   const [selectFacultyId, setSelectFacultyId] = useState<string>('')
   const [selectDegreeTemplateId, setSelectDegreeTemplateId] = useState<string>('')
@@ -32,7 +32,7 @@ const SignDegreeDialog: React.FC = () => {
   }, [selectFacultyId])
 
   const queryDegreeTemplatesByFaculty = useSWR(
-    selectFacultyId === '' ? undefined : 'degree-templates-by-faculty' + selectFacultyId,
+    selectFacultyId === '' ? undefined : 'degree-templates-by-faculty-1' + selectFacultyId,
     () => searchDegreeTemplateByFaculty(selectFacultyId),
     {
       onError: (error) => {
@@ -42,11 +42,11 @@ const SignDegreeDialog: React.FC = () => {
   )
 
   const mutateIssueDigitalDegree = useSWRMutation(
-    'issue-digital-degree-faculty',
-    () => issueDigitalDegreeFaculty(selectFacultyId, selectDegreeTemplateId),
+    'download-digital-degree-faculty',
+    () => downloadDegreeZip(selectFacultyId, selectDegreeTemplateId),
     {
       onSuccess: () => {
-        showNotification('success', 'Cấp bằng số cho chuyên ngành thành công')
+        showNotification('success', 'Tải bằng số của chuyên ngành thành công')
         setOpenSignDialog(false)
       }
     }
@@ -64,15 +64,17 @@ const SignDegreeDialog: React.FC = () => {
       }}
     >
       <DialogTrigger asChild>
-        <Button>
-          <KeyRound />
-          <span className='hidden md:block'>Cấp bằng</span>
+        <Button variant={'outline'}>
+          <Download />
+          <span className='hidden md:block'>Tải xuống</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Cấp bằng số</DialogTitle>
-          <DialogDescription>Cấp bằng số cho các văn bằng số của chuyên ngành</DialogDescription>
+          <DialogTitle>Tải bằng số</DialogTitle>
+          <DialogDescription>
+            Tải bằng số của chuyên ngành theo dạng <span className='font-bold'>.zip</span>
+          </DialogDescription>
         </DialogHeader>
         <Label>Chọn chuyên ngành</Label>
         <CommonSelect
@@ -99,7 +101,7 @@ const SignDegreeDialog: React.FC = () => {
             isLoading={mutateIssueDigitalDegree.isMutating}
             onClick={() => mutateIssueDigitalDegree.trigger()}
           >
-            Cấp bằng
+            Tải xuống
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -107,4 +109,4 @@ const SignDegreeDialog: React.FC = () => {
   )
 }
 
-export default SignDegreeDialog
+export default DownloadDialog

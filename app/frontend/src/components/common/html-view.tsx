@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react'
 
 interface Props {
-  html?: string | null
+  html?: string
   loading?: boolean
   // sandbox để an toàn khi render HTML từ server
   sandbox?: boolean

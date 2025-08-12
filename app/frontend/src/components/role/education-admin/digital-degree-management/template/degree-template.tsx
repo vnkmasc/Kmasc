@@ -8,20 +8,10 @@ import Filter from '../../filter'
 import { formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { UseData } from '@/components/providers/data-provider'
 import useSWR from 'swr'
-import {
-  createDegreeTemplate,
-  getDegreeTemplateById,
-  searchDegreeTemplateByFaculty,
-  signDegreeTemplateById,
-  signDegreeTemplateFaculty,
-  signDegreeTemplateUni,
-  updateDegreeTemplate
-} from '@/lib/api/degree'
+import { searchDegreeTemplateByFaculty, signDegreeTemplateFaculty, signDegreeTemplateUni } from '@/lib/api/degree'
 import { showMessage, showNotification } from '@/lib/utils/common'
 import TableList from '../../table-list'
 import useSWRMutation from 'swr/mutation'
-import DetailDialog from '../../detail-dialog'
-import { validateNoEmpty } from '@/lib/utils/validators'
 import { OptionType } from '@/types/common'
 import TableActionButton from './table-action-button'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +28,7 @@ import {
 } from '@/components/ui/dialog'
 import CommonSelect from '../../common-select'
 import { Label } from '@/components/ui/label'
+import DegreeTemplateSheet from './degree-template-sheet'
 
 const DegreeTemplate: React.FC = () => {
   const [idDetail, setIdDetail] = useState<string | null | undefined>(undefined)
@@ -57,42 +48,6 @@ const DegreeTemplate: React.FC = () => {
     {
       onError: (error) => {
         showNotification('error', error.message || 'Lỗi khi lấy danh sách mẫu bằng số')
-      }
-    }
-  )
-
-  const queryDegreeTemplateById = useSWR(idDetail, () => getDegreeTemplateById(idDetail as string), {
-    onError: (error) => {
-      showNotification('error', error.message || 'Lỗi khi lấy thông tin mẫu bằng số')
-    }
-  })
-
-  const mutateCreateDegreeTemplate = useSWRMutation(
-    'create-degree-template',
-    (_key, { arg }: { arg: any }) => createDegreeTemplate(arg),
-    {
-      onSuccess: () => {
-        showNotification('success', 'Tạo mẫu bằng số thành công')
-        queryDegreeTemplatesByFaculty.mutate()
-        setIdDetail(undefined)
-      },
-      onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi tạo mẫu bằng số')
-      }
-    }
-  )
-
-  const mutateUpdateDegreeTemplate = useSWRMutation(
-    'update-degree-template',
-    (_key, { arg }: { arg: any }) => updateDegreeTemplate(idDetail as string, arg),
-    {
-      onSuccess: () => {
-        showNotification('success', 'Cập nhật mẫu bằng số thành công')
-        queryDegreeTemplatesByFaculty.mutate()
-        setIdDetail(undefined)
-      },
-      onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi cập nhật mẫu bằng số')
       }
     }
   )
@@ -131,30 +86,9 @@ const DegreeTemplate: React.FC = () => {
     }
   })
 
-  const mutateSignDegreeTemplateById = useSWRMutation(
-    'sign-degree-template-by-id',
-    (_key, { arg }: { arg: any }) => signDegreeTemplateById(arg),
-    {
-      onSuccess: () => {
-        showNotification('success', 'Ký mẫu bằng số thành công')
-        queryDegreeTemplatesByFaculty.mutate()
-      },
-      onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi ký mẫu bằng số')
-      }
-    }
-  )
-
-  const handleSubmit = useCallback(
-    (data: any) => {
-      if (idDetail) {
-        mutateUpdateDegreeTemplate.trigger(data)
-      } else {
-        mutateCreateDegreeTemplate.trigger(data)
-      }
-    },
-    [idDetail, mutateCreateDegreeTemplate, mutateUpdateDegreeTemplate]
-  )
+  const handleRefetchQueryList = useCallback(() => {
+    queryDegreeTemplatesByFaculty.mutate()
+  }, [queryDegreeTemplatesByFaculty])
 
   return (
     <div>
@@ -168,19 +102,19 @@ const DegreeTemplate: React.FC = () => {
             onClick={() => mutateSignDegreeTemplateUni.trigger()}
           >
             <Key />
-            Ký trường
+            <span className='hidden sm:block'>Ký trường</span>
           </Button>,
           <Dialog key='sign-degree-template-faculty' open={openSignDialog} onOpenChange={setOpenSignDialog}>
             <DialogTrigger asChild>
               <Button variant={'outline'}>
                 <KeyRound />
-                Ký chuyên ngành
+                <span className='hidden sm:block'>Ký khoa</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Ký số cho chuyên ngành</DialogTitle>
-                <DialogDescription>Ký số cho các mẫu văn bằng số của chuyên ngành</DialogDescription>
+                <DialogTitle>Ký số cho khoa</DialogTitle>
+                <DialogDescription>Ký số cho các mẫu văn bằng số của khoa</DialogDescription>
               </DialogHeader>
               <Label>Chọn chuyên ngành</Label>
               <CommonSelect
@@ -188,6 +122,7 @@ const DegreeTemplate: React.FC = () => {
                 options={facultyOptions}
                 handleSelect={setSelectFacultyId}
                 placeholder='Chọn chuyên ngành'
+                selectLabel='Chuyên ngành'
               />
               <DialogFooter>
                 <DialogClose asChild>
@@ -270,63 +205,16 @@ const DegreeTemplate: React.FC = () => {
             render: (item) => (
               <TableActionButton
                 canSign={item.status === 'PENDING'}
-                handleSign={() => mutateSignDegreeTemplateById.trigger(item.id)}
                 canEdit={!item.isLocked}
                 handleSetIdDetail={setIdDetail}
                 id={item.id}
+                refetch={handleRefetchQueryList}
               />
             )
           }
         ]}
       />
-      <DetailDialog
-        data={queryDegreeTemplateById.data?.data || {}}
-        mode={idDetail ? 'update' : idDetail === undefined ? undefined : 'create'}
-        handleSubmit={handleSubmit}
-        handleClose={handleCloseDetailDialog}
-        items={[
-          {
-            type: 'input',
-            placeholder: 'Nhập tên mẫu bằng số',
-            name: 'name',
-            label: 'Tên mẫu bằng số',
-            validator: validateNoEmpty('Tên mẫu bằng số')
-          },
-          {
-            type: 'textarea',
-            placeholder: 'Nhập mô tả',
-            name: 'description',
-            label: 'Mô tả'
-          },
-          {
-            type: 'select',
-            name: 'facultyId',
-            placeholder: 'Chọn chuyên ngành',
-            label: 'Chuyên ngành',
-            setting: {
-              select: {
-                groups: [
-                  {
-                    label: 'Chuyên ngành',
-                    options: facultyOptions
-                  }
-                ]
-              }
-            },
-            disabled: idDetail !== null
-          },
-          {
-            type: 'file',
-            name: 'file',
-            label: 'Mẫu văn bằng',
-            setting: {
-              file: {
-                accept: '.html'
-              }
-            }
-          }
-        ]}
-      />
+      <DegreeTemplateSheet id={idDetail} onClose={handleCloseDetailDialog} handleRefetch={handleRefetchQueryList} />
     </div>
   )
 }

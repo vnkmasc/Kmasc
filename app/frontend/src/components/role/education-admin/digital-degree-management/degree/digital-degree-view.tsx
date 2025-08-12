@@ -15,9 +15,14 @@ import { Fragment, useState } from 'react'
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
-import { searchDigitalDegreeList } from '@/lib/api/degree'
+import { searchDigitalDegreeList, uploadDegreeToMinio } from '@/lib/api/degree'
 import SignDegreeDialog from './sign-degree-dialog'
 import { formatDate } from 'date-fns'
+import DownloadDialog from './download-dialog'
+import { Button } from '@/components/ui/button'
+import { Blocks, Hash } from 'lucide-react'
+import useSWRMutation from 'swr/mutation'
+import { showNotification } from '@/lib/utils/common'
 
 const DigitalDegreeView = () => {
   const [idDetail, setIdDetail] = useState<string | null | undefined>(undefined)
@@ -34,12 +39,38 @@ const DigitalDegreeView = () => {
       page_size: PAGE_SIZE
     })
   )
+  const mutateUploadDegreeToMinio = useSWRMutation('upload-degree-to-minio', uploadDegreeToMinio, {
+    onError: (error) => {
+      showNotification('error', error.message || 'Lỗi khi mã hóa và đẩy lên Minio')
+    },
+    onSuccess: () => {
+      showNotification('success', 'Mã hóa và đẩy lên Minio thành công')
+    }
+  })
 
   return (
     <>
       <PageHeader
         title='Quản lý văn bằng số'
         extra={[
+          <Fragment key='blockchain'>
+            <Button variant={'secondary'}>
+              <Blocks />
+              Đẩy lên Blockchain
+            </Button>
+          </Fragment>,
+          <Fragment key='hash'>
+            <Button
+              isLoading={mutateUploadDegreeToMinio.isMutating}
+              onClick={() => mutateUploadDegreeToMinio.trigger()}
+            >
+              <Hash />
+              Mã hóa & lưu Minio
+            </Button>
+          </Fragment>,
+          <Fragment key='download-degree-faculty'>
+            <DownloadDialog />
+          </Fragment>,
           <Fragment key='sign-degree-faculty'>
             <SignDegreeDialog />
           </Fragment>
