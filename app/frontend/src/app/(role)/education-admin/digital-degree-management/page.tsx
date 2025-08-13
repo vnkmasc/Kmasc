@@ -129,16 +129,17 @@ const DigitalDegreeManagement = () => {
       <TableList
         items={[
           { header: 'Mã SV', value: 'student_code', className: 'min-w-[80px] font-semibold text-blue-500' },
-          // { header: 'Họ và tên', value: 'studentName', className: 'min-w-[200px]' },
+          { header: 'Họ và tên', value: 'student_name', className: 'min-w-[150px]' },
           { header: 'Chuyên ngành', value: 'faculty_name', className: 'min-w-[150px]' },
           { header: 'Tên văn bằng', value: 'full_name', className: 'min-w-[200px]' },
+          { header: 'Mẫu bằng', value: 'template_name', className: 'min-w-[150px]' },
           { header: 'Khóa', value: 'course' },
           {
             header: 'Ngày cấp',
-            value: 'issue_date',
+            value: 'created_at',
             className: 'min-w-[100px]',
             render: (item) => {
-              return formatDate(item.issue_date, 'dd/MM/yyyy')
+              return formatDate(item.created_at, 'dd/MM/yyyy')
             }
           },
           {

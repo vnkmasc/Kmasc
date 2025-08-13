@@ -1,4 +1,5 @@
 import HtmlView from '@/components/common/html-view'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ReactNode } from 'react'
 
@@ -16,6 +17,7 @@ const HtmlEditView: React.FC<Props> = (props) => {
       </TabsList>
       <TabsContent value='code'>{props.textarea}</TabsContent>
       <TabsContent value='preview'>
+        <Label>Mẫu bằng số</Label>
         <HtmlView html={props.html} />
       </TabsContent>
     </Tabs>

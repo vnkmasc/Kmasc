@@ -26,17 +26,13 @@ const Header: React.FC<Props> = (props) => {
   const { md, lg } = UseBreakpoint()
   const educationAdminPages: { title: string; href: string }[] = [
     {
-      title: 'Chuyên ngành',
+      title: md && !lg ? 'CN' : 'Chuyên ngành',
       href: '/education-admin/faculty-management'
     },
     {
-      title: 'Sinh viên',
+      title: md && !lg ? 'SV' : 'Sinh viên',
       href: '/education-admin/student-management'
     },
-    // {
-    //   title: 'Quản lý điểm',
-    //   href: '/education-admin/score-management'
-    // },
     {
       title: md && !lg ? 'KT&KL' : 'Khen thưởng & Kỷ luật',
       href: '/education-admin/reward-discipline-management'

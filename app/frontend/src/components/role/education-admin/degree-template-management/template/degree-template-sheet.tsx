@@ -94,7 +94,15 @@ const DegreeTemplateSheet: React.FC<Props> = (props) => {
   }
 
   return (
-    <Sheet open={props.id !== undefined} onOpenChange={props.onClose}>
+    <Sheet
+      open={props.id !== undefined}
+      onOpenChange={(open) => {
+        if (!open) {
+          props.onClose()
+        }
+        form.reset()
+      }}
+    >
       <SheetContent className='min-w-full max-w-full overflow-y-scroll md:min-w-[900px]'>
         <SheetTitle>{props.id ? 'Chỉnh sửa mẫu bằng số' : 'Thêm mẫu bằng số'}</SheetTitle>
         <Form {...form}>
@@ -139,11 +147,11 @@ const DegreeTemplateSheet: React.FC<Props> = (props) => {
                     type='textarea'
                     name='html_content'
                     control={form.control}
-                    label='Mẫu bằng số'
                     placeholder='Nhập code mẫu bằng số'
+                    label='Code mẫu bằng số'
                     setting={{
                       textarea: {
-                        rows: 20
+                        rows: 25
                       }
                     }}
                   />
