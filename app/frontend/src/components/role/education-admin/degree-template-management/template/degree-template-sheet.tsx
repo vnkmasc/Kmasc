@@ -12,6 +12,12 @@ import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
 import { z } from 'zod'
 import HtmlEditView from './html-edit-view'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { ChevronsLeftRightEllipsis } from 'lucide-react'
+import { useState, useRef } from 'react'
+import TinyTextEdit, { TinyTextEditRef } from './tiny-text-edit'
 
 interface Props {
   id: string | null | undefined
@@ -27,6 +33,9 @@ const formSchema = z.object({
 })
 
 const DegreeTemplateSheet: React.FC<Props> = (props) => {
+  const [tinyMode, setTinyMode] = useState<boolean>(true)
+  const tinyEditorRef = useRef<TinyTextEditRef>(null)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -86,6 +95,11 @@ const DegreeTemplateSheet: React.FC<Props> = (props) => {
   )
 
   const handleSubmit = (data: z.infer<typeof formSchema>) => {
+    // Get content from TinyMCE editor if in tiny mode
+    if (tinyMode && tinyEditorRef.current) {
+      data.html_content = tinyEditorRef.current.getContent()
+    }
+
     if (props.id) {
       mutateUpdateDegreeTemplate.trigger(data)
     } else {
@@ -141,23 +155,39 @@ const DegreeTemplateSheet: React.FC<Props> = (props) => {
                 }}
                 disabled={!!props.id}
               />
-              <HtmlEditView
-                textarea={
-                  <CustomFormItem
-                    type='textarea'
-                    name='html_content'
-                    control={form.control}
-                    placeholder='Nhập code mẫu bằng số'
-                    label='Code mẫu bằng số'
-                    setting={{
-                      textarea: {
-                        rows: 25
-                      }
-                    }}
-                  />
-                }
-                html={form.watch('html_content')}
-              />
+              <Separator />
+              <div className='mt-2'>
+                <div className='flex items-center gap-2'>
+                  <Label>Mẫu bằng số</Label>
+                  <ChevronsLeftRightEllipsis />
+                  <span className='text-sm font-semibold'>Chế độ soạn thảo</span>
+                  <Switch onCheckedChange={setTinyMode} checked={tinyMode} />
+                </div>
+              </div>
+              {tinyMode ? (
+                <TinyTextEdit
+                  ref={tinyEditorRef}
+                  value={form.watch('html_content')}
+                  onChange={(content) => form.setValue('html_content', content)}
+                />
+              ) : (
+                <HtmlEditView
+                  textarea={
+                    <CustomFormItem
+                      type='textarea'
+                      name='html_content'
+                      control={form.control}
+                      placeholder='Nhập code mẫu bằng số'
+                      setting={{
+                        textarea: {
+                          rows: 25
+                        }
+                      }}
+                    />
+                  }
+                  html={form.watch('html_content')}
+                />
+              )}
             </div>
             <SheetFooter className='mt-4'>
               <SheetClose asChild>
