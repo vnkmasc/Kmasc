@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -375,7 +374,6 @@ func (s *certificateService) UploadCertificateFile(
 		head = len(cipherOnly)
 	}
 	fmt.Printf("[DEBUG] Ciphertext (first %d bytes): %x\n", head, cipherOnly[:head])
-	fmt.Printf("[DEBUG] Full ciphertext (base64): %s\n", base64.StdEncoding.EncodeToString(encryptedData))
 
 	// Tên file lưu trên MinIO
 	ext := filepath.Ext(origFileName)

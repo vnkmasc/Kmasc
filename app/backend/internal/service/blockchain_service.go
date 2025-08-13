@@ -32,7 +32,7 @@ type blockchainService struct {
 	facultyRepo    repository.FacultyRepository
 	universityRepo repository.UniversityRepository
 	fabricClient   *blockchain.FabricClient
-	minioClient    *database.MinioClient 
+	minioClient    *database.MinioClient
 }
 
 func NewBlockchainService(
@@ -41,7 +41,7 @@ func NewBlockchainService(
 	facultyRepo repository.FacultyRepository,
 	universityRepo repository.UniversityRepository,
 	fabricClient *blockchain.FabricClient,
-	minioClient *database.MinioClient, 
+	minioClient *database.MinioClient,
 ) BlockchainService {
 	return &blockchainService{
 		certRepo:       certRepo,
@@ -49,7 +49,7 @@ func NewBlockchainService(
 		facultyRepo:    facultyRepo,
 		universityRepo: universityRepo,
 		fabricClient:   fabricClient,
-		minioClient:    minioClient, 
+		minioClient:    minioClient,
 	}
 }
 
@@ -94,9 +94,9 @@ func (s *blockchainService) PushCertificateToChain(ctx context.Context, certific
 
 	update := bson.M{
 		"$set": bson.M{
-			"blockchain_tx_id": txID,
-			"on_blockchain":    true,
-			"updated_at":       time.Now(),
+			"transaction_id": txID,
+			"on_blockchain":  true,
+			"updated_at":     time.Now(),
 		},
 	}
 	if err := s.certRepo.UpdateCertificateByID(ctx, certificateID, update); err != nil {

@@ -31,6 +31,7 @@ type EDiplomaService interface {
 	UploadLocalEDiplomas(ctx context.Context) []map[string]interface{}
 	GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, templateIDStr string) (string, error)
 	GetDiplomaPDF(ctx context.Context, id primitive.ObjectID) (io.ReadCloser, int64, string, error)
+	ProcessZip(ctx context.Context, zipPath string) ([]map[string]interface{}, error)
 }
 
 type eDiplomaService struct {
@@ -540,6 +541,73 @@ func (s *eDiplomaService) UploadLocalEDiplomas(ctx context.Context) []map[string
 	}
 
 	return results
+}
+func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string) ([]map[string]interface{}, error) {
+	// Thư mục tạm để giải nén
+	extractDir := filepath.Join(os.TempDir(), fmt.Sprintf("unzipped_%d", time.Now().Unix()))
+	os.MkdirAll(extractDir, 0755)
+
+	if err := utils.Unzip(zipPath, extractDir); err != nil {
+		return nil, fmt.Errorf("failed to unzip: %w", err)
+	}
+
+	files, err := os.ReadDir(extractDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read extracted folder: %w", err)
+	}
+
+	var results []map[string]interface{}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		filePath := filepath.Join(extractDir, file.Name())
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			results = append(results, map[string]interface{}{
+				"file":  file.Name(),
+				"error": fmt.Sprintf("read failed: %v", err),
+			})
+			continue
+		}
+
+		hash := utils.ComputeSHA256(data)
+		minioPath := fmt.Sprintf("ediplomas/%s", file.Name())
+
+		if err := s.minioClient.UploadFile(ctx, minioPath, data, "application/pdf"); err != nil {
+			results = append(results, map[string]interface{}{
+				"file":  file.Name(),
+				"error": fmt.Sprintf("upload failed: %v", err),
+			})
+			continue
+		}
+
+		ediploma := &models.EDiploma{
+			ID:        primitive.NewObjectID(),
+			FileLink:  minioPath,
+			FileHash:  hash,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := s.repo.Save(ctx, ediploma); err != nil {
+			results = append(results, map[string]interface{}{
+				"file":  file.Name(),
+				"error": fmt.Sprintf("DB save failed: %v", err),
+			})
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"file":   file.Name(),
+			"hash":   hash,
+			"link":   minioPath,
+			"status": "uploaded",
+		})
+	}
+
+	return results, nil
 }
 
 func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, templateIDStr string) (string, error) {

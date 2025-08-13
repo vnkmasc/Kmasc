@@ -114,6 +114,43 @@ func (h *EDiplomaHandler) UploadLocalEDiplomas(c *gin.Context) {
 	})
 }
 
+func (h *EDiplomaHandler) UploadEDiplomasZip(c *gin.Context) {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing zip file"})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot open uploaded file"})
+		return
+	}
+	defer file.Close()
+
+	tempZipPath := filepath.Join(os.TempDir(), fileHeader.Filename)
+	out, err := os.Create(tempZipPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot save temp zip"})
+		return
+	}
+	defer out.Close()
+
+	io.Copy(out, file)
+
+	// Gọi service xử lý zip
+	results, err := h.ediplomaService.ProcessZip(c.Request.Context(), tempZipPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_files": len(results),
+		"results":     results,
+	})
+}
+
 func (h *EDiplomaHandler) ViewEDiploma(c *gin.Context) {
 	ctx := c.Request.Context()
 	diplomaID := c.Param("id")
