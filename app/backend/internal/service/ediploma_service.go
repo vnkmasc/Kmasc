@@ -620,26 +620,23 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 		return "", fmt.Errorf("invalid template ID")
 	}
 
+	// 1. Lấy template
 	template, err := s.templateRepo.GetByID(ctx, templateID)
 	if err != nil {
-		log.Printf("❌ Template not found: %v", err)
 		return "", fmt.Errorf("template not found")
 	}
 	if template.FacultyID != facultyID {
-		log.Printf("❌ Template faculty ID %s != request faculty ID %s", template.FacultyID.Hex(), facultyID.Hex())
 		return "", errors.New("template does not belong to the given faculty")
 	}
-
 	if template.HTMLContent == "" {
-		log.Printf("❌ Template %s has no HTML content", templateID.Hex())
 		return "", errors.New("template has no HTML content")
 	}
 
+	// 2. Lấy certificates theo khoa
 	certificates, err := s.certificateRepo.FindByFacultyID(ctx, facultyID)
 	if err != nil {
 		return "", fmt.Errorf("failed to load certificates: %w", err)
 	}
-	log.Printf("ℹ️ Found %d certificates for faculty %s", len(certificates), facultyID.Hex())
 
 	tmpDir, err := os.MkdirTemp("", "ediplomas_*")
 	if err != nil {
@@ -649,28 +646,21 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 	var generatedFilePaths []string
 
 	for _, cert := range certificates {
-		log.Printf("📄 Processing cert: %s (StudentCode=%s)", cert.ID.Hex(), cert.StudentCode)
-
 		university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
 		if err != nil {
-			log.Printf("❌ Failed to get university %s: %v", cert.UniversityID.Hex(), err)
 			continue
 		}
 
 		user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
 		if err != nil {
-			log.Printf("❌ Failed to get user %s: %v", cert.UserID.Hex(), err)
 			continue
 		}
 
 		var dobTime time.Time
-		dobStr := user.DateOfBirth
-
-		dobTime, err = time.Parse("2006-01-02", dobStr)
+		dobTime, err = time.Parse("2006-01-02", user.DateOfBirth)
 		if err != nil {
-			dobTime, err = time.Parse("02/01/2006", dobStr)
+			dobTime, err = time.Parse("02/01/2006", user.DateOfBirth)
 			if err != nil {
-				log.Printf("❌ Failed to parse date of birth '%s' for user %s: %v", dobStr, cert.UserID.Hex(), err)
 				continue
 			}
 		}
@@ -690,37 +680,72 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 
 		renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
 		if err != nil {
-			log.Printf("❌ Failed to render template for cert %s: %v", cert.ID.Hex(), err)
 			continue
 		}
 
 		pdfBytes, err := s.pdfGenerator.ConvertHTMLToPDF(renderedHTML)
 		if err != nil {
-			log.Printf("❌ Failed to convert HTML to PDF for cert %s: %v", cert.ID.Hex(), err)
 			continue
 		}
 
 		fileName := fmt.Sprintf("%s.pdf", cert.StudentCode)
 		filePath := filepath.Join(tmpDir, fileName)
 		if err := os.WriteFile(filePath, pdfBytes, 0644); err != nil {
-			log.Printf("❌ Failed to write PDF file for cert %s: %v", cert.ID.Hex(), err)
 			continue
 		}
 
-		log.Printf("✅ Diploma generated: %s", filePath)
+		// 3. Hash file PDF
+		hash := utils.ComputeSHA256(pdfBytes)
+
+		// 4. Lưu metadata eDiploma vào MongoDB
+		now := time.Now()
+		ediploma := &models.EDiploma{
+			ID:                 primitive.NewObjectID(),
+			TemplateID:         templateID,
+			UniversityID:       cert.UniversityID,
+			FacultyID:          cert.FacultyID,
+			UserID:             cert.UserID,
+			MajorID:            primitive.NilObjectID,
+			StudentCode:        cert.StudentCode,
+			FullName:           cert.Name,
+			CertificateType:    cert.CertificateType,
+			Course:             cert.Course,
+			EducationType:      cert.EducationType,
+			GPA:                cert.GPA,
+			GraduationRank:     cert.GraduationRank,
+			IssueDate:          cert.IssueDate,
+			SerialNumber:       cert.SerialNumber,
+			RegistrationNumber: cert.RegNo,
+			FileLink:           filePath, // đường dẫn local (vì đang trả zip)
+			FileHash:           hash,
+			Signed:             false,
+			Signature:          "",
+			SignedAt:           time.Time{},
+			OnBlockchain:       false,
+			BlockchainTxID:     "",
+			SignatureOfUni:     template.SignatureOfUni,
+			SignatureOfMinEdu:  template.SignatureOfMinEdu,
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		}
+
+		if err := s.repo.Save(ctx, ediploma); err != nil {
+			log.Printf("❌ Failed to save eDiploma for cert %s: %v", cert.ID.Hex(), err)
+			continue
+		}
+
 		generatedFilePaths = append(generatedFilePaths, filePath)
 	}
 
 	if len(generatedFilePaths) == 0 {
-		log.Printf("⚠️ No diplomas generated for faculty %s", facultyID.Hex())
 		return "", errors.New("no diplomas generated")
 	}
 
+	// 5. Nén file zip
 	zipFilePath := filepath.Join(tmpDir, "ediplomas.zip")
 	if err := utils.CreateZipFromFiles(zipFilePath, generatedFilePaths); err != nil {
 		return "", fmt.Errorf("failed to create zip: %w", err)
 	}
 
-	log.Printf("✅ ZIP file created: %s", zipFilePath)
 	return zipFilePath, nil
 }
