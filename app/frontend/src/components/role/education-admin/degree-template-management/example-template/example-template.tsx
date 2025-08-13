@@ -1,32 +1,17 @@
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import TemplateView from '@/components/role/education-admin/digital-degree-management/template-view'
+import TemplateView from '@/components/role/education-admin/degree-template-management/template-view'
 import { useEffect, useState } from 'react'
 import PageHeader from '@/components/common/page-header'
 
-interface Props {
-  initialV1?: string
-  initialV2?: string
-  initialV3?: string
-}
-
-const ExampleTemplate: React.FC<Props> = ({ initialV1, initialV2, initialV3 }) => {
+const ExampleTemplate: React.FC = () => {
   const [v1, setV1] = useState<string>('')
   const [v2, setV2] = useState<string>('')
   const [v3, setV3] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
-    // Prefer server-provided content when available, fallback to client fetch
-    if (initialV1 && initialV2 && initialV3) {
-      setV1(initialV1)
-      setV2(initialV2)
-      setV3(initialV3)
-      setLoading(false)
-      return
-    }
-
     const load = async () => {
       try {
         setLoading(true)
@@ -43,7 +28,7 @@ const ExampleTemplate: React.FC<Props> = ({ initialV1, initialV2, initialV3 }) =
       }
     }
     load()
-  }, [initialV1, initialV2, initialV3])
+  }, [])
 
   return (
     <>

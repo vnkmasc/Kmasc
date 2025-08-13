@@ -16,24 +16,32 @@ import { KeyRound } from 'lucide-react'
 import { UseData } from '@/components/providers/data-provider'
 import { formatDegreeTemplateOptions, formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import useSWR from 'swr'
-import { issueDigitalDegreeFaculty, searchDegreeTemplateByFaculty } from '@/lib/api/degree'
+import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/degree'
 import { showNotification } from '@/lib/utils/common'
-import CommonSelect from '../../common-select'
+import CommonSelect from '../common-select'
 import { Label } from '@/components/ui/label'
 import useSWRMutation from 'swr/mutation'
+import { OptionType } from '@/types/common'
 
-const SignDegreeDialog: React.FC = () => {
+const IssueDegreeDialog: React.FC = () => {
   const [openSignDialog, setOpenSignDialog] = useState(false)
   const [selectFacultyId, setSelectFacultyId] = useState<string>('')
   const [selectDegreeTemplateId, setSelectDegreeTemplateId] = useState<string>('')
-
+  const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
   useEffect(() => {
     setSelectDegreeTemplateId('')
   }, [selectFacultyId])
 
+  const findLabel = (id: string, options: OptionType[]) => {
+    return options?.find((o: OptionType) => o.value === id)?.label
+  }
+
   const queryDegreeTemplatesByFaculty = useSWR(
     selectFacultyId === '' ? undefined : 'degree-templates-by-faculty' + selectFacultyId,
-    () => searchDegreeTemplateByFaculty(selectFacultyId),
+    async () => {
+      const res = await searchDegreeTemplateByFaculty(selectFacultyId)
+      return formatDegreeTemplateOptions(res.data)
+    },
     {
       onError: (error) => {
         showNotification('error', error.message || 'Lỗi khi lấy danh sách mẫu bằng số')
@@ -43,7 +51,12 @@ const SignDegreeDialog: React.FC = () => {
 
   const mutateIssueDigitalDegree = useSWRMutation(
     'issue-digital-degree-faculty',
-    () => issueDigitalDegreeFaculty(selectFacultyId, selectDegreeTemplateId),
+    () =>
+      issueDownloadDegreeZip(
+        selectFacultyId,
+        selectDegreeTemplateId,
+        `VBS-${findLabel(selectFacultyId, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
+      ),
     {
       onSuccess: () => {
         showNotification('success', 'Cấp bằng số cho chuyên ngành thành công')
@@ -72,12 +85,14 @@ const SignDegreeDialog: React.FC = () => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Cấp bằng số</DialogTitle>
-          <DialogDescription>Cấp bằng số cho các văn bằng số của chuyên ngành</DialogDescription>
+          <DialogDescription>
+            Cấp bằng số cho các chuyên ngành và tự động tải xuống tệp <span className='font-bold'>.zip</span>
+          </DialogDescription>
         </DialogHeader>
         <Label>Chọn chuyên ngành</Label>
         <CommonSelect
           value={selectFacultyId}
-          options={formatFacultyOptionsByID(UseData().facultyList)}
+          options={facultyOptions}
           handleSelect={setSelectFacultyId}
           placeholder='Chọn chuyên ngành'
         />
@@ -85,7 +100,7 @@ const SignDegreeDialog: React.FC = () => {
         <Label>Chọn mẫu văn bằng</Label>
         <CommonSelect
           value={selectDegreeTemplateId}
-          options={formatDegreeTemplateOptions(queryDegreeTemplatesByFaculty.data?.data ?? [])}
+          options={queryDegreeTemplatesByFaculty.data || []}
           handleSelect={setSelectDegreeTemplateId}
           placeholder='Chọn mẫu văn bằng số'
         />
@@ -107,4 +122,4 @@ const SignDegreeDialog: React.FC = () => {
   )
 }
 
-export default SignDegreeDialog
+export default IssueDegreeDialog

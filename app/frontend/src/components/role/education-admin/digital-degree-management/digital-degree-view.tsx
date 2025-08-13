@@ -8,19 +8,16 @@ import Filter from '@/components/role/education-admin/filter'
 import TableList from '@/components/role/education-admin/table-list'
 import { Badge } from '@/components/ui/badge'
 import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE, STUDENT_CODE_SEARCH_SETTING } from '@/constants/common'
-
 import { formatFacultyOptions } from '@/lib/utils/format-api'
 import { validateNoEmpty } from '@/lib/utils/validators'
 import { Fragment, useState } from 'react'
-
 import { useCallback } from 'react'
 import useSWR from 'swr'
 import { searchDigitalDegreeList, uploadDegreeToMinio } from '@/lib/api/degree'
-import SignDegreeDialog from './sign-degree-dialog'
+import SignDegreeDialog from './issue-degree-dialog'
 import { formatDate } from 'date-fns'
-import DownloadDialog from './download-dialog'
 import { Button } from '@/components/ui/button'
-import { Blocks, Hash } from 'lucide-react'
+import { Blocks, FolderUp } from 'lucide-react'
 import useSWRMutation from 'swr/mutation'
 import { showNotification } from '@/lib/utils/common'
 
@@ -53,26 +50,24 @@ const DigitalDegreeView = () => {
       <PageHeader
         title='Quản lý văn bằng số'
         extra={[
+          <Fragment key='sign-degree-faculty'>
+            <SignDegreeDialog />
+          </Fragment>,
           <Fragment key='blockchain'>
-            <Button variant={'secondary'}>
+            <Button variant={'outline'} title='Đẩy lên Blockchain'>
               <Blocks />
-              Đẩy lên Blockchain
+              <span className='hidden md:block'>Blockchain</span>
             </Button>
           </Fragment>,
           <Fragment key='hash'>
             <Button
               isLoading={mutateUploadDegreeToMinio.isMutating}
               onClick={() => mutateUploadDegreeToMinio.trigger()}
+              title='Mã hóa & lưu lên Minio'
             >
-              <Hash />
-              Mã hóa & lưu Minio
+              <FolderUp />
+              <span className='hidden md:block'>Minio</span>
             </Button>
-          </Fragment>,
-          <Fragment key='download-degree-faculty'>
-            <DownloadDialog />
-          </Fragment>,
-          <Fragment key='sign-degree-faculty'>
-            <SignDegreeDialog />
           </Fragment>
         ]}
       />

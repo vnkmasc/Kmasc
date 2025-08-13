@@ -48,6 +48,10 @@ const Header: React.FC<Props> = (props) => {
     {
       title: md && !lg ? 'VB số' : 'Văn bằng số',
       href: '/education-admin/digital-degree-management'
+    },
+    {
+      title: md && !lg ? 'MB số' : 'Mẫu bằng số',
+      href: '/education-admin/degree-template-management'
     }
   ]
 
