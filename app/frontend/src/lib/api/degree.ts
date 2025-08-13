@@ -51,15 +51,7 @@ export const searchDigitalDegreeList = async (params: any) => {
   return res
 }
 
-export const issueDigitalDegreeFaculty = async (facultyId: string, templateId: string) => {
-  const res = await apiService('POST', `ediplomas/generate-bulk`, {
-    faculty_id: facultyId,
-    template_id: templateId
-  })
-  return res
-}
-
-export const downloadDegreeZip = async (facultyId: string, templateId: string) => {
+export const issueDownloadDegreeZip = async (facultyId: string, templateId: string, fileName: string) => {
   const blob = await apiService(
     'POST',
     `ediplomas/generate-bulk-zip`,
@@ -69,14 +61,13 @@ export const downloadDegreeZip = async (facultyId: string, templateId: string) =
     },
     true,
     { Accept: 'application/zip' },
-    true // isBlob = true to get blob response
+    true
   )
 
-  // Tự động tải file về
   const url = window.URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `degrees-${facultyId}-${templateId}.zip`
+  a.download = fileName
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
