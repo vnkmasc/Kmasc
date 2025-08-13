@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -216,6 +217,8 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("❌ Invalid request body: %v", err)
+
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -226,9 +229,12 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 		req.TemplateID,
 	)
 	if err != nil {
+		log.Printf("❌ Failed to generate diplomas: %v", err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	log.Printf("✅ Generated diplomas zip: %s", zipFilePath)
 
 	// Đọc file ZIP để trả về client
 	c.FileAttachment(zipFilePath, "ediplomas.zip")
