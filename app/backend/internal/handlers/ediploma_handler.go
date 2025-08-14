@@ -214,12 +214,15 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 	var req struct {
 		FacultyID  string `json:"faculty_id" binding:"required"`
 		TemplateID string `json:"template_id" binding:"required"`
+		Course     string `json:"course"` // tùy chọn
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("❌ Invalid request body: %v", err)
-
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input",
+			"details": err.Error(),
+		})
 		return
 	}
 
@@ -227,18 +230,19 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 		c.Request.Context(),
 		req.FacultyID,
 		req.TemplateID,
+		req.Course, // truyền xuống service
 	)
 	if err != nil {
 		log.Printf("❌ Failed to generate diplomas: %v", err)
-
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	log.Printf("✅ Generated diplomas zip: %s", zipFilePath)
 
-	// Đọc file ZIP để trả về client
+	// Trả file zip về client
 	c.FileAttachment(zipFilePath, "ediplomas.zip")
 
-	// Optional: Xóa file ZIP sau khi gửi xong
+	// Xóa file sau khi gửi
 	_ = os.Remove(zipFilePath)
 }

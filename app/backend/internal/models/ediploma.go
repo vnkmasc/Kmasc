@@ -26,7 +26,7 @@ type EDiploma struct {
 	RegistrationNumber string `bson:"registration_number" json:"registration_number"` // Số vào sổ
 
 	// File văn bằng
-	FileLink  string    `bson:"file_link" json:"file_link"` // Link MinIO hoặc CDN
+	FileLink  string    `bson:"file_link" json:"file_link"`
 	FileHash  string    `bson:"file_hash" json:"file_hash"` // SHA256 mã băm file PDF
 	Signature string    `bson:"signature" json:"signature"` // Chữ ký số
 	Signed    bool      `bson:"signed" json:"signed"`       // Đã ký hay chưa

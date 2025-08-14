@@ -108,9 +108,9 @@ type CertificateResponse struct {
 type SearchCertificateParams struct {
 	StudentCode     string `form:"student_code"`
 	FacultyCode     string `form:"faculty_code"`
-	Course          string `form:"course"`
 	Signed          *bool  `form:"signed"`
 	CertificateType string `form:"certificate_type"`
+	Course          string `form:"course"`
 	Page            int    `form:"page,default=1"`
 	PageSize        int    `form:"page_size,default=10"`
 	SortOrder       string `form:"sort_order"` // "asc" | "desc"

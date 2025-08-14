@@ -29,9 +29,9 @@ type EDiplomaService interface {
 	GetEDiplomasByFaculty(ctx context.Context, facultyID string) ([]*models.EDiplomaDTO, error)
 	SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error)
 	UploadLocalEDiplomas(ctx context.Context) []map[string]interface{}
-	GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, templateIDStr string) (string, error)
 	GetDiplomaPDF(ctx context.Context, id primitive.ObjectID) (io.ReadCloser, int64, string, error)
 	ProcessZip(ctx context.Context, zipPath string) ([]map[string]interface{}, error)
+	GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, templateIDStr, course string) (string, error)
 }
 
 type eDiplomaService struct {
@@ -610,7 +610,10 @@ func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string) ([]map
 	return results, nil
 }
 
-func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, templateIDStr string) (string, error) {
+func (s *eDiplomaService) GenerateBulkEDiplomasZip(
+	ctx context.Context,
+	facultyIDStr, templateIDStr, course string,
+) (string, error) {
 	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
 	if err != nil {
 		return "", fmt.Errorf("invalid faculty ID")
@@ -632,8 +635,13 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 		return "", errors.New("template has no HTML content")
 	}
 
-	// 2. Lấy certificates theo khoa
-	certificates, err := s.certificateRepo.FindByFacultyID(ctx, facultyID)
+	// 2. Lấy certificates theo khoa hoặc theo khóa học
+	var certificates []*models.Certificate
+	if course != "" {
+		certificates, err = s.certificateRepo.FindByFacultyIDAndCourse(ctx, facultyID, course)
+	} else {
+		certificates, err = s.certificateRepo.FindByFacultyID(ctx, facultyID)
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to load certificates: %w", err)
 	}
@@ -694,10 +702,8 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 			continue
 		}
 
-		// 3. Hash file PDF
 		hash := utils.ComputeSHA256(pdfBytes)
 
-		// 4. Lưu metadata eDiploma vào MongoDB
 		now := time.Now()
 		ediploma := &models.EDiploma{
 			ID:                 primitive.NewObjectID(),
@@ -716,7 +722,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 			IssueDate:          cert.IssueDate,
 			SerialNumber:       cert.SerialNumber,
 			RegistrationNumber: cert.RegNo,
-			FileLink:           filePath, // đường dẫn local (vì đang trả zip)
+			FileLink:           filePath,
 			FileHash:           hash,
 			Signed:             false,
 			Signature:          "",
@@ -741,7 +747,6 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(ctx context.Context, facultyI
 		return "", errors.New("no diplomas generated")
 	}
 
-	// 5. Nén file zip
 	zipFilePath := filepath.Join(tmpDir, "ediplomas.zip")
 	if err := utils.CreateZipFromFiles(zipFilePath, generatedFilePaths); err != nil {
 		return "", fmt.Errorf("failed to create zip: %w", err)

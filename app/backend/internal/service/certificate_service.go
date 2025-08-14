@@ -475,6 +475,10 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 	if params.Signed != nil {
 		filter["signed"] = *params.Signed
 	}
+	if params.Course != "" {
+		filter["course"] = bson.M{"$regex": params.Course, "$options": "i"}
+	}
+
 	if params.FacultyCode != "" {
 		faculty, err := s.facultyRepo.FindByCodeAndUniversityID(ctx, params.FacultyCode, universityID)
 		if err != nil || faculty == nil {
@@ -550,9 +554,7 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 		if err != nil || user == nil {
 			continue
 		}
-		if params.Course != "" && !strings.Contains(strings.ToLower(user.Course), strings.ToLower(params.Course)) {
-			continue
-		}
+
 		faculty, err := s.facultyRepo.FindByID(ctx, cert.FacultyID)
 		if err != nil || faculty == nil {
 			continue

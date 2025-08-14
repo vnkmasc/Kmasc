@@ -13,6 +13,7 @@ import (
 )
 
 type CertificateRepository interface {
+	FindByFacultyIDAndCourse(ctx context.Context, facultyID primitive.ObjectID, course string) ([]*models.Certificate, error)
 	FindOneByFilter(ctx context.Context, filter bson.M) (*models.Certificate, error)
 	FindOneByStudentCodeAndType(ctx context.Context, studentCode string, certificateType string, universityID primitive.ObjectID) (*models.Certificate, error)
 	GetAllCertificates(ctx context.Context) ([]*models.Certificate, error)
@@ -42,6 +43,20 @@ type certificateRepository struct {
 func NewCertificateRepository(db *mongo.Database) CertificateRepository {
 	col := db.Collection("certificates")
 	return &certificateRepository{col: col}
+}
+func (r *certificateRepository) FindByFacultyIDAndCourse(ctx context.Context, facultyID primitive.ObjectID, course string) ([]*models.Certificate, error) {
+	filter := bson.M{"faculty_id": facultyID, "course": course}
+	cursor, err := r.col.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var certs []*models.Certificate
+	if err := cursor.All(ctx, &certs); err != nil {
+		return nil, err
+	}
+	return certs, nil
 }
 
 func (r *certificateRepository) CreateCertificate(ctx context.Context, cert *models.Certificate) error {
