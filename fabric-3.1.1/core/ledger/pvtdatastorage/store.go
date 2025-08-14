@@ -331,12 +331,7 @@ func (s *Store) Commit(blockNum uint64, pvtData []*ledger.TxPvtData, missingPvtD
 			return err
 		}
 		// Encrypt value before storing using MKV
-		mkvKey, err := mkv.GetCurrentK1("statedb_leveldb_password")
-		if err != nil {
-			// Fallback to hardcoded key if key management not initialized
-			mkvKey = []byte("1234567890abcdef1234567890abcdef")
-		}
-		val = mkv.EncryptValueMKV(val, mkvKey)
+		val = mkv.EncryptValueMKV(val)
 		batch.Put(key, val)
 	}
 
@@ -528,12 +523,7 @@ func (s *Store) GetPvtDataByBlockNum(blockNum uint64, filter ledger.PvtNsCollFil
 		}
 
 		// Decrypt value after reading
-		mkvKey, err := mkv.GetCurrentK1("statedb_leveldb_password")
-		if err != nil {
-			// Fallback to hardcoded key if key management not initialized
-			mkvKey = []byte("1234567890abcdef1234567890abcdef")
-		}
-		dataValueBytes = mkv.DecryptValueMKV(dataValueBytes, mkvKey)
+		dataValueBytes = mkv.DecryptValueMKV(dataValueBytes)
 		dataValue, err := decodeDataValue(dataValueBytes)
 		if err != nil {
 			return nil, err
@@ -982,12 +972,8 @@ func (s *Store) retrieveDataEntries(dataKeys []*dataKey) ([]*dataEntry, error) {
 			return nil, err
 		}
 		// Decrypt value after reading
-		mkvKey, err := mkv.GetCurrentK1("statedb_leveldb_password")
-		if err != nil {
-			// Fallback to hardcoded key if key management not initialized
-			mkvKey = []byte("1234567890abcdef1234567890abcdef")
-		}
-		v = mkv.DecryptValueMKV(v, mkvKey)
+
+		v = mkv.DecryptValueMKV(v)
 		collWS, err := decodeDataValue(v)
 		if err != nil {
 			return nil, err
@@ -1235,12 +1221,7 @@ func (p *purgeUpdatesProcessor) process(hashedIndexKey, hashedIndexVal []byte) e
 			return err
 		}
 		// Decrypt value after reading
-		mkvKey, err := mkv.GetCurrentK1("statedb_leveldb_password")
-		if err != nil {
-			// Fallback to hardcoded key if key management not initialized
-			mkvKey = []byte("1234567890abcdef1234567890abcdef")
-		}
-		dataValue = mkv.DecryptValueMKV(dataValue, mkvKey)
+		dataValue = mkv.DecryptValueMKV(dataValue)
 		collPvtRWSetProto, err := decodeDataValue(dataValue)
 		if err != nil {
 			return err
@@ -1297,12 +1278,7 @@ func (p *purgeUpdatesProcessor) commitPendingChanges() error {
 			return err
 		}
 		// Encrypt value before storing
-		mkvKey, err := mkv.GetCurrentK1("statedb_leveldb_password")
-		if err != nil {
-			// Fallback to hardcoded key if key management not initialized
-			mkvKey = []byte("1234567890abcdef1234567890abcdef")
-		}
-		encDataValue = mkv.EncryptValueMKV(encDataValue, mkvKey)
+		encDataValue = mkv.EncryptValueMKV(encDataValue)
 		p.batch.Put([]byte(k), encDataValue)
 	}
 	if err := p.db.WriteBatch(p.batch, true); err != nil {
