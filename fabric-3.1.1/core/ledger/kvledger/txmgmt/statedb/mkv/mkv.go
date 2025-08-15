@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -27,7 +28,7 @@ var (
 	logFileMu   sync.Mutex
 )
 
-// logToFileMKV ghi log các thao tác mã hóa/giải mã MKV vào file /root/state_mkv.log
+// logToFileMKV ghi log các thao tác mã hóa/giải mã MKV vào file /tmp/state_mkv.log
 func logToFileMKV(op, ns, key, status, errMsg string) {
 	logFileOnce.Do(func() {
 		logFile, logFileErr = os.OpenFile("/tmp/state_mkv.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -50,12 +51,17 @@ func logToFileMKV(op, ns, key, status, errMsg string) {
 	logFile.WriteString(msg + "\n")
 }
 
-// EncryptValueMKV mã hóa value bằng MKV256
-func EncryptValueMKV(value []byte, key []byte) []byte {
-	if value == nil || len(value) == 0 || key == nil || len(key) == 0 {
-		logToFileMKV("ENCRYPT", "", "", "SKIP_EMPTY", "")
-		return value
+// EncryptValueMKV mã hóa value sử dụng K1 từ KeyManager
+func EncryptValueMKV(value []byte) []byte {
+	if len(value) == 0 {
+		return nil
 	}
+
+	// Lấy K1 từ KeyManager singleton
+	keyManager := GetKeyManager()
+	k1 := keyManager.GetEncryptionKey()
+
+	// Mã hóa value bằng K1 sử dụng MKV256
 	ciphertextLen := len(value) + 32 // padding tối đa 1 block
 	ciphertext := make([]byte, ciphertextLen)
 	var cPlaintext *C.uchar
@@ -64,38 +70,46 @@ func EncryptValueMKV(value []byte, key []byte) []byte {
 	}
 	cCiphertext := (*C.uchar)(unsafe.Pointer(&ciphertext[0]))
 	cCiphertextLen := C.int(0)
-	cKey := (*C.uchar)(unsafe.Pointer(&key[0]))
-	keyLen := C.int(len(key) * 8) // bit
+	cKey := (*C.uchar)(unsafe.Pointer(&k1[0]))
+	keyLen := C.int(len(k1) * 8) // bit
 	ret := C.mkv_encrypt(cPlaintext, C.int(len(value)), cCiphertext, &cCiphertextLen, cKey, keyLen)
 	if ret != 0 {
 		logToFileMKV("ENCRYPT", "", "", "FAIL", "EncryptValueMKV error")
 		return nil
 	}
-	logToFileMKV("ENCRYPT", "", "", "SUCCESS", "")
+
+	logToFileMKV("ENCRYPT", "k1="+string(k1), "original="+string(value), "SUCCESS", "")
 	return ciphertext[:int(cCiphertextLen)]
 }
 
-// DecryptValueMKV giải mã value bằng MKV256
-func DecryptValueMKV(value []byte, key []byte) []byte {
-	if value == nil || len(value) == 0 || key == nil || len(key) == 0 {
-		logToFileMKV("DECRYPT", "", "", "SKIP_EMPTY", "")
-		return value
+// DecryptValueMKV giải mã value sử dụng K1 từ KeyManager
+func DecryptValueMKV(value []byte) []byte {
+	if len(value) == 0 {
+		return nil
 	}
-	plaintext := make([]byte, len(value))
+
+	// Lấy K1 từ KeyManager singleton
+	keyManager := GetKeyManager()
+	k1 := keyManager.GetEncryptionKey()
+
+	// Giải mã value bằng K1 sử dụng MKV256
+	plaintextLen := len(value)
+	plaintext := make([]byte, plaintextLen)
 	var cCiphertext *C.uchar
 	if len(value) > 0 {
 		cCiphertext = (*C.uchar)(unsafe.Pointer(&value[0]))
 	}
 	cPlaintext := (*C.uchar)(unsafe.Pointer(&plaintext[0]))
 	cPlaintextLen := C.int(0)
-	cKey := (*C.uchar)(unsafe.Pointer(&key[0]))
-	keyLen := C.int(len(key) * 8)
+	cKey := (*C.uchar)(unsafe.Pointer(&k1[0]))
+	keyLen := C.int(len(k1) * 8) // bit
 	ret := C.mkv_decrypt(cCiphertext, C.int(len(value)), cPlaintext, &cPlaintextLen, cKey, keyLen)
 	if ret != 0 {
 		logToFileMKV("DECRYPT", "", "", "FAIL", "DecryptValueMKV error")
 		return nil
 	}
-	logToFileMKV("DECRYPT", "", "", "SUCCESS", "")
+
+	logToFileMKV("DECRYPT", "k1="+string(k1), "original="+string(value), "SUCCESS", "")
 	return plaintext[:int(cPlaintextLen)]
 }
 
@@ -180,18 +194,60 @@ func GenerateK0FromPassword(password string) ([]byte, error) {
 	keyLen := 32
 
 	k0 := PBKDF2([]byte(password), salt, iterations, keyLen)
-	logToFileMKV("GENERATE_K0", "", "", "SUCCESS", fmt.Sprintf("PBKDF2_%d_iters_file_salt", iterations))
+	logToFileMKV("GENERATE_K0", "salt="+string(salt), "", "SUCCESS", fmt.Sprintf("PBKDF2_%d_iters_file_salt", iterations))
 	return k0, nil
 }
 
 // EncryptK1WithK0 mã hóa K1 bằng K0 sử dụng MKV
 func EncryptK1WithK0(k1 []byte, k0 []byte) []byte {
-	return EncryptValueMKV(k1, k0)
+	// Sử dụng hàm mã hóa cũ để mã K1 bằng K0
+	if k1 == nil || len(k1) == 0 || k0 == nil || len(k0) == 0 {
+		logToFileMKV("ENCRYPT_K1", "", "", "SKIP_EMPTY", "")
+		return k1
+	}
+	ciphertextLen := len(k1) + 32 // padding tối đa 1 block
+	ciphertext := make([]byte, ciphertextLen)
+	var cPlaintext *C.uchar
+	if len(k1) > 0 {
+		cPlaintext = (*C.uchar)(unsafe.Pointer(&k1[0]))
+	}
+	cCiphertext := (*C.uchar)(unsafe.Pointer(&ciphertext[0]))
+	cCiphertextLen := C.int(0)
+	cKey := (*C.uchar)(unsafe.Pointer(&k0[0]))
+	keyLen := C.int(len(k0) * 8) // bit
+	ret := C.mkv_encrypt(cPlaintext, C.int(len(k1)), cCiphertext, &cCiphertextLen, cKey, keyLen)
+	if ret != 0 {
+		logToFileMKV("ENCRYPT_K1", "", "", "FAIL", "EncryptK1WithK0 error")
+		return nil
+	}
+	logToFileMKV("ENCRYPT_K1", "", "", "SUCCESS", "")
+	return ciphertext[:int(cCiphertextLen)]
 }
 
 // DecryptK1WithK0 giải mã K1 bằng K0 sử dụng MKV
 func DecryptK1WithK0(encryptedK1 []byte, k0 []byte) []byte {
-	return DecryptValueMKV(encryptedK1, k0)
+	// Sử dụng hàm giải mã cũ để giải K1 bằng K0
+	if encryptedK1 == nil || len(encryptedK1) == 0 || k0 == nil || len(k0) == 0 {
+		logToFileMKV("DECRYPT_K1", "", "", "SKIP_EMPTY", "")
+		return encryptedK1
+	}
+	plaintextLen := len(encryptedK1)
+	plaintext := make([]byte, plaintextLen)
+	var cCiphertext *C.uchar
+	if len(encryptedK1) > 0 {
+		cCiphertext = (*C.uchar)(unsafe.Pointer(&encryptedK1[0]))
+	}
+	cPlaintext := (*C.uchar)(unsafe.Pointer(&plaintext[0]))
+	cPlaintextLen := C.int(0)
+	cKey := (*C.uchar)(unsafe.Pointer(&k0[0]))
+	keyLen := C.int(len(k0) * 8)
+	ret := C.mkv_decrypt(cCiphertext, C.int(len(encryptedK1)), cPlaintext, &cPlaintextLen, cKey, keyLen)
+	if ret != 0 {
+		logToFileMKV("DECRYPT_K1", "", "", "FAIL", "DecryptK1WithK0 error")
+		return nil
+	}
+	logToFileMKV("DECRYPT_K1", "", "", "SUCCESS", "")
+	return plaintext[:int(cPlaintextLen)]
 }
 
 // GenerateSalt tạo salt ngẫu nhiên 32 bytes
@@ -327,6 +383,68 @@ func GetCurrentK1(password string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to decrypt K1 with password")
 	}
 	return k1, nil
+}
+
+// GetCurrentK1FromFile đọc K1 từ file (không cần password)
+func GetCurrentK1FromFile() ([]byte, error) {
+	// Thử đọc K1 đã mã trước
+	encryptedK1Path, err := findKeyFile("encrypted_k1.key")
+	if err != nil {
+		// Nếu không có encrypted_k1.key, thử đọc K1 plaintext
+		k1Path, err := findKeyFile("k1.key")
+		if err != nil {
+			return nil, fmt.Errorf("no K1 found: %v", err)
+		}
+		k1, err := LoadK1FromFile(k1Path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load K1 from %s: %v", k1Path, err)
+		}
+		return k1, nil
+	}
+
+	// Load encrypted K1 từ path tìm được
+	encryptedK1, err := LoadEncryptedK1FromFile(encryptedK1Path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load encrypted K1 from %s: %v", encryptedK1Path, err)
+	}
+
+	// Đọc password từ file password
+	password, err := ReadPasswordFromFile()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read password: %v", err)
+	}
+
+	// Giải mã K1 bằng password
+	k0, err := GenerateK0FromPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate K0: %v", err)
+	}
+	k1 := DecryptK1WithK0(encryptedK1, k0)
+	if k1 == nil {
+		return nil, fmt.Errorf("failed to decrypt K1 with password")
+	}
+	return k1, nil
+}
+
+// ReadPasswordFromFile đọc password từ file
+func ReadPasswordFromFile() (string, error) {
+	passwordPath, err := findKeyFile("password.txt")
+	if err != nil {
+		return "", fmt.Errorf("password file not found: %v", err)
+	}
+
+	passwordBytes, err := ioutil.ReadFile(passwordPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read password file: %v", err)
+	}
+
+	// Loại bỏ newline và whitespace
+	password := strings.TrimSpace(string(passwordBytes))
+	if password == "" {
+		return "", fmt.Errorf("password is empty")
+	}
+
+	return password, nil
 }
 
 // InitializeKeyManagement khởi tạo hệ thống quản lý khóa

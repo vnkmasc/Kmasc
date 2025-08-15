@@ -238,7 +238,7 @@ func TestDataEncryptionWithK1(t *testing.T) {
 	}
 
 	// Get K1
-	k1, err := GetCurrentK1(password)
+	_, err = GetCurrentK1(password)
 	if err != nil {
 		t.Fatalf("Failed to get K1: %v", err)
 	}
@@ -247,13 +247,13 @@ func TestDataEncryptionWithK1(t *testing.T) {
 	testData := []byte("This is test data for MKV encryption with K1")
 
 	// Encrypt data with K1
-	encryptedData := EncryptValueMKV(testData, k1)
+	encryptedData := EncryptValueMKV(testData)
 	if encryptedData == nil {
 		t.Fatalf("Failed to encrypt data with K1")
 	}
 
 	// Decrypt data with K1
-	decryptedData := DecryptValueMKV(encryptedData, k1)
+	decryptedData := DecryptValueMKV(encryptedData)
 	if decryptedData == nil {
 		t.Fatalf("Failed to decrypt data with K1")
 	}
