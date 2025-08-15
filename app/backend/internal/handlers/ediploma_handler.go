@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -42,8 +41,9 @@ func (h *EDiplomaHandler) SearchEDiplomas(c *gin.Context) {
 		v, _ := strconv.ParseBool(issuedStr)
 		issued = &v
 	}
+
 	filters := models.EDiplomaSearchFilter{
-		FacultyCode:     c.Query("faculty_code"),
+		FacultyID:       c.Query("faculty_id"), // dùng trực tiếp faculty_id từ query
 		CertificateType: c.Query("certificate_type"),
 		Course:          c.Query("course"),
 		Issued:          issued,
@@ -140,18 +140,21 @@ func (h *EDiplomaHandler) UploadEDiplomasZip(c *gin.Context) {
 	}
 	defer out.Close()
 
-	io.Copy(out, file)
+	if _, err := io.Copy(out, file); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save uploaded file"})
+		return
+	}
 
-	// Gọi service xử lý zip
-	results, err := h.ediplomaService.ProcessZip(c.Request.Context(), tempZipPath)
+	// Gọi service xử lý zip và lấy các bản ghi EDiploma đã update
+	updatedDiplomas, err := h.ediplomaService.ProcessZip(c.Request.Context(), tempZipPath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"total_files": len(results),
-		"results":     results,
+		"total_files": len(updatedDiplomas),
+		"results":     updatedDiplomas,
 	})
 }
 
@@ -183,7 +186,7 @@ func (h *EDiplomaHandler) ViewEDiploma(c *gin.Context) {
 }
 func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 	var req struct {
-		FacultyCode     string `form:"faculty_code" json:"faculty_code"`
+		FacultyID       string `form:"faculty_id" json:"faculty_id"`
 		CertificateType string `form:"certificate_type" json:"certificate_type"` // optional
 		Course          string `form:"course" json:"course"`                     // optional
 		Issued          *bool  `form:"issued" json:"issued"`                     // optional
@@ -191,7 +194,6 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 	}
 
 	if err := c.ShouldBind(&req); err != nil {
-		log.Printf("❌ Invalid form-data: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid input",
 			"details": err.Error(),
@@ -201,19 +203,26 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 
 	zipFilePath, err := h.ediplomaService.GenerateBulkEDiplomasZip(
 		c.Request.Context(),
-		req.FacultyCode,
+		req.FacultyID,
 		req.CertificateType,
 		req.Course,
 		req.Issued,
 		req.TemplateID,
 	)
 	if err != nil {
-		log.Printf("❌ Failed to generate diplomas: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Printf("✅ Generated diplomas zip: %s", zipFilePath)
+	if zipFilePath == "" {
+		// Không có văn bằng nào được cấp
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Không có văn bằng nào được cấp theo bộ lọc này",
+		})
+		return
+	}
+
+	// Nếu có zip, gửi file
 	c.FileAttachment(zipFilePath, "ediplomas.zip")
 	_ = os.Remove(zipFilePath)
 }

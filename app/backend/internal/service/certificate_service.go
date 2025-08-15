@@ -147,7 +147,6 @@ func mapCertificateToEDiploma(cert *models.Certificate, user *models.User, facul
 		SignedAt:           cert.SignedAt,
 		DataEncrypted:      false,
 		OnBlockchain:       false,
-		FileHash:           cert.HashFile,
 		Status:             "PENDING",
 		IsLocked:           false,
 		CreatedAt:          time.Now(),

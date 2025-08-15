@@ -13,6 +13,8 @@ import (
 )
 
 type EDiplomaRepository interface {
+	UpdateFields(ctx context.Context, id primitive.ObjectID, updates bson.M) error
+	FindByStudentCode(ctx context.Context, studentCode string) (*models.EDiploma, error)
 	FindByDynamicFilter(ctx context.Context, filter bson.M) ([]*models.EDiploma, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.EDiploma, error)
 	Save(ctx context.Context, ediploma *models.EDiploma) error
@@ -36,17 +38,15 @@ func NewEDiplomaRepository(db *mongo.Database, facultyRepo FacultyRepository) ED
 func (r *eDiplomaRepository) SearchByFilters(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiploma, int64, error) {
 	bsonFilter := bson.M{}
 
-	if filter.FacultyCode != "" {
-		faculty, err := r.facultyRepo.FindByFacultyCode(ctx, filter.FacultyCode)
+	// filter theo FacultyID nếu có
+	if filter.FacultyID != "" {
+		facultyID, err := primitive.ObjectIDFromHex(filter.FacultyID)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to find faculty by code: %w", err)
+			return nil, 0, fmt.Errorf("invalid faculty_id: %w", err)
 		}
-		if faculty != nil {
-			bsonFilter["faculty_id"] = faculty.ID
-		} else {
-			return []*models.EDiploma{}, 0, nil
-		}
+		bsonFilter["faculty_id"] = facultyID
 	}
+
 	if filter.CertificateType != "" {
 		bsonFilter["certificate_type"] = filter.CertificateType
 	}
@@ -56,6 +56,7 @@ func (r *eDiplomaRepository) SearchByFilters(ctx context.Context, filter models.
 	if filter.Issued != nil {
 		bsonFilter["issued"] = *filter.Issued
 	}
+
 	// Đếm tổng số kết quả
 	total, err := r.db.CountDocuments(ctx, bsonFilter)
 	if err != nil {
@@ -88,6 +89,12 @@ func (r *eDiplomaRepository) SearchByFilters(ctx context.Context, filter models.
 	}
 
 	return results, total, nil
+}
+
+func (r *eDiplomaRepository) UpdateFields(ctx context.Context, id primitive.ObjectID, updates bson.M) error {
+	updates["updated_at"] = time.Now()
+	_, err := r.db.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updates})
+	return err
 }
 
 func (r *eDiplomaRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*models.EDiploma, error) {
@@ -157,6 +164,24 @@ func (r *eDiplomaRepository) Update(ctx context.Context, id primitive.ObjectID, 
 	}
 	_, err := r.db.UpdateByID(ctx, id, update)
 	return err
+}
+
+func (r *eDiplomaRepository) FindByStudentCode(ctx context.Context, studentCode string) (*models.EDiploma, error) {
+	var ediploma models.EDiploma
+
+	filter := bson.M{
+		"student_code": studentCode,
+	}
+
+	err := r.db.FindOne(ctx, filter).Decode(&ediploma)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // Không tìm thấy
+		}
+		return nil, err
+	}
+
+	return &ediploma, nil
 }
 
 func (r *eDiplomaRepository) Save(ctx context.Context, ediploma *models.EDiploma) error {

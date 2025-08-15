@@ -27,10 +27,10 @@ type EDiplomaService interface {
 	GenerateEDiploma(ctx context.Context, certificateIDStr, templateIDStr string) (*models.EDiploma, error)
 	GenerateBulkEDiplomas(ctx context.Context, facultyIDStr, templateIDStr string) ([]*models.EDiploma, error)
 	UploadLocalEDiplomas(ctx context.Context) []map[string]interface{}
+	ProcessZip(ctx context.Context, zipPath string) ([]*models.EDiploma, error)
 	GetDiplomaPDF(ctx context.Context, id primitive.ObjectID) (io.ReadCloser, int64, string, error)
-	ProcessZip(ctx context.Context, zipPath string) ([]map[string]interface{}, error)
 	SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error)
-	GenerateBulkEDiplomasZip(ctx context.Context, facultyCode, educationType, course string, issued *bool, templateIDStr string) (string, error)
+	GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, certificateType, course string, issued *bool, templateIDStr string) (string, error)
 }
 
 type eDiplomaService struct {
@@ -181,8 +181,8 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		IssueDate:          cert.IssueDate,
 		SerialNumber:       cert.SerialNumber,
 		RegistrationNumber: cert.RegNo,
-		FileLink:           pdfPath,
-		FileHash:           hash,
+		EDiplomaFileLink:   pdfPath,
+		EDiplomaFileHash:   hash,
 		Signed:             false,
 		Signature:          "",
 		SignedAt:           time.Time{},
@@ -218,12 +218,6 @@ func (s *eDiplomaService) SearchEDiplomaDTOs(ctx context.Context, filter models.
 		}
 
 		template, _ := s.templateRepo.GetByID(ctx, ed.TemplateID)
-		if template == nil {
-			log.Default().Printf("[WARN] Template not found for TemplateID=%v in EDiploma ID=%v", ed.TemplateID, ed.ID)
-		} else {
-			log.Default().Printf("[DEBUG] Found template: ID=%v, Name=%s", template.ID, template.Name)
-		}
-
 		user, _ := s.userRepo.GetUserByID(ctx, ed.UserID)
 
 		dto := mapper.MapEDiplomaToDTO(ed, university, faculty, major, template, user)
@@ -345,8 +339,8 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			IssueDate:          cert.IssueDate,
 			SerialNumber:       cert.SerialNumber,
 			RegistrationNumber: cert.RegNo,
-			FileLink:           pdfPath,
-			FileHash:           hash,
+			EDiplomaFileLink:   pdfPath,
+			EDiplomaFileHash:   hash,
 			Signed:             false,
 			Signature:          "",
 			SignedAt:           time.Time{},
@@ -374,16 +368,16 @@ func (s *eDiplomaService) GetDiplomaPDF(ctx context.Context, id primitive.Object
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("diploma not found: %w", err)
 	}
-	if diploma.FileLink == "" {
+	if diploma.EDiplomaFileLink == "" {
 		return nil, 0, "", fmt.Errorf("no file link for diploma")
 	}
 
-	log.Printf("[DEBUG] Getting file from MinIO - Bucket=%s, Object=%s", s.minioClient.Bucket, diploma.FileLink)
+	log.Printf("[DEBUG] Getting file from MinIO - Bucket=%s, Object=%s", s.minioClient.Bucket, diploma.EDiplomaFileLink)
 
 	statInfo, err := s.minioClient.Client.StatObject(
 		ctx,
 		s.minioClient.Bucket,
-		diploma.FileLink,
+		diploma.EDiplomaFileLink,
 		minio.StatObjectOptions{},
 	)
 	if err != nil {
@@ -394,7 +388,7 @@ func (s *eDiplomaService) GetDiplomaPDF(ctx context.Context, id primitive.Object
 	obj, err := s.minioClient.Client.GetObject(
 		ctx,
 		s.minioClient.Bucket,
-		diploma.FileLink,
+		diploma.EDiplomaFileLink,
 		minio.GetObjectOptions{},
 	)
 	if err != nil {
@@ -451,11 +445,11 @@ func (s *eDiplomaService) UploadLocalEDiplomas(ctx context.Context) []map[string
 
 		// Lưu vào DB
 		ediploma := &models.EDiploma{
-			ID:        primitive.NewObjectID(),
-			FileLink:  minioPath,
-			FileHash:  hash,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:               primitive.NewObjectID(),
+			EDiplomaFileLink: minioPath,
+			EDiplomaFileHash: hash,
+			CreatedAt:        time.Now(),
+			UpdatedAt:        time.Now(),
 		}
 		if err := s.repo.Save(ctx, ediploma); err != nil {
 			results = append(results, map[string]interface{}{
@@ -475,10 +469,12 @@ func (s *eDiplomaService) UploadLocalEDiplomas(ctx context.Context) []map[string
 
 	return results
 }
-func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string) ([]map[string]interface{}, error) {
+func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string) ([]*models.EDiploma, error) {
 	// Thư mục tạm để giải nén
 	extractDir := filepath.Join(os.TempDir(), fmt.Sprintf("unzipped_%d", time.Now().Unix()))
-	os.MkdirAll(extractDir, 0755)
+	if err := os.MkdirAll(extractDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create extract dir: %w", err)
+	}
 
 	if err := utils.Unzip(zipPath, extractDir); err != nil {
 		return nil, fmt.Errorf("failed to unzip: %w", err)
@@ -489,7 +485,7 @@ func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string) ([]map
 		return nil, fmt.Errorf("failed to read extracted folder: %w", err)
 	}
 
-	var results []map[string]interface{}
+	var results []*models.EDiploma
 
 	for _, file := range files {
 		if file.IsDir() {
@@ -499,54 +495,53 @@ func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string) ([]map
 		filePath := filepath.Join(extractDir, file.Name())
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			results = append(results, map[string]interface{}{
-				"file":  file.Name(),
-				"error": fmt.Sprintf("read failed: %v", err),
-			})
 			continue
 		}
 
 		hash := utils.ComputeSHA256(data)
 		minioPath := fmt.Sprintf("ediplomas/%s", file.Name())
 
+		// Upload file lên MinIO
 		if err := s.minioClient.UploadFile(ctx, minioPath, data, "application/pdf"); err != nil {
-			results = append(results, map[string]interface{}{
-				"file":  file.Name(),
-				"error": fmt.Sprintf("upload failed: %v", err),
-			})
 			continue
 		}
 
-		ediploma := &models.EDiploma{
-			ID:        primitive.NewObjectID(),
-			FileLink:  minioPath,
-			FileHash:  hash,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
-		if err := s.repo.Save(ctx, ediploma); err != nil {
-			results = append(results, map[string]interface{}{
-				"file":  file.Name(),
-				"error": fmt.Sprintf("DB save failed: %v", err),
-			})
+		// Lấy student_code từ tên file, loại bỏ phần .pdf
+		studentCode := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+
+		// Tìm bản ghi EDiploma hiện có
+		ediploma, err := s.repo.FindByStudentCode(ctx, studentCode)
+		if err != nil || ediploma == nil {
 			continue
 		}
 
-		results = append(results, map[string]interface{}{
-			"file":   file.Name(),
-			"hash":   hash,
-			"link":   minioPath,
-			"status": "uploaded",
-		})
+		// Cập nhật các trường cần thiết
+		updates := bson.M{
+			"ediploma_file_hash": hash,
+			"ediploma_file_link": minioPath,
+			"data_encrypted":     true,
+			"updated_at":         time.Now(),
+		}
+
+		if err := s.repo.UpdateFields(ctx, ediploma.ID, updates); err != nil {
+			continue
+		}
+
+		// Lấy lại bản ghi sau khi update
+		updatedEDiploma, err := s.repo.FindByID(ctx, ediploma.ID)
+		if err != nil || updatedEDiploma == nil {
+			continue
+		}
+
+		results = append(results, updatedEDiploma)
 	}
 
 	return results, nil
 }
 
-// Service
 func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 	ctx context.Context,
-	facultyCode, certificateType, course string,
+	facultyIDStr, certificateType, course string,
 	issued *bool,
 	templateIDStr string,
 ) (string, error) {
@@ -559,83 +554,58 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 
 	// 2. Lấy template
 	template, err := s.templateRepo.GetByID(ctx, templateID)
-	if err != nil {
-		return "", fmt.Errorf("template not found")
-	}
-	if template.HTMLContent == "" {
-		return "", errors.New("template has no HTML content")
+	if err != nil || template.HTMLContent == "" {
+		return "", errors.New("template not found or empty")
 	}
 
+	// 3. Convert facultyID nếu có
 	var facultyID primitive.ObjectID
-	if facultyCode != "" {
-		faculty, err := s.facultyRepo.FindByFacultyCode(ctx, facultyCode)
+	if facultyIDStr != "" {
+		facultyID, err = primitive.ObjectIDFromHex(facultyIDStr)
 		if err != nil {
-			return "", fmt.Errorf("faculty not found for code %s", facultyCode)
+			return "", fmt.Errorf("invalid faculty_id")
 		}
-		facultyID = faculty.ID
 	}
 
-	// 3. Build filter động cho EDiploma
+	// 4. Build dynamic filter
 	filter := bson.M{}
-
-	// facultyID → convert sang ObjectID
 	if !facultyID.IsZero() {
 		filter["faculty_id"] = facultyID
 	}
 	if certificateType != "" {
 		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
 	}
-
-	// course → regex ignore case
 	if course != "" {
 		filter["course"] = bson.M{"$regex": course, "$options": "i"}
 	}
-
-	// issued
 	if issued != nil {
 		filter["issued"] = *issued
 	}
 
-	// 4. Lấy danh sách eDiplomas thỏa filter
+	// 5. Lấy danh sách eDiplomas
 	ediplomas, err := s.repo.FindByDynamicFilter(ctx, filter)
 	if err != nil {
 		return "", fmt.Errorf("failed to load eDiplomas: %w", err)
 	}
 	if len(ediplomas) == 0 {
-		return "", errors.New("no eDiplomas match the given filter")
+		// Không tạo file zip, trả về thông báo rỗng
+		return "", nil
 	}
 
-	// 5. Tạo thư mục tạm
+	// 6. Tạo thư mục tạm và xuất PDF
 	tmpDir, err := os.MkdirTemp("", "ediplomas_*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
 
 	var generatedFilePaths []string
-
-	// 6. Xử lý từng EDiploma
 	for _, ed := range ediplomas {
-		university, err := s.universityRepo.FindByID(ctx, ed.UniversityID)
-		if err != nil {
-			continue
-		}
-		faculty, err := s.facultyRepo.FindByID(ctx, ed.FacultyID)
-		if err != nil {
-			continue
-		}
-		user, err := s.userRepo.GetUserByID(ctx, ed.UserID)
-		if err != nil {
-			continue
-		}
+		user, _ := s.userRepo.GetUserByID(ctx, ed.UserID)
+		university, _ := s.universityRepo.FindByID(ctx, ed.UniversityID)
+		faculty, _ := s.facultyRepo.FindByID(ctx, ed.FacultyID)
 
-		dobTime, err := time.Parse("2006-01-02", user.DateOfBirth)
-		if err != nil {
-			dobTime, err = time.Parse("02/01/2006", user.DateOfBirth)
-			if err != nil {
-				continue
-			}
-		}
-
+		// Parse ngày sinh
+		dobTime, _ := time.Parse("2006-01-02", user.DateOfBirth)
 		data := map[string]interface{}{
 			"SoHieu":         ed.SerialNumber,
 			"SoVaoSo":        ed.RegistrationNumber,
@@ -665,27 +635,20 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 			continue
 		}
 
-		// Update Template & chữ ký & đánh dấu issued
+		// Update eDiploma
 		ed.TemplateID = templateID
 		ed.SignatureOfUni = template.SignatureOfUni
 		ed.SignatureOfMinEdu = template.SignatureOfMinEdu
-		ed.FileLink = filePath
+		ed.EDiplomaFileLink = filePath
 		ed.EDiplomaFileHash = utils.ComputeSHA256(pdfBytes)
 		ed.Issued = true
 		ed.UpdatedAt = time.Now()
-
-		if err := s.repo.Update(ctx, ed.ID, ed); err != nil {
-			log.Printf("❌ Failed to update eDiploma for %s: %v", ed.StudentCode, err)
-			continue
-		}
+		_ = s.repo.Update(ctx, ed.ID, ed)
 
 		generatedFilePaths = append(generatedFilePaths, filePath)
 	}
 
-	if len(generatedFilePaths) == 0 {
-		return "", errors.New("no diplomas updated or generated")
-	}
-
+	// 7. Tạo file zip từ các PDF
 	zipFilePath := filepath.Join(tmpDir, "ediplomas.zip")
 	if err := utils.CreateZipFromFiles(zipFilePath, generatedFilePaths); err != nil {
 		return "", fmt.Errorf("failed to create zip: %w", err)
