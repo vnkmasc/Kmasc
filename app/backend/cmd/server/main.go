@@ -96,9 +96,7 @@ func main() {
 	facultyService := service.NewFacultyService(universityRepo, facultyRepo)
 	verificationService := service.NewVerificationService(verificationRepo, certificateService)
 	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)
-	blockchainSvc := service.NewBlockchainService(
-		certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient,
-	)
+	blockchainSvc := service.NewBlockchainService(ediplomaRepo, certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient)
 	majorService := service.NewMajorService(majorRepo, facultyRepo)
 	templateService := service.NewTemplateService(
 		templateRepo,

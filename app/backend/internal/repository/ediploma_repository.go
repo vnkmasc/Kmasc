@@ -159,6 +159,7 @@ func (r *eDiplomaRepository) Update(ctx context.Context, id primitive.ObjectID, 
 			"signature_of_uni":    ed.SignatureOfUni,
 			"signature_of_minedu": ed.SignatureOfMinEdu,
 			"issued":              ed.Issued,
+			"on_blockchain":       ed.OnBlockchain,
 			"updated_at":          time.Now(),
 		},
 	}

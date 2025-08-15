@@ -59,11 +59,11 @@ type EDiplomaDTO struct {
 	// TemplateID         primitive.ObjectID `json:"template_id"`
 	TemplateName string `json:"template_name"`
 	// UniversityID       primitive.ObjectID `json:"university_id"`
-	UniversityCode string `json:"university_code"`
-	UniversityName string `json:"university_name"`
-	// FacultyID          primitive.ObjectID `json:"faculty_id"`
-	FacultyCode string `json:"faculty_code"`
-	FacultyName string `json:"faculty_name"`
+	UniversityCode string             `json:"university_code"`
+	UniversityName string             `json:"university_name"`
+	FacultyID      primitive.ObjectID `json:"faculty_id"`
+	FacultyCode    string             `json:"faculty_code"`
+	FacultyName    string             `json:"faculty_name"`
 	// MajorID            primitive.ObjectID `json:"major_id"`
 	// MajorCode          string             `json:"major_code"`
 	// MajorName          string             `json:"major_name"`
