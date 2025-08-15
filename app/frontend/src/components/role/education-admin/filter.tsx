@@ -56,11 +56,11 @@ const Filter: React.FC<Props> = (props) => {
             <div>
               <Button variant='destructive' className='mr-2' onClick={handleReset}>
                 <CircleXIcon />
-                <span className='hidden sm:block'>Xóa bộ lọc</span>
+                <span className='hidden md:block'>Xóa bộ lọc</span>
               </Button>
               <Button onClick={form.handleSubmit(onSubmit)}>
                 <SearchIcon />
-                <span className='hidden sm:block'>Tìm kiếm</span>
+                <span className='hidden md:block'>Tìm kiếm</span>
               </Button>
             </div>
           </div>

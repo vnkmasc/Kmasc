@@ -102,13 +102,13 @@ const DegreeTemplate: React.FC = () => {
             onClick={() => mutateSignDegreeTemplateUni.trigger()}
           >
             <Key />
-            <span className='hidden sm:block'>Ký trường</span>
+            <span className='hidden md:block'>Ký trường</span>
           </Button>,
           <Dialog key='sign-degree-template-faculty' open={openSignDialog} onOpenChange={setOpenSignDialog}>
             <DialogTrigger asChild>
               <Button variant={'outline'}>
                 <KeyRound />
-                <span className='hidden sm:block'>Ký khoa</span>
+                <span className='hidden md:block'>Ký khoa</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -140,7 +140,7 @@ const DegreeTemplate: React.FC = () => {
           </Dialog>,
           <Button key='create-degree-template' onClick={() => setIdDetail(null)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Tạo mới</span>
+            <span className='hidden md:block'>Tạo mới</span>
           </Button>
         ]}
       />

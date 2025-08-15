@@ -193,7 +193,7 @@ const CertificateManagementPage = () => {
           />,
           <Button key='create-new-degree' onClick={() => setOpenCreateDegreeDialog(true)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Cấp văn bằng</span>
+            <span className='hidden md:block'>Cấp văn bằng</span>
           </Button>,
           <Button
             variant={'secondary'}
@@ -201,13 +201,13 @@ const CertificateManagementPage = () => {
             onClick={() => setOpenCreateCertificateDialog(true)}
           >
             <PlusIcon />
-            <span className='hidden sm:block'>Cấp chứng chỉ</span>
+            <span className='hidden md:block'>Cấp chứng chỉ</span>
           </Button>,
           <Dialog key='upload-pdf' open={openUploadDialog} onOpenChange={setOpenUploadDialog}>
             <DialogTrigger>
               <Button variant={'outline'} title='Có hỗ trợ tải nhiều tệp cùng lúc'>
                 <FileUpIcon />
-                <span className='hidden sm:block'>Tải tệp (PDF)</span>
+                <span className='hidden md:block'>Tải tệp (PDF)</span>
               </Button>
             </DialogTrigger>
             <DialogContent>

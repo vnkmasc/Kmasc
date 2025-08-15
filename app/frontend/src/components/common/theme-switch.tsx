@@ -1,7 +1,6 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { Button } from '../ui/button'
 import { MoonIcon, SunIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -14,17 +13,17 @@ const ThemeSwitch = () => {
   }, [])
 
   if (!mounted) {
-    return (
-      <Button variant='ghost' size='icon'>
-        <div className='h-4 w-4' />
-      </Button>
-    )
+    return <div>Giao diện</div>
   }
 
   return (
-    <Button variant='ghost' size='icon' onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+    <div
+      className='flex w-full items-center justify-between'
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+    >
+      Giao diện
       {theme === 'light' ? <SunIcon className='h-4 w-4' /> : <MoonIcon className='h-4 w-4' />}
-    </Button>
+    </div>
   )
 }
 

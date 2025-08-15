@@ -144,7 +144,7 @@ const ScoreManagementPage = () => {
           <UploadButton handleUpload={() => {}} loading={false} />
           <Button onClick={() => setIdDetail(null)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Thêm điểm</span>
+            <span className='hidden md:block'>Thêm điểm</span>
           </Button>
         </div>
       </div>

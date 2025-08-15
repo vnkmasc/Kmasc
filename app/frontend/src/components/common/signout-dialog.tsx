@@ -1,7 +1,3 @@
-'use client'
-
-import { Button } from '../ui/button'
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,32 +5,30 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogTrigger
+  AlertDialogTitle
 } from '../ui/alert-dialog'
-import { LogOutIcon } from 'lucide-react'
+
 import { signOut } from '@/lib/auth/auth'
-const SignOutButton = () => {
-  const handleSignOut = () => {
-    signOut()
-  }
+import React, { Dispatch } from 'react'
+
+interface Props {
+  open: boolean
+  onOpenChange: Dispatch<React.SetStateAction<boolean>>
+}
+
+const SignoutDialog: React.FC<Props> = ({ open, onOpenChange }) => {
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant='destructive' size={'icon'}>
-          <LogOutIcon />
-        </Button>
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className='rounded-lg'>
         <AlertDialogTitle>Đăng xuất</AlertDialogTitle>
         <AlertDialogDescription>Bạn có chắc chắn muốn đăng xuất không?</AlertDialogDescription>
         <AlertDialogFooter>
           <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
-          <AlertDialogAction onClick={handleSignOut}>Đăng xuất</AlertDialogAction>
+          <AlertDialogAction onClick={signOut}>Đăng xuất</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   )
 }
 
-export default SignOutButton
+export default SignoutDialog
