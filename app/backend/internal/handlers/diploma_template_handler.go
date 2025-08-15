@@ -389,32 +389,6 @@ func (h *TemplateHandler) SignTemplatesByMinEdu(c *gin.Context) {
 	})
 }
 
-// func (h *TemplateHandler) GetTemplateView(c *gin.Context) {
-// 	ctx := c.Request.Context()
-// 	templateIDStr := c.Param("id")
-
-// 	template, err := h.templateService.GetTemplateByID(ctx, templateIDStr)
-// 	if err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "template not found"})
-// 		return
-// 	}
-
-// 	// calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
-// 	// fmt.Println("[GetTemplateView] Calculated hash:", calculatedHash)
-// 	// fmt.Println("[GetTemplateView] Stored hash:", template.HashTemplate)
-// 	// fmt.Println("[GetTemplateView] HTMLContent length:", len(template.HTMLContent))
-// 	// fmt.Printf("[GetTemplateView] HTMLContent preview: %.100s\n", template.HTMLContent)
-
-// 	// if calculatedHash != template.HashTemplate {
-// 	// 	c.JSON(http.StatusInternalServerError, gin.H{
-// 	// 		"error": "template content hash mismatch - data may be corrupted",
-// 	// 	})
-// 	// 	return
-// 	// }
-
-// 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(template.HTMLContent))
-// }
-
 func parseMinioURL(urlStr string) (bucket, objectPath string, err error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {

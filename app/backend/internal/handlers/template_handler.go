@@ -161,3 +161,21 @@ func (h *TemplateSampleHandler) GetAllTemplateSamples(c *gin.Context) {
 		"data":    result,
 	})
 }
+
+func (h *TemplateSampleHandler) GetTemplateSampleView(c *gin.Context) {
+	ctx := c.Request.Context()
+	templateSampleIDStr := c.Param("id")
+
+	templateSampleID, err := primitive.ObjectIDFromHex(templateSampleIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid template sample ID"})
+		return
+	}
+	templateSample, err := h.service.GetByID(ctx, templateSampleID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "template sample not found"})
+		return
+	}
+
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(templateSample.HTMLContent))
+}
