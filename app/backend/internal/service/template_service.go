@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
@@ -11,11 +12,12 @@ import (
 )
 
 type TemplateSampleService struct {
-	repo *repository.TemplateSampleRepo
+	repo         *repository.TemplateSampleRepo
+	templateRepo repository.TemplateRepository
 }
 
-func NewTemplateSampleService(repo *repository.TemplateSampleRepo) *TemplateSampleService {
-	return &TemplateSampleService{repo: repo}
+func NewTemplateSampleService(repo *repository.TemplateSampleRepo, templateRepo repository.TemplateRepository) *TemplateSampleService {
+	return &TemplateSampleService{repo: repo, templateRepo: templateRepo}
 }
 
 func (s *TemplateSampleService) Create(ctx context.Context, sample *models.TemplateSample) (primitive.ObjectID, error) {
@@ -47,6 +49,7 @@ func (s *TemplateSampleService) GetByID(ctx context.Context, id primitive.Object
 	}
 	return s.repo.GetByID(ctx, id)
 }
+
 func (s *TemplateSampleService) Update(ctx context.Context, sample *models.TemplateSample) error {
 	if sample.ID.IsZero() {
 		return errors.New("invalid template sample ID")
@@ -58,6 +61,18 @@ func (s *TemplateSampleService) Update(ctx context.Context, sample *models.Templ
 		return errors.New("html_content is required")
 	}
 
+	// Kiểm tra xem có template nào đang khóa sử dụng sample này
+	templates, err := s.templateRepo.FindByTemplateSampleID(ctx, sample.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check related templates: %w", err)
+	}
+	for _, tmpl := range templates {
+		if tmpl.IsLocked {
+			return fmt.Errorf("template %s đã bị khóa, không thể sửa giao diện", tmpl.Name)
+		}
+	}
+
+	// Update TemplateSample
 	return s.repo.Update(ctx, sample)
 }
 

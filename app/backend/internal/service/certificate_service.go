@@ -73,16 +73,13 @@ func NewCertificateService(
 }
 
 func (s *certificateService) CreateCertificate(ctx context.Context, claims *utils.CustomClaims, req *models.CreateCertificateRequest) error {
-
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		return common.ErrInvalidToken
 	}
-	fmt.Println(">>> Tìm sinh viên - code:", strings.TrimSpace(req.StudentCode), "universityID:", universityID.Hex())
 
 	user, err := s.userRepo.FindByStudentCodeAndUniversityID(ctx, strings.TrimSpace(req.StudentCode), universityID)
 	if err != nil || user == nil {
-		fmt.Println(">>> Không tìm thấy sinh viên với code:", req.StudentCode)
 		return common.ErrUserNotExisted
 	}
 	if user.FacultyID.IsZero() {
@@ -92,18 +89,18 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err := s.validateDegreeRequest(ctx, req, universityID); err != nil {
 		return err
 	}
-
 	if err := s.checkDuplicateSerialAndRegNo(ctx, universityID, req); err != nil {
 		return err
+	}
+
+	university, err := s.universityRepo.FindByID(ctx, universityID)
+	if err != nil || university == nil {
+		return common.ErrUniversityNotFound
 	}
 
 	faculty, err := s.facultyRepo.FindByID(ctx, user.FacultyID)
 	if err != nil || faculty == nil {
 		return common.ErrFacultyNotFound
-	}
-	university, err := s.universityRepo.FindByID(ctx, universityID)
-	if err != nil || university == nil {
-		return common.ErrUniversityNotFound
 	}
 
 	cert := models.NewCertificate(req, user, universityID)
@@ -112,11 +109,11 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err := s.certificateRepo.CreateCertificate(ctx, cert); err != nil {
 		return err
 	}
-	ed := mapCertificateToEDiploma(cert, user, faculty)
+
+	ed := mapCertificateToEDiploma(cert, user)
 	if err := s.ediplomaRepo.Save(ctx, ed); err != nil {
 		return err
 	}
-	return nil
 
 	if req.IsDegree {
 		s.updateUserStatusIfNeeded(ctx, user, req.CertificateType)
@@ -125,7 +122,7 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	return nil
 }
 
-func mapCertificateToEDiploma(cert *models.Certificate, user *models.User, faculty *models.Faculty) *models.EDiploma {
+func mapCertificateToEDiploma(cert *models.Certificate, user *models.User) *models.EDiploma {
 	return &models.EDiploma{
 		ID:                 primitive.NewObjectID(),
 		Name:               cert.Name,
@@ -147,8 +144,6 @@ func mapCertificateToEDiploma(cert *models.Certificate, user *models.User, facul
 		SignedAt:           cert.SignedAt,
 		DataEncrypted:      false,
 		OnBlockchain:       false,
-		Status:             "PENDING",
-		IsLocked:           false,
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
 	}

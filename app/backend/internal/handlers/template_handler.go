@@ -95,6 +95,7 @@ type UpdateTemplateSampleRequest struct {
 	HTMLContent string `json:"html_content" binding:"required"`
 }
 
+// Handler
 func (h *TemplateSampleHandler) UpdateTemplateSample(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -103,7 +104,10 @@ func (h *TemplateSampleHandler) UpdateTemplateSample(c *gin.Context) {
 		return
 	}
 
-	var req UpdateTemplateSampleRequest
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		HTMLContent string `json:"html_content" binding:"required"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body", "details": err.Error()})
 		return
@@ -116,7 +120,7 @@ func (h *TemplateSampleHandler) UpdateTemplateSample(c *gin.Context) {
 	}
 
 	if err := h.service.Update(c.Request.Context(), sample); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -124,6 +128,7 @@ func (h *TemplateSampleHandler) UpdateTemplateSample(c *gin.Context) {
 		"message": "Template sample updated successfully",
 	})
 }
+
 func (h *TemplateSampleHandler) GetAllTemplateSamples(c *gin.Context) {
 	val, exists := c.Get("claims")
 	if !exists {

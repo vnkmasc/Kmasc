@@ -92,7 +92,6 @@ func main() {
 		templateEngine,
 		pdfGenerator,
 	)
-	templateSampleService := service.NewTemplateSampleService(templateSampleRepo)
 
 	userService := service.NewUserService(userRepo, universityRepo, facultyRepo)
 	authService := service.NewAuthService(authRepo, userRepo, emailSender)
@@ -103,6 +102,8 @@ func main() {
 	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)
 	blockchainSvc := service.NewBlockchainService(ediplomaRepo, certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient)
 	majorService := service.NewMajorService(majorRepo, facultyRepo)
+	templateSampleService := service.NewTemplateSampleService(templateSampleRepo, templateRepo)
+
 	templateService := service.NewTemplateService(
 		templateRepo,
 		facultyRepo,

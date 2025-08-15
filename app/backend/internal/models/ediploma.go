@@ -44,8 +44,6 @@ type EDiploma struct {
 
 	SignatureOfUni    string `bson:"signature_of_uni,omitempty" json:"signatureOfUni,omitempty"`
 	SignatureOfMinEdu string `bson:"signature_of_minedu,omitempty" json:"signatureOfMinEdu,omitempty"`
-	Status            string `bson:"status" json:"status"` // PENDING, VERIFIED,...
-	IsLocked          bool   `bson:"is_locked" json:"isLocked"`
 
 	// Metadata
 	Description string    `bson:"description,omitempty" json:"description,omitempty"`
@@ -53,45 +51,30 @@ type EDiploma struct {
 	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
 }
 
-type EDiplomaDTO struct {
-	ID   primitive.ObjectID `json:"id"`
-	Name string             `json:"name"`
-	// TemplateID         primitive.ObjectID `json:"template_id"`
-	TemplateName string `json:"template_name"`
-	// UniversityID       primitive.ObjectID `json:"university_id"`
-	UniversityCode string             `json:"university_code"`
-	UniversityName string             `json:"university_name"`
-	FacultyID      primitive.ObjectID `json:"faculty_id"`
-	FacultyCode    string             `json:"faculty_code"`
-	FacultyName    string             `json:"faculty_name"`
-	// MajorID            primitive.ObjectID `json:"major_id"`
-	// MajorCode          string             `json:"major_code"`
-	// MajorName          string             `json:"major_name"`
-	// UserID             primitive.ObjectID `json:"user_id"`
-	StudentName        string    `json:"student_name"`
-	StudentCode        string    `json:"student_code"`
-	FullName           string    `json:"full_name"`
-	CertificateType    string    `json:"certificate_type"`
-	Course             string    `json:"course"`
-	EducationType      string    `json:"education_type"`
-	GPA                float64   `json:"gpa"`
-	GraduationRank     string    `json:"graduation_rank"`
-	IssueDate          time.Time `json:"issue_date"`
-	SerialNumber       string    `json:"serial_number"`
-	RegistrationNumber string    `json:"registration_number"`
-	// FileHash           string             `json:"file_hash"`
-	// EDiplomaFileHash   string             `json:"ediploma_file_hash"`
-	// Signature          string             `json:"signature"`
-	Issued        bool `json:"issued"` // Đã cấp bằng số hay chưa
-	Signed        bool `json:"signed"`
-	DataEncrypted bool `json:"data_encrypted"`
-	// SignedAt           time.Time          `json:"signed_at"`
-	OnBlockchain bool `json:"on_blockchain"`
-	// SignatureOfUni     string             `json:"signatureOfUni,omitempty"`
-	// SignatureOfMinEdu  string             `json:"signatureOfMinEdu,omitempty"`
-	Status string `json:"status"`
-	// CreatedAt time.Time `json:"created_at"`
-	// UpdatedAt time.Time `json:"updated_at"`
+type EDiplomaResponse struct {
+	ID                 primitive.ObjectID `json:"id"`
+	Name               string             `json:"name"`
+	TemplateName       string             `json:"template_name"`
+	UniversityCode     string             `json:"university_code"`
+	UniversityName     string             `json:"university_name"`
+	FacultyID          primitive.ObjectID `json:"faculty_id"`
+	FacultyCode        string             `json:"faculty_code"`
+	FacultyName        string             `json:"faculty_name"`
+	StudentName        string             `json:"student_name"`
+	StudentCode        string             `json:"student_code"`
+	FullName           string             `json:"full_name"`
+	CertificateType    string             `json:"certificate_type"`
+	Course             string             `json:"course"`
+	EducationType      string             `json:"education_type"`
+	GPA                float64            `json:"gpa"`
+	GraduationRank     string             `json:"graduation_rank"`
+	IssueDate          time.Time          `json:"issue_date"`
+	SerialNumber       string             `json:"serial_number"`
+	RegistrationNumber string             `json:"registration_number"`
+	Issued             bool               `json:"issued"`
+	Signed             bool               `json:"signed"`
+	DataEncrypted      bool               `json:"data_encrypted"`
+	OnBlockchain       bool               `json:"on_blockchain"`
 }
 type EDiplomaSearchFilter struct {
 	FacultyID       string `json:"faculty_id"`

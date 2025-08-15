@@ -49,11 +49,10 @@ func MapEDiplomaToDTO(
 	ed *models.EDiploma,
 	university *models.University,
 	faculty *models.Faculty,
-	major *models.Major,
 	template *models.DiplomaTemplate,
 	user *models.User,
-) *models.EDiplomaDTO {
-	return &models.EDiplomaDTO{
+) *models.EDiplomaResponse {
+	return &models.EDiplomaResponse{
 		ID:             ed.ID,
 		Name:           ed.Name,
 		FacultyID:      ed.FacultyID,
@@ -78,6 +77,5 @@ func MapEDiplomaToDTO(
 		Signed:             ed.Signed,
 		DataEncrypted:      ed.DataEncrypted,
 		OnBlockchain:       ed.OnBlockchain,
-		Status:             ed.Status,
 	}
 }
