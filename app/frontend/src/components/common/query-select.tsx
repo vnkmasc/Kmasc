@@ -86,7 +86,7 @@ const QuerySelect: React.FC<CustomFormItem> = (props) => {
             </PopoverContent>
           </Popover>
           {props.description && <FormDescription>{props.description}</FormDescription>}
-          <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+          <FormMessage className={`${props.description ? '!mt-0' : '!mt-1'}`} />
         </FormItem>
       )}
     />

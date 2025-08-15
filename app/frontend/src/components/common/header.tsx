@@ -27,6 +27,7 @@ import { useState } from 'react'
 import SignoutDialog from './signout-dialog'
 import ChangePassDialog from './change-pass-dialog'
 import ThemeSwitch from './theme-switch'
+import SignSetting from './sign-setting'
 
 interface Props {
   role: 'student' | 'university_admin' | 'admin' | null
@@ -54,10 +55,6 @@ const Header: React.FC<Props> = (props) => {
     {
       title: md && !lg ? 'VB số' : 'Văn bằng số',
       href: '/education-admin/digital-degree-management'
-    },
-    {
-      title: md && !lg ? 'MB số' : 'Mẫu bằng số',
-      href: '/education-admin/degree-template-management'
     }
   ]
 
@@ -88,6 +85,7 @@ const Header: React.FC<Props> = (props) => {
   ]
   const [openSignoutDialog, setOpenSignoutDialog] = useState<boolean>(false)
   const [openChangePassDialog, setOpenChangePassDialog] = useState<boolean>(false)
+  const [openSignSetting, setOpenSignSetting] = useState<boolean>(false)
 
   const navList =
     props.role === 'university_admin' ? educationAdminPages : props.role === 'admin' ? adminPages : studentPages
@@ -97,7 +95,7 @@ const Header: React.FC<Props> = (props) => {
         {props.role !== null ? (
           <div className='flex gap-2 md:hidden'>
             <Sheet>
-              <SheetTrigger>
+              <SheetTrigger asChild>
                 <div className='rounded-md border p-1 hover:bg-accent'>
                   <MenuIcon />
                 </div>
@@ -150,7 +148,9 @@ const Header: React.FC<Props> = (props) => {
             <DropdownMenuContent align='end' className='w-40'>
               <DropdownMenuLabel>Cấu hình</DropdownMenuLabel>
               <DropdownMenuGroup>
-                <DropdownMenuItem>Cấu hình ký số</DropdownMenuItem>
+                {props.role !== 'student' && (
+                  <DropdownMenuItem onClick={() => setOpenSignSetting(true)}>Cấu hình ký số</DropdownMenuItem>
+                )}
                 <DropdownMenuItem>
                   <ThemeSwitch />
                 </DropdownMenuItem>
@@ -178,6 +178,7 @@ const Header: React.FC<Props> = (props) => {
 
         <SignoutDialog open={openSignoutDialog} onOpenChange={setOpenSignoutDialog} />
         <ChangePassDialog open={openChangePassDialog} setOpen={setOpenChangePassDialog} />
+        <SignSetting open={openSignSetting} onOpenChange={setOpenSignSetting} role={props.role as string} />
       </header>
     </div>
   )

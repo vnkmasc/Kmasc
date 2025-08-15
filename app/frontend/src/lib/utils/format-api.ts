@@ -96,7 +96,8 @@ export const formatCertificate = (data: any, isSendToServer: boolean = false) =>
         date: data.issue_date,
         signed: data.signed,
         name: data.name,
-        isDegree: data.certificate_type !== undefined
+        isDegree: data.certificate_type !== undefined,
+        onBlockchain: data.on_blockchain
       }
 }
 

@@ -11,35 +11,37 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { KeyRound } from 'lucide-react'
 import { UseData } from '@/components/providers/data-provider'
 import { formatDegreeTemplateOptions, formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import useSWR from 'swr'
 import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/degree'
 import { showNotification } from '@/lib/utils/common'
-import CommonSelect from '../common-select'
+import CommonSelect from '../../common-select'
 import { Label } from '@/components/ui/label'
 import useSWRMutation from 'swr/mutation'
 import { OptionType } from '@/types/common'
 
-const IssueDegreeDialog: React.FC = () => {
+interface Props {
+  faculty_code: string
+  certificate_type: string
+  course: string
+}
+
+const SignDegreeDialog: React.FC<Props> = (props) => {
   const [openSignDialog, setOpenSignDialog] = useState(false)
-  const [selectFacultyId, setSelectFacultyId] = useState<string>('')
   const [selectDegreeTemplateId, setSelectDegreeTemplateId] = useState<string>('')
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
-  useEffect(() => {
-    setSelectDegreeTemplateId('')
-  }, [selectFacultyId])
 
   const findLabel = (id: string, options: OptionType[]) => {
     return options?.find((o: OptionType) => o.value === id)?.label
   }
 
   const queryDegreeTemplatesByFaculty = useSWR(
-    selectFacultyId === '' ? undefined : 'degree-templates-by-faculty' + selectFacultyId,
+    props.faculty_code ? 'degree-templates-by-faculty' + props.faculty_code : undefined,
     async () => {
-      const res = await searchDegreeTemplateByFaculty(selectFacultyId)
+      const res = await searchDegreeTemplateByFaculty(props.faculty_code)
       return formatDegreeTemplateOptions(res.data)
     },
     {
@@ -53,13 +55,13 @@ const IssueDegreeDialog: React.FC = () => {
     'issue-digital-degree-faculty',
     () =>
       issueDownloadDegreeZip(
-        selectFacultyId,
+        props.faculty_code,
         selectDegreeTemplateId,
-        `VBS-${findLabel(selectFacultyId, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
+        `VBS-${findLabel(props.faculty_code, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
       ),
     {
       onSuccess: () => {
-        showNotification('success', 'Cấp bằng số cho chuyên ngành thành công')
+        showNotification('success', 'Ký bằng số cho chuyên ngành thành công')
         setOpenSignDialog(false)
       }
     }
@@ -70,32 +72,24 @@ const IssueDegreeDialog: React.FC = () => {
       open={openSignDialog}
       onOpenChange={(open) => {
         if (!open) {
-          setSelectFacultyId('')
           setSelectDegreeTemplateId('')
         }
         setOpenSignDialog(open)
       }}
     >
       <DialogTrigger asChild>
-        <Button>
+        <Button variant={'secondary'}>
           <KeyRound />
-          <span className='hidden md:block'>Cấp bằng</span>
+          <span className='hidden md:block'>Ký số</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Cấp bằng số</DialogTitle>
+          <DialogTitle>Ký văn bằng số</DialogTitle>
           <DialogDescription>
-            Cấp bằng số cho các chuyên ngành và tự động tải xuống tệp <span className='font-bold'>.zip</span>
+            Ký bằng số cho các chuyên ngành và tự động tải xuống tệp <span className='font-bold'>.zip</span>
           </DialogDescription>
         </DialogHeader>
-        <Label>Chọn chuyên ngành</Label>
-        <CommonSelect
-          value={selectFacultyId}
-          options={facultyOptions}
-          handleSelect={setSelectFacultyId}
-          placeholder='Chọn chuyên ngành'
-        />
 
         <Label>Chọn mẫu văn bằng</Label>
         <CommonSelect
@@ -112,9 +106,15 @@ const IssueDegreeDialog: React.FC = () => {
           <Button
             type='submit'
             isLoading={mutateIssueDigitalDegree.isMutating}
-            onClick={() => mutateIssueDigitalDegree.trigger()}
+            onClick={() => {
+              if (selectDegreeTemplateId === '') {
+                showNotification('error', 'Vui lòng chọn mẫu văn bằng số')
+                return
+              }
+              mutateIssueDigitalDegree.trigger()
+            }}
           >
-            Cấp bằng
+            Ký bằng
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -122,4 +122,4 @@ const IssueDegreeDialog: React.FC = () => {
   )
 }
 
-export default IssueDegreeDialog
+export default SignDegreeDialog

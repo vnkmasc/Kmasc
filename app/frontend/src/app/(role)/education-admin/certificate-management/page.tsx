@@ -204,7 +204,7 @@ const CertificateManagementPage = () => {
             <span className='hidden md:block'>Cấp chứng chỉ</span>
           </Button>,
           <Dialog key='upload-pdf' open={openUploadDialog} onOpenChange={setOpenUploadDialog}>
-            <DialogTrigger>
+            <DialogTrigger asChild>
               <Button variant={'outline'} title='Có hỗ trợ tải nhiều tệp cùng lúc'>
                 <FileUpIcon />
                 <span className='hidden md:block'>Tải tệp (PDF)</span>
@@ -356,6 +356,16 @@ const CertificateManagementPage = () => {
             className: 'min-w-[100px]',
             render: (item) => (
               <Badge variant={item.signed ? 'default' : 'outline'}>{item.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
+            )
+          },
+          {
+            header: 'Blockchain',
+            value: 'onBlockchain',
+
+            render: (item) => (
+              <Badge variant={item.onBlockchain ? 'default' : 'outline'}>
+                {item.onBlockchain ? 'Đã đẩy' : 'Chưa đẩy'}
+              </Badge>
             )
           },
           {
