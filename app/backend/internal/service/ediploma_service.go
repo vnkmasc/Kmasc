@@ -18,6 +18,7 @@ import (
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
 	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
 	"github.com/vnkmasc/Kmasc/app/backend/utils"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -28,8 +29,8 @@ type EDiplomaService interface {
 	UploadLocalEDiplomas(ctx context.Context) []map[string]interface{}
 	GetDiplomaPDF(ctx context.Context, id primitive.ObjectID) (io.ReadCloser, int64, string, error)
 	ProcessZip(ctx context.Context, zipPath string) ([]map[string]interface{}, error)
-	GenerateBulkEDiplomasZip(ctx context.Context, facultyIDStr, templateIDStr, course string) (string, error)
 	SearchEDiplomaDTOs(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiplomaDTO, int64, error)
+	GenerateBulkEDiplomasZip(ctx context.Context, facultyCode, educationType, course string, issued *bool, templateIDStr string) (string, error)
 }
 
 type eDiplomaService struct {
@@ -217,6 +218,11 @@ func (s *eDiplomaService) SearchEDiplomaDTOs(ctx context.Context, filter models.
 		}
 
 		template, _ := s.templateRepo.GetByID(ctx, ed.TemplateID)
+		if template == nil {
+			log.Default().Printf("[WARN] Template not found for TemplateID=%v in EDiploma ID=%v", ed.TemplateID, ed.ID)
+		} else {
+			log.Default().Printf("[DEBUG] Found template: ID=%v, Name=%s", template.ID, template.Name)
+		}
 
 		user, _ := s.userRepo.GetUserByID(ctx, ed.UserID)
 
@@ -537,42 +543,69 @@ func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string) ([]map
 	return results, nil
 }
 
+// Service
 func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 	ctx context.Context,
-	facultyIDStr, templateIDStr, course string,
+	facultyCode, certificateType, course string,
+	issued *bool,
+	templateIDStr string,
 ) (string, error) {
-	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
-	if err != nil {
-		return "", fmt.Errorf("invalid faculty ID")
-	}
+
+	// 1. Convert templateID
 	templateID, err := primitive.ObjectIDFromHex(templateIDStr)
 	if err != nil {
 		return "", fmt.Errorf("invalid template ID")
 	}
 
-	// 1. Lấy template
+	// 2. Lấy template
 	template, err := s.templateRepo.GetByID(ctx, templateID)
 	if err != nil {
 		return "", fmt.Errorf("template not found")
-	}
-	if template.FacultyID != facultyID {
-		return "", errors.New("template does not belong to the given faculty")
 	}
 	if template.HTMLContent == "" {
 		return "", errors.New("template has no HTML content")
 	}
 
-	// 2. Lấy certificates theo khoa hoặc theo khóa học
-	var certificates []*models.Certificate
-	if course != "" {
-		certificates, err = s.certificateRepo.FindByFacultyIDAndCourse(ctx, facultyID, course)
-	} else {
-		certificates, err = s.certificateRepo.FindByFacultyID(ctx, facultyID)
-	}
-	if err != nil {
-		return "", fmt.Errorf("failed to load certificates: %w", err)
+	var facultyID primitive.ObjectID
+	if facultyCode != "" {
+		faculty, err := s.facultyRepo.FindByFacultyCode(ctx, facultyCode)
+		if err != nil {
+			return "", fmt.Errorf("faculty not found for code %s", facultyCode)
+		}
+		facultyID = faculty.ID
 	}
 
+	// 3. Build filter động cho EDiploma
+	filter := bson.M{}
+
+	// facultyID → convert sang ObjectID
+	if !facultyID.IsZero() {
+		filter["faculty_id"] = facultyID
+	}
+	if certificateType != "" {
+		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+	}
+
+	// course → regex ignore case
+	if course != "" {
+		filter["course"] = bson.M{"$regex": course, "$options": "i"}
+	}
+
+	// issued
+	if issued != nil {
+		filter["issued"] = *issued
+	}
+
+	// 4. Lấy danh sách eDiplomas thỏa filter
+	ediplomas, err := s.repo.FindByDynamicFilter(ctx, filter)
+	if err != nil {
+		return "", fmt.Errorf("failed to load eDiplomas: %w", err)
+	}
+	if len(ediplomas) == 0 {
+		return "", errors.New("no eDiplomas match the given filter")
+	}
+
+	// 5. Tạo thư mục tạm
 	tmpDir, err := os.MkdirTemp("", "ediplomas_*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
@@ -580,19 +613,22 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 
 	var generatedFilePaths []string
 
-	for _, cert := range certificates {
-		university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
+	// 6. Xử lý từng EDiploma
+	for _, ed := range ediplomas {
+		university, err := s.universityRepo.FindByID(ctx, ed.UniversityID)
+		if err != nil {
+			continue
+		}
+		faculty, err := s.facultyRepo.FindByID(ctx, ed.FacultyID)
+		if err != nil {
+			continue
+		}
+		user, err := s.userRepo.GetUserByID(ctx, ed.UserID)
 		if err != nil {
 			continue
 		}
 
-		user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
-		if err != nil {
-			continue
-		}
-
-		var dobTime time.Time
-		dobTime, err = time.Parse("2006-01-02", user.DateOfBirth)
+		dobTime, err := time.Parse("2006-01-02", user.DateOfBirth)
 		if err != nil {
 			dobTime, err = time.Parse("02/01/2006", user.DateOfBirth)
 			if err != nil {
@@ -601,16 +637,16 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 		}
 
 		data := map[string]interface{}{
-			"SoHieu":         cert.SerialNumber,
-			"SoVaoSo":        cert.RegNo,
+			"SoHieu":         ed.SerialNumber,
+			"SoVaoSo":        ed.RegistrationNumber,
 			"HoTen":          user.FullName,
 			"NgaySinh":       dobTime.Format("02/01/2006"),
 			"TenTruong":      university.UniversityName,
-			"Nganh":          cert.Major,
-			"XepLoai":        cert.GraduationRank,
-			"HinhThucDaoTao": cert.EducationType,
-			"Khoa":           cert.Course,
-			"NgayCap":        cert.IssueDate.Format("02/01/2006"),
+			"Nganh":          faculty.FacultyName,
+			"XepLoai":        ed.GraduationRank,
+			"HinhThucDaoTao": ed.EducationType,
+			"Khoa":           ed.Course,
+			"NgayCap":        ed.IssueDate.Format("02/01/2006"),
 		}
 
 		renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
@@ -623,29 +659,23 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 			continue
 		}
 
-		fileName := fmt.Sprintf("%s.pdf", cert.StudentCode)
+		fileName := fmt.Sprintf("%s.pdf", ed.StudentCode)
 		filePath := filepath.Join(tmpDir, fileName)
 		if err := os.WriteFile(filePath, pdfBytes, 0644); err != nil {
 			continue
 		}
 
-		// Tìm EDiploma đã tồn tại theo StudentCode + FacultyID
-		existingEd, err := s.repo.FindByStudentCodeAndFacultyID(ctx, cert.StudentCode, cert.FacultyID)
-		if err != nil || existingEd == nil {
-			log.Printf("⚠️ Không tìm thấy eDiploma cho %s, bỏ qua update", cert.StudentCode)
-			continue
-		}
+		// Update Template & chữ ký & đánh dấu issued
+		ed.TemplateID = templateID
+		ed.SignatureOfUni = template.SignatureOfUni
+		ed.SignatureOfMinEdu = template.SignatureOfMinEdu
+		ed.FileLink = filePath
+		ed.EDiplomaFileHash = utils.ComputeSHA256(pdfBytes)
+		ed.Issued = true
+		ed.UpdatedAt = time.Now()
 
-		// Update 3 field
-		existingEd.TemplateID = templateID
-		existingEd.SignatureOfUni = template.SignatureOfUni
-		existingEd.SignatureOfMinEdu = template.SignatureOfMinEdu
-		existingEd.FileLink = filePath
-		existingEd.FileHash = utils.ComputeSHA256(pdfBytes)
-		existingEd.UpdatedAt = time.Now()
-
-		if err := s.repo.Update(ctx, existingEd.ID, existingEd); err != nil {
-			log.Printf("❌ Failed to update eDiploma for %s: %v", cert.StudentCode, err)
+		if err := s.repo.Update(ctx, ed.ID, ed); err != nil {
+			log.Printf("❌ Failed to update eDiploma for %s: %v", ed.StudentCode, err)
 			continue
 		}
 

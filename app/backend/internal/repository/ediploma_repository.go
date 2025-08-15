@@ -13,6 +13,7 @@ import (
 )
 
 type EDiplomaRepository interface {
+	FindByDynamicFilter(ctx context.Context, filter bson.M) ([]*models.EDiploma, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.EDiploma, error)
 	Save(ctx context.Context, ediploma *models.EDiploma) error
 	GetByFacultyID(ctx context.Context, facultyID primitive.ObjectID) ([]*models.EDiploma, error)
@@ -98,6 +99,35 @@ func (r *eDiplomaRepository) FindByID(ctx context.Context, id primitive.ObjectID
 	return &diploma, nil
 }
 
+func (r *eDiplomaRepository) FindByDynamicFilter(ctx context.Context, filter bson.M) ([]*models.EDiploma, error) {
+	var results []*models.EDiploma
+
+	// Nếu không truyền filter thì mặc định lấy tất cả
+	if filter == nil {
+		filter = bson.M{}
+	}
+
+	cursor, err := r.db.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var ed models.EDiploma
+		if err := cursor.Decode(&ed); err != nil {
+			return nil, err
+		}
+		results = append(results, &ed)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 func (r *eDiplomaRepository) FindByStudentCodeAndFacultyID(ctx context.Context, studentCode string, facultyID primitive.ObjectID) (*models.EDiploma, error) {
 	filter := bson.M{
 		"student_code": studentCode,
@@ -121,6 +151,7 @@ func (r *eDiplomaRepository) Update(ctx context.Context, id primitive.ObjectID, 
 			"template_id":         ed.TemplateID,
 			"signature_of_uni":    ed.SignatureOfUni,
 			"signature_of_minedu": ed.SignatureOfMinEdu,
+			"issued":              ed.Issued,
 			"updated_at":          time.Now(),
 		},
 	}

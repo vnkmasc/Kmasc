@@ -27,8 +27,10 @@ type EDiploma struct {
 	RegistrationNumber string `bson:"registration_number" json:"registration_number"` // Số vào sổ
 
 	// File văn bằng
-	FileLink      string    `bson:"file_link" json:"file_link"`
-	FileHash      string    `bson:"file_hash" json:"file_hash"`           // SHA256 mã băm file PDF
+	FileLink         string `bson:"file_link" json:"file_link"`
+	FileHash         string `bson:"file_hash" json:"file_hash"`                   // SHA256 mã băm file PDF
+	EDiplomaFileHash string `bson:"ediploma_file_hash" json:"ediploma_file_hash"` // Mã băm của văn bằng số
+	// Ch
 	Signature     string    `bson:"signature" json:"signature"`           // Chữ ký số
 	Signed        bool      `bson:"signed" json:"signed"`                 // Đã ký hay chưa
 	DataEncrypted bool      `bson:"data_encrypted" json:"data_encrypted"` //Đã mã hóa dữ liệu hay chưa
