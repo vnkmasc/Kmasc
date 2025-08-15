@@ -18,7 +18,7 @@ interface SelectGroup {
 }
 
 export interface CustomFormItem {
-  type: 'input' | 'select' | 'query_select' | 'search_select' | 'textarea'
+  type: 'input' | 'select' | 'query_select' | 'search_select' | 'textarea' | 'file'
   control: Control<any, any, any> | undefined
   name: string
   label?: string | ''
@@ -36,6 +36,12 @@ export interface CustomFormItem {
     querySelect?: {
       // eslint-disable-next-line no-unused-vars
       queryFn: (keyword: string) => Promise<any>
+    }
+    file?: {
+      accept?: string
+    }
+    textarea?: {
+      rows?: number
     }
   }
 }
@@ -60,4 +66,11 @@ export type CertificateType = {
   serialNumber?: string
   regNo?: string
   isDegree?: boolean
+}
+
+export type DegreeTemplateType = {
+  name: string
+  description?: string
+  faculty_id: string
+  html_content: string
 }

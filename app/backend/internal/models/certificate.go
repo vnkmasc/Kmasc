@@ -25,13 +25,14 @@ type Certificate struct {
 	IssueDate          time.Time         `bson:"issue_date" json:"issue_date"` // Ngày cấp
 	HashFile           string            `bson:"hash_file,omitempty" json:"hash_file,omitempty"`
 	CertificateFiles   []CertificateFile `bson:"certificate_files,omitempty"`
-	Major              string            `bson:"major" json:"major"`                               // Ngành đào tạo
-	Course             string            `bson:"course" json:"course"`                             //  Khóa học (VD: AT18)
-	GPA                float64           `bson:"gpa" json:"gpa"`                                   //  GPA toàn khóa
-	GraduationRank     string            `bson:"graduation_rank" json:"graduation_rank"`           //  Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
-	EducationType      string            `bson:"education_type" json:"education_type"`             //  Hệ đào tạo: Chính quy, Tại chức...
-	PhysicalCopyIssued bool              `bson:"physical_copy_issued" json:"physical_copy_issued"` // Đã phát hành bản giấy
-	OnBlockchain       bool              `bson:"on_blockchain" json:"on_blockchain"`               // Đã đẩy lên blockchain
+	Major              string            `bson:"major" json:"major"`                                       // Ngành đào tạo
+	Course             string            `bson:"course" json:"course"`                                     //  Khóa học (VD: AT18)
+	GPA                float64           `bson:"gpa" json:"gpa"`                                           //  GPA toàn khóa
+	GraduationRank     string            `bson:"graduation_rank" json:"graduation_rank"`                   //  Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
+	EducationType      string            `bson:"education_type" json:"education_type"`                     //  Hệ đào tạo: Chính quy, Tại chức...
+	PhysicalCopyIssued bool              `bson:"physical_copy_issued" json:"physical_copy_issued"`         // Đã phát hành bản giấy
+	OnBlockchain       bool              `bson:"on_blockchain" json:"on_blockchain"`                       // Đã đẩy lên blockchain
+	TransactionID      string            `bson:"transaction_id,omitempty" json:"transaction_id,omitempty"` // ID giao dịch trên blockchain
 	Signed             bool              `bson:"signed" json:"signed"`
 	SignedAt           time.Time         `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
 	Description        string            `bson:"description,omitempty" json:"description,omitempty"` // Mô tả thêm
@@ -107,13 +108,13 @@ type CertificateResponse struct {
 type SearchCertificateParams struct {
 	StudentCode     string `form:"student_code"`
 	FacultyCode     string `form:"faculty_code"`
-	Course          string `form:"course"`
 	Signed          *bool  `form:"signed"`
 	CertificateType string `form:"certificate_type"`
+	Course          string `form:"course"`
 	Page            int    `form:"page,default=1"`
 	PageSize        int    `form:"page_size,default=10"`
 	SortOrder       string `form:"sort_order"` // "asc" | "desc"
-
+	Year            int    `form:"year"`
 }
 
 func ValidateCreateCertificateRequest(sl validator.StructLevel) {

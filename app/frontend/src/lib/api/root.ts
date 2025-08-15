@@ -79,9 +79,7 @@ const apiService = async (
     } else if (isBlob) {
       return await response.blob()
     } else {
-      const text = await response.text()
-      console.warn('Response is not JSON:', text)
-      return { error: 'Response is not JSON', data: text }
+      return await response.text()
     }
   } catch (error) {
     console.error('API Service Error:', error)

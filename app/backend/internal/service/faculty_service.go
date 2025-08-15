@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -21,6 +22,7 @@ type FacultyService interface {
 	GetFacultyByCode(ctx context.Context, code string) (*models.Faculty, error)
 	CreateFaculty(ctx context.Context, claims *utils.CustomClaims, req *models.CreateFacultyRequest) error
 	GetAllFaculties(ctx context.Context, universityID primitive.ObjectID) ([]models.FacultyResponse, error)
+	CheckFacultyBelongsToUniversity(ctx context.Context, facultyID, universityID primitive.ObjectID) (bool, error)
 }
 
 type facultyService struct {
@@ -33,6 +35,18 @@ func NewFacultyService(universityRepo repository.UniversityRepository, facultyRe
 		universityRepo: universityRepo,
 		facultyRepo:    facultyRepo,
 	}
+}
+
+func (s *facultyService) CheckFacultyBelongsToUniversity(ctx context.Context, facultyID, universityID primitive.ObjectID) (bool, error) {
+	faculty, err := s.facultyRepo.FindByID(ctx, facultyID)
+	if err != nil {
+		return false, err
+	}
+	if faculty == nil {
+		return false, fmt.Errorf("faculty not found")
+	}
+
+	return faculty.UniversityID == universityID, nil
 }
 
 func (s *facultyService) CreateFaculty(ctx context.Context, claims *utils.CustomClaims, req *models.CreateFacultyRequest) error {

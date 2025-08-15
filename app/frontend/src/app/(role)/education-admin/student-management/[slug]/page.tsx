@@ -1,5 +1,5 @@
 import Back from '@/components/common/back'
-import StudentView from '@/components/role/education-admin/student-view'
+import StudentView from '@/components/role/education-admin/student-management/student-view'
 
 interface Props {
   params: Promise<{ slug: string }>

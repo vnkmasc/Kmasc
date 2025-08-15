@@ -1,12 +1,12 @@
 'use client'
 
 import { Blocks, EyeIcon, Grid2X2Plus } from 'lucide-react'
-import { Button } from '../ui/button'
+import { Button } from '../../../ui/button'
 import Link from 'next/link'
 import useSWRMutation from 'swr/mutation'
 import { pushCertificateIntoBlockchain } from '@/lib/api/certificate'
 import { showNotification } from '@/lib/utils/common'
-import CertificateQrCode from './certificate-qr-code'
+import CertificateQrCode from '../../../common/certificate-qr-code'
 
 interface Props {
   id: string

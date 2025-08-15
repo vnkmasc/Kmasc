@@ -101,3 +101,32 @@ func (m *MinioClient) DownloadFileStream(ctx context.Context, objectName string)
 
 	return object, info.ContentType, nil
 }
+func (m *MinioClient) GetObject(ctx context.Context, bucket, object string) (io.ReadCloser, error) {
+	obj, err := m.Client.GetObject(ctx, bucket, object, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+	// Kiểm tra lỗi khi truy cập file
+	_, err = obj.Stat()
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+func (m *MinioClient) DownloadFile(ctx context.Context, bucket, object string) ([]byte, error) {
+	obj, err := m.Client.GetObject(ctx, bucket, object, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer obj.Close()
+
+	return io.ReadAll(obj)
+}
+func (m *MinioClient) RemoveFile(ctx context.Context, objectName string) error {
+	err := m.Client.RemoveObject(ctx, m.Bucket, objectName, minio.RemoveObjectOptions{})
+	if err != nil {
+		log.Printf("[WARN] Failed to remove object from MinIO: %v", err)
+	}
+	return err
+}

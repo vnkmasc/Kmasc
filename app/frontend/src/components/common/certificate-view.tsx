@@ -6,6 +6,7 @@ import DecriptionView from './description-view'
 import {
   Blocks,
   Book,
+  BookOpen,
   Calendar,
   ChartAreaIcon,
   CheckCircleIcon,
@@ -23,14 +24,12 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import PDFView from './pdf-view'
 import { Separator } from '../ui/separator'
-import CertificateBlankButton from './certificate-blank-button'
+import CertificateBlankButton from '../role/education-admin/certificate-management/certificate-blank-button'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils'
 import CertificateQrCode from './certificate-qr-code'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
-import CertificatePreview from './certificate-preview'
-import { getCertificatePreviewProps } from '@/lib/utils/format-api'
 
 interface Props {
   isBlockchain: boolean
@@ -155,6 +154,11 @@ const CertificateView: React.FC<Props> = (props) => {
         value: `${data?.facultyCode} - ${data?.facultyName}`
       },
       {
+        icon: <BookOpen className='h-5 w-5 text-gray-500' />,
+        title: 'Hệ đào tạo',
+        value: data?.educationType
+      },
+      {
         icon: <Book className='h-5 w-5 text-gray-500' />,
         title: 'Văn bằng',
         value: (
@@ -238,8 +242,8 @@ const CertificateView: React.FC<Props> = (props) => {
                 {isDegree && currentDataQuery?.data?.certificate && (
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant='outline' size='sm'>
-                        <Eye className='mr-2 h-4 w-4' />
+                      <Button variant='outline'>
+                        <Eye />
                         Xem trước
                       </Button>
                     </DialogTrigger>
@@ -247,7 +251,7 @@ const CertificateView: React.FC<Props> = (props) => {
                       <DialogHeader>
                         <DialogTitle>Văn bằng</DialogTitle>
                       </DialogHeader>
-                      <CertificatePreview {...getCertificatePreviewProps(currentDataQuery?.data)!} />
+                      {/* <CertificatePreview {...getCertificatePreviewProps(currentDataQuery?.data)!} /> */}
                     </DialogContent>
                   </Dialog>
                 )}

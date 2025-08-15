@@ -1,5 +1,5 @@
 'use client'
-import CertificateActionButton from '@/components/common/certificate-action-button'
+import CertificateActionButton from '@/components/role/education-admin/certificate-management/certificate-action-button'
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'
@@ -42,16 +42,14 @@ import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
 
 const CertificateManagementPage = () => {
-  const [idDetail, setIdDetail] = useState<string | null | undefined>(undefined)
+  const [openCreateDegreeDialog, setOpenCreateDegreeDialog] = useState(false)
+  const [openCreateCertificateDialog, setOpenCreateCertificateDialog] = useState(false)
   const [typeUpload, setTypeUpload] = useState<'degree' | 'certificate'>('degree')
   const [certificateName, setCertificateName] = useState<string>('')
   const uploadButtonRef = useRef<UploadButtonRef>(null)
   const [openUploadDialog, setOpenUploadDialog] = useState(false)
 
   const [filter, setFilter] = useState<any>({})
-  const handleCloseDialog = useCallback(() => {
-    setIdDetail(undefined)
-  }, [])
 
   const queryCertificates = useSWR('certificates-list' + JSON.stringify(filter), () =>
     getCertificateList({
@@ -68,29 +66,37 @@ const CertificateManagementPage = () => {
     onSuccess: () => {
       showNotification('success', 'Cấp chứng chỉ thành công')
       queryCertificates.mutate()
-      handleCloseDialog()
+      setOpenCreateCertificateDialog(false)
     },
     onError: (error) => {
       showNotification('error', error.message || 'Cấp chứng chỉ thất bại')
     }
   })
 
-  const mutateUploadDegreeFile = useSWRMutation(
-    'upload-certificate',
-    (_, { arg }: { arg: FormData }) => uploadDegree(arg),
-    {
-      onSuccess: () => {
-        showNotification('success', 'Tải tệp lên thành công')
-        queryCertificates.mutate()
-        setOpenUploadDialog(false)
-        setCertificateName('')
-        setTypeUpload('degree')
-      },
-      onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi tải tệp lên')
-      }
+  // const mutateCreateDegree = useSWRMutation('create-degree', (_, { arg }: any) => createDegree(arg), {
+  //   onSuccess: () => {
+  //     showNotification('success', 'Cấp văn bằng thành công')
+  //     queryCertificates.mutate()
+  //     setOpenCreateDegreeDialog(false)
+  //   },
+  //   onError: (error) => {
+  //     showNotification('error', error.message || 'Cấp văn bằng thất bại')
+  //   }
+  // })
+
+  const mutateUploadFile = useSWRMutation('upload-certificate', (_, { arg }: { arg: FormData }) => uploadDegree(arg), {
+    onSuccess: () => {
+      showNotification('success', 'Tải tệp lên thành công')
+      queryCertificates.mutate()
+      setOpenUploadDialog(false)
+      setCertificateName('')
+      setTypeUpload('degree')
+    },
+    onError: (error) => {
+      showNotification('error', error.message || 'Lỗi khi tải tệp lên')
     }
-  )
+  })
+
   const mutateUploadCertificateFile = useSWRMutation(
     'upload-certificate',
     (_, { arg }: { arg: FormData }) => uploadCertificate(arg, certificateName),
@@ -151,12 +157,12 @@ const CertificateManagementPage = () => {
   const handleUpload = useCallback(
     (file: FormData) => {
       if (typeUpload === 'degree') {
-        mutateUploadDegreeFile.trigger(file)
+        mutateUploadFile.trigger(file)
       } else {
         mutateUploadCertificateFile.trigger(file)
       }
     },
-    [mutateUploadCertificateFile, mutateUploadDegreeFile, typeUpload]
+    [mutateUploadCertificateFile, mutateUploadFile, typeUpload]
   )
 
   const handleImportCertificateExcel = useCallback(
@@ -185,9 +191,17 @@ const CertificateManagementPage = () => {
             title={'Tải tệp (Excel)'}
             icon={<FileUpIcon />}
           />,
-          <Button key='create-new' onClick={() => setIdDetail(null)}>
+          <Button key='create-new-degree' onClick={() => setOpenCreateDegreeDialog(true)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Tạo mới</span>
+            <span className='hidden sm:block'>Cấp văn bằng</span>
+          </Button>,
+          <Button
+            variant={'secondary'}
+            key='create-new-certificate'
+            onClick={() => setOpenCreateCertificateDialog(true)}
+          >
+            <PlusIcon />
+            <span className='hidden sm:block'>Cấp chứng chỉ</span>
           </Button>,
           <Dialog key='upload-pdf' open={openUploadDialog} onOpenChange={setOpenUploadDialog}>
             <DialogTrigger>
@@ -230,7 +244,7 @@ const CertificateManagementPage = () => {
                 </DialogClose>
                 <Button
                   onClick={handleUploadPDF}
-                  disabled={mutateUploadDegreeFile.isMutating || mutateUploadCertificateFile.isMutating}
+                  disabled={mutateUploadFile.isMutating || mutateUploadCertificateFile.isMutating}
                 >
                   Tải tệp
                 </Button>
@@ -242,7 +256,7 @@ const CertificateManagementPage = () => {
       <div className='hidden'>
         <UploadButton
           handleUpload={handleUpload}
-          loading={mutateUploadDegreeFile.isMutating || mutateUploadCertificateFile.isMutating}
+          loading={mutateUploadFile.isMutating || mutateUploadCertificateFile.isMutating}
           ref={uploadButtonRef}
         />
       </div>
@@ -262,7 +276,7 @@ const CertificateManagementPage = () => {
               select: {
                 groups: [
                   {
-                    label: 'Hệ đào tạo',
+                    label: 'Chuyên ngành',
                     options: formatFacultyOptions(UseData().facultyList)
                   }
                 ]
@@ -319,7 +333,7 @@ const CertificateManagementPage = () => {
         items={[
           { header: 'Mã SV', value: 'studentCode', className: 'min-w-[80px] font-semibold text-blue-500' },
           { header: 'Họ và tên', value: 'studentName', className: 'min-w-[200px]' },
-          { header: 'Tên khoa', value: 'facultyName', className: 'min-w-[150px]' },
+          { header: 'Chuyên ngành', value: 'facultyName', className: 'min-w-[150px]' },
           {
             header: 'Phân loại',
             value: 'isDegree',
@@ -352,6 +366,8 @@ const CertificateManagementPage = () => {
           }
         ]}
         data={queryCertificates.data?.data || []}
+        page={queryCertificates.data?.page || 1}
+        pageSize={queryCertificates.data?.page_size || PAGE_SIZE}
       />
       <CommonPagination
         page={queryCertificates.data?.page || 1}
@@ -361,6 +377,7 @@ const CertificateManagementPage = () => {
         }}
       />
       <DetailDialog
+        title='Cấp văn bằng'
         items={[
           {
             type: 'query_select',
@@ -422,9 +439,65 @@ const CertificateManagementPage = () => {
           }
         ]}
         data={[]}
-        mode={idDetail === null ? 'create' : undefined}
+        mode={openCreateDegreeDialog ? 'create' : undefined}
         handleSubmit={handleCreateCertificate}
-        handleClose={handleCloseDialog}
+        handleClose={() => setOpenCreateDegreeDialog(false)}
+      />
+      <DetailDialog
+        title='Cấp chứng chỉ'
+        items={[
+          {
+            type: 'query_select',
+            placeholder: 'Nhập và chọn MSV',
+            name: 'studentCode',
+            setting: STUDENT_CODE_SEARCH_SETTING,
+            label: 'Mã sinh viên',
+            validator: validateNoEmpty('Mã sinh viên')
+          },
+          {
+            type: 'input',
+            placeholder: 'Nhập tên chứng chỉ',
+            name: 'name',
+            label: 'Tên chứng chỉ',
+            validator: validateNoEmpty('Tên chứng chỉ')
+          },
+          {
+            type: 'input',
+            name: 'serialNumber',
+            placeholder: 'Nhập số hiệu',
+            label: 'Số hiệu',
+            validator: validateNoEmpty('Số hiệu')
+          },
+          {
+            type: 'input',
+            name: 'regNo',
+            placeholder: 'Nhập số vào sổ gốc cấp văn bằng',
+            label: 'Số vào sổ gốc cấp văn bằng',
+            validator: validateNoEmpty('Số vào sổ gốc cấp văn bằng')
+          },
+          {
+            type: 'input',
+            name: 'date',
+            placeholder: 'Nhập ngày cấp',
+            label: 'Ngày cấp',
+            validator: validateNoEmpty('Ngày cấp'),
+            setting: {
+              input: {
+                type: 'date'
+              }
+            }
+          },
+          {
+            type: 'textarea',
+            name: 'description',
+            label: 'Mô tả',
+            placeholder: 'Nhập mô tả'
+          }
+        ]}
+        data={[]}
+        mode={openCreateCertificateDialog ? 'create' : undefined}
+        handleSubmit={handleCreateCertificate}
+        handleClose={() => setOpenCreateCertificateDialog(false)}
       />
     </>
   )

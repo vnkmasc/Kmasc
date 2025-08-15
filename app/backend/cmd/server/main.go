@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/handlers"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
 	"github.com/vnkmasc/Kmasc/app/backend/pkg/blockchain"
@@ -67,20 +68,43 @@ func main() {
 	facultyRepo := repository.NewFacultyRepository(db)
 	verificationRepo := repository.NewVerificationRepository(db)
 	rewardDisciplineRepo := repository.NewRewardDisciplineRepository(db)
+	majorRepo := repository.NewMajorRepository(db)
+	templateRepo := repository.NewTemplateRepository(db)
+	ediplomaRepo := repository.NewEDiplomaRepository(db, facultyRepo)
 
 	// Services
+	templateEngine := models.NewTemplateEngine() // giả định bạn có utils/template_engine.go
+	pdfGenerator := utils.NewPDFGenerator()      // giả định bạn có utils/pdf_generator.go
+
+	ediplomaService := service.NewEDiplomaService(
+		universityRepo,
+		majorRepo,
+		facultyRepo,
+		ediplomaRepo,
+		certificateRepo,
+		templateRepo,
+		userRepo,
+		minioClient,
+		templateEngine,
+		pdfGenerator,
+	)
+
 	userService := service.NewUserService(userRepo, universityRepo, facultyRepo)
 	authService := service.NewAuthService(authRepo, userRepo, emailSender)
 	universityService := service.NewUniversityService(universityRepo, authRepo, emailSender)
-	certificateService := service.NewCertificateService(certificateRepo, userRepo, facultyRepo, universityRepo, minioClient)
+	certificateService := service.NewCertificateService(certificateRepo, ediplomaRepo, userRepo, facultyRepo, universityRepo, minioClient)
 	facultyService := service.NewFacultyService(universityRepo, facultyRepo)
 	verificationService := service.NewVerificationService(verificationRepo, certificateService)
 	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)
-	blockchainSvc := service.NewBlockchainService(
-		certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient,
-	)
-
-	// Handlers
+	blockchainSvc := service.NewBlockchainService(ediplomaRepo, certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient)
+	majorService := service.NewMajorService(majorRepo, facultyRepo)
+	templateService := service.NewTemplateService(
+		templateRepo,
+		facultyRepo,
+		universityRepo,
+		facultyService,
+		minioClient,
+	) // Handlers
 	facultyHandler := handlers.NewFacultyHandler(facultyService)
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(authService, universityService, userService, facultyService)
@@ -100,6 +124,9 @@ func main() {
 		minioClient,
 	)
 	rewardDisciplineHandler := handlers.NewRewardDisciplineHandler(rewardDisciplineService)
+	majorHandler := handlers.NewMajorHandler(majorService)
+	templateHandler := handlers.NewTemplateHandler(templateService, minioClient, facultyService)
+	ediplomaHandler := handlers.NewEDiplomaHandler(ediplomaService)
 
 	fileHandler := handlers.NewFileHandler(minioClient)
 	blockchainHandler := handlers.NewBlockchainHandler(blockchainSvc)
@@ -115,6 +142,9 @@ func main() {
 		verificationHandler,
 		rewardDisciplineHandler,
 		blockchainHandler,
+		majorHandler,
+		templateHandler,
+		ediplomaHandler,
 	)
 
 	// Xử lý tín hiệu dừng
@@ -131,7 +161,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "9090"
+		port = "8080"
 	}
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Không thể khởi động server: %v", err)

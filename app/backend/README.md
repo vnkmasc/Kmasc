@@ -57,7 +57,7 @@ Cấu trúc thư mục
 ├── routes
 │ └── router.go # Định nghĩa các tuyến API
 ├── utils # Các tiện ích hỗ trợ
-└── web # Mã nguồn frontend (React.js)
+
 
 Yêu cầu cài đặt
 
@@ -126,7 +126,7 @@ docker-compose up --build -d
 
 Chạy ứng dụng Go:
 
-go run cmd/server/main.go
+go run cmd/server/
 
 Server sẽ chạy mặc định trên http://localhost:8080.
 
@@ -135,6 +135,3 @@ Server sẽ chạy mặc định trên http://localhost:8080.
 Tham khảo tài liệu chính thức của Hyperledger Fabric để thiết lập mạng blockchain.
 Đảm bảo tích hợp các chaincode cần thiết để lưu trữ và xác minh văn bằng.
 
-Tác giả: Tuyen Nguyen Duc
-Email: tuyenngduc12@gmail.com
-GitHub: tuyenngduc

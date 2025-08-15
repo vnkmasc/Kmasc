@@ -11,6 +11,7 @@ import (
 )
 
 type FacultyRepository interface {
+	FindByIDAndUniversityID(ctx context.Context, facultyID, universityID primitive.ObjectID) (*models.Faculty, error)
 	FindByCodeAndUniversityID(ctx context.Context, facultyCode string, universityID primitive.ObjectID) (*models.Faculty, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Faculty, error)
 	Create(ctx context.Context, faculty *models.Faculty) error
@@ -28,6 +29,19 @@ func NewFacultyRepository(db *mongo.Database) FacultyRepository {
 	return &facultyRepository{
 		col: db.Collection("faculties"),
 	}
+}
+
+func (r *facultyRepository) FindByIDAndUniversityID(ctx context.Context, facultyID, universityID primitive.ObjectID) (*models.Faculty, error) {
+	filter := bson.M{
+		"_id":           facultyID,
+		"university_id": universityID,
+	}
+	var faculty models.Faculty
+	err := r.col.FindOne(ctx, filter).Decode(&faculty)
+	if err != nil {
+		return nil, err
+	}
+	return &faculty, nil
 }
 
 func (r *facultyRepository) FindByCodeAndUniversityID(ctx context.Context, code string, universityID primitive.ObjectID) (*models.Faculty, error) {

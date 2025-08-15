@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -48,6 +47,7 @@ type CertificateService interface {
 
 type certificateService struct {
 	certificateRepo repository.CertificateRepository
+	ediplomaRepo    repository.EDiplomaRepository
 	userRepo        repository.UserRepository
 	facultyRepo     repository.FacultyRepository
 	universityRepo  repository.UniversityRepository
@@ -56,6 +56,7 @@ type certificateService struct {
 
 func NewCertificateService(
 	certificateRepo repository.CertificateRepository,
+	ediplomaRepo repository.EDiplomaRepository,
 	userRepo repository.UserRepository,
 	facultyRepo repository.FacultyRepository,
 	universityRepo repository.UniversityRepository,
@@ -63,6 +64,7 @@ func NewCertificateService(
 ) CertificateService {
 	return &certificateService{
 		certificateRepo: certificateRepo,
+		ediplomaRepo:    ediplomaRepo,
 		userRepo:        userRepo,
 		facultyRepo:     facultyRepo,
 		universityRepo:  universityRepo,
@@ -71,6 +73,7 @@ func NewCertificateService(
 }
 
 func (s *certificateService) CreateCertificate(ctx context.Context, claims *utils.CustomClaims, req *models.CreateCertificateRequest) error {
+
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		return common.ErrInvalidToken
@@ -109,12 +112,46 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err := s.certificateRepo.CreateCertificate(ctx, cert); err != nil {
 		return err
 	}
+	ed := mapCertificateToEDiploma(cert, user, faculty)
+	if err := s.ediplomaRepo.Save(ctx, ed); err != nil {
+		return err
+	}
+	return nil
 
 	if req.IsDegree {
 		s.updateUserStatusIfNeeded(ctx, user, req.CertificateType)
 	}
 
 	return nil
+}
+
+func mapCertificateToEDiploma(cert *models.Certificate, user *models.User, faculty *models.Faculty) *models.EDiploma {
+	return &models.EDiploma{
+		ID:                 primitive.NewObjectID(),
+		Name:               cert.Name,
+		UniversityID:       cert.UniversityID,
+		FacultyID:          cert.FacultyID,
+		UserID:             cert.UserID,
+		StudentCode:        cert.StudentCode,
+		FullName:           user.FullName,
+		CertificateType:    cert.CertificateType,
+		Course:             cert.Course,
+		EducationType:      cert.EducationType,
+		GPA:                cert.GPA,
+		GraduationRank:     cert.GraduationRank,
+		IssueDate:          cert.IssueDate,
+		SerialNumber:       cert.SerialNumber,
+		RegistrationNumber: cert.RegNo,
+		Issued:             false,
+		Signed:             false,
+		SignedAt:           cert.SignedAt,
+		DataEncrypted:      false,
+		OnBlockchain:       false,
+		Status:             "PENDING",
+		IsLocked:           false,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
 }
 
 func (s *certificateService) checkDuplicateSerialAndRegNo(
@@ -375,7 +412,6 @@ func (s *certificateService) UploadCertificateFile(
 		head = len(cipherOnly)
 	}
 	fmt.Printf("[DEBUG] Ciphertext (first %d bytes): %x\n", head, cipherOnly[:head])
-	fmt.Printf("[DEBUG] Full ciphertext (base64): %s\n", base64.StdEncoding.EncodeToString(encryptedData))
 
 	// Tên file lưu trên MinIO
 	ext := filepath.Ext(origFileName)
@@ -477,12 +513,25 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 	if params.Signed != nil {
 		filter["signed"] = *params.Signed
 	}
+	if params.Course != "" {
+		filter["course"] = bson.M{"$regex": params.Course, "$options": "i"}
+	}
+
 	if params.FacultyCode != "" {
 		faculty, err := s.facultyRepo.FindByCodeAndUniversityID(ctx, params.FacultyCode, universityID)
 		if err != nil || faculty == nil {
 			return nil, 0, fmt.Errorf("faculty not found in your university with code: %s", params.FacultyCode)
 		}
 		filter["faculty_id"] = faculty.ID
+	}
+	if params.Year > 0 {
+		from := time.Date(params.Year, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := from.AddDate(1, 0, 0)
+
+		filter["issue_date"] = bson.M{
+			"$gte": from,
+			"$lt":  to,
+		}
 	}
 
 	// Lấy toàn bộ certificates để tự nhóm và phân trang
@@ -543,9 +592,7 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 		if err != nil || user == nil {
 			continue
 		}
-		if params.Course != "" && !strings.Contains(strings.ToLower(user.Course), strings.ToLower(params.Course)) {
-			continue
-		}
+
 		faculty, err := s.facultyRepo.FindByID(ctx, cert.FacultyID)
 		if err != nil || faculty == nil {
 			continue

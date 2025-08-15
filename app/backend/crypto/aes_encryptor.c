@@ -36,7 +36,7 @@ unsigned char *aes_encrypt_pbkdf2(
     unsigned char *ciphertext = malloc(SALT_SIZE + max_len);
     if (!ciphertext) return NULL;
 
-    memcpy(ciphertext, salt, SALT_SIZE);  // Save salt at the beginning
+    memcpy(ciphertext, salt, SALT_SIZE); 
 
     if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) goto err;
 

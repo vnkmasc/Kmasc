@@ -17,6 +17,9 @@ func SetupRouter(
 	verificationHandler *handlers.VerificationHandler,
 	rewardDisciplineHandler *handlers.RewardDisciplineHandler,
 	blockchainHandler *handlers.BlockchainHandler,
+	majorHandler *handlers.MajorHandler,
+	templateHandler *handlers.TemplateHandler,
+	ediplomaHandler *handlers.EDiplomaHandler,
 
 ) *gin.Engine {
 	r := gin.Default()
@@ -90,6 +93,7 @@ func SetupRouter(
 	facultyGroup.PUT("/:id", facultyHandler.UpdateFaculty)
 	facultyGroup.DELETE("/:id", facultyHandler.DeleteFaculty)
 	facultyGroup.GET("/:id", facultyHandler.GetFacultyByID)
+	facultyGroup.GET("/university/:university_id", facultyHandler.GetFacultiesByUniversity)
 
 	//temp
 	api.POST("/upload", fileHandler.UploadFile)
@@ -117,6 +121,37 @@ func SetupRouter(
 	blockchainGroup.GET("/certificate-on-chain/:id", blockchainHandler.GetCertificateByID)
 	blockchainGroup.GET("/verify/:id", blockchainHandler.VerifyCertificateIntegrity)
 	blockchainGroup.GET("/verify-file/:id", blockchainHandler.VerifyCertificateFile)
+	blockchainGroup.POST("/push-ediploma", blockchainHandler.PushEDiplomasToBlockchain)
 
+	// ===== Major routes =====
+	majorGroup := api.Group("/majors")
+	majorGroup.Use(middleware.JWTAuthMiddleware())
+	majorGroup.POST("", majorHandler.CreateMajor)
+	majorGroup.GET("/faculty/:faculty_id", majorHandler.GetMajorsByFaculty)
+	majorGroup.DELETE("/:id", majorHandler.DeleteMajor)
+
+	templateGroup := api.Group("/templates")
+	templateGroup.Use(middleware.JWTAuthMiddleware())
+	templateGroup.POST("", templateHandler.CreateTemplate)
+	templateGroup.GET("/faculty/:faculty_id", templateHandler.GetTemplatesByFaculty)
+	templateGroup.GET("/university/:university_id/faculty/:faculty_id", templateHandler.GetTemplatesByFacultyAndUniversity)
+	templateGroup.POST("/sign/faculty/:faculty_id", templateHandler.SignTemplatesByFaculty)
+	templateGroup.POST("/sign/university", templateHandler.SignAllPendingTemplatesOfUniversity)
+	templateGroup.POST("/sign/minedu/:university_id", templateHandler.SignTemplatesByMinEdu)
+	templateGroup.POST("/verify/faculty/:faculty_id", templateHandler.VerifyTemplatesByFaculty)
+	templateGroup.GET("/:id/file", templateHandler.GetTemplateFile)
+	templateGroup.GET("/view/:id", templateHandler.GetTemplateView)
+	templateGroup.PUT("/:id", templateHandler.UpdateTemplate)
+	templateGroup.GET("/:id", templateHandler.GetTemplateByID)
+	templateGroup.POST("/:template_id/sign", templateHandler.SignTemplateByID)
+
+	ediplomaGroup := api.Group("/ediplomas")
+	ediplomaGroup.Use(middleware.JWTAuthMiddleware())
+	ediplomaGroup.POST("/generate", ediplomaHandler.GenerateEDiploma)
+	ediplomaGroup.POST("/generate-bulk", ediplomaHandler.GenerateBulkEDiplomas)
+	ediplomaGroup.POST("/generate-bulk-zip", ediplomaHandler.GenerateBulkEDiplomasZip)
+	ediplomaGroup.POST("/upload-zip", ediplomaHandler.UploadEDiplomasZip)
+	ediplomaGroup.GET("/search", ediplomaHandler.SearchEDiplomas)
+	ediplomaGroup.GET("/file/:id", ediplomaHandler.ViewEDiploma)
 	return r
 }

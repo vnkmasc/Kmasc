@@ -4,13 +4,14 @@ import { Input } from '../ui/input'
 import { FormDescription, FormMessage, FormControl, FormField, FormLabel, FormItem } from '../ui/form'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select'
 import QuerySelect from './query-select'
-import { Check, ChevronsUpDown, Eye, EyeOff } from 'lucide-react'
+import { Check, ChevronsUpDown, Eye, EyeOff, Trash } from 'lucide-react'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Button } from '../ui/button'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { Textarea } from '../ui/textarea'
+import { formatBytes } from '@/lib/utils/common'
 
 const CustomFormItem: React.FC<CustomFormItem> = (props) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -183,7 +184,12 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
             <FormItem>
               <FormLabel>{props.label}</FormLabel>
               <FormControl>
-                <Textarea {...field} placeholder={props.placeholder} disabled={props.disabled} rows={3} />
+                <Textarea
+                  {...field}
+                  placeholder={props.placeholder}
+                  disabled={props.disabled}
+                  rows={props.setting?.textarea?.rows || 3}
+                />
               </FormControl>
               {props.description && <FormDescription>{props.description}</FormDescription>}
               <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
@@ -191,69 +197,48 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
           )}
         />
       )
-    // case 'date':
-    //   return (
-    //     <FormField
-    //       control={props.control}
-    //       name={props.name}
-    //       render={({ field }) => (
-    //         <FormItem>
-    //           <FormLabel>{props.label}</FormLabel>
-    //           <Popover>
-    //             <PopoverTrigger asChild>
-    //               <FormControl>
-    //                 <Button
-    //                   variant={'outline'}
-    //                   className={cn(
-    //                     'w-full pl-3 text-left font-normal hover:bg-background',
-    //                     !field.value && 'text-muted-foreground hover:text-muted-foreground'
-    //                   )}
-    //                 >
-    //                   {field.value ? (
-    //                     props.setting?.date?.mode === 'range' ? (
-    //                       field.value.to ? (
-    //                         <>
-    //                           {dayjs(field.value.from).format('DD/MM/YYYY')} -{' '}
-    //                           {dayjs(field.value.to).format('DD/MM/YYYY')}
-    //                         </>
-    //                       ) : (
-    //                         dayjs(field.value).format('DD/MM/YYYY')
-    //                       )
-    //                     ) : (
-    //                       dayjs(field.value).format('DD/MM/YYYY')
-    //                     )
-    //                   ) : (
-    //                     <span>{props.placeholder}</span>
-    //                   )}
-    //                   <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
-    //                 </Button>
-    //               </FormControl>
-    //             </PopoverTrigger>
-    //             <PopoverContent className='w-auto p-0' align='start'>
-    //               <Calendar
-    //                 mode={props.setting?.date?.mode || 'single'}
-    //                 selected={field.value}
-    //                 onSelect={field.onChange}
-    //                 initialFocus
-    //                 disabled={(date) => {
-    //                   if (props.setting?.date?.min && dayjs(date).isBefore(props.setting?.date?.min)) {
-    //                     return true
-    //                   }
-    //                   if (props.setting?.date?.max && dayjs(date).isAfter(props.setting?.date?.max)) {
-    //                     return true
-    //                   }
-    //                   return false
-    //                 }}
-    //                 numberOfMonths={props.setting?.date?.mode === 'range' ? 2 : 1}
-    //               />
-    //             </PopoverContent>
-    //           </Popover>
-    //           {props.description && <FormDescription>{props.description}</FormDescription>}
-    //           <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
-    //         </FormItem>
-    //       )}
-    //     />
-    //   )
+    case 'file':
+      return (
+        <FormField
+          control={props.control}
+          name={props.name}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{props.label}</FormLabel>
+              <FormControl>
+                <div>
+                  <Input
+                    type='file'
+                    accept={props.setting?.file?.accept}
+                    disabled={props.disabled}
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null
+                      field.onChange(file)
+                    }}
+                  />
+                  {field.value ? (
+                    <div className='mt-2 flex items-center justify-between rounded-md border px-3 py-2 text-sm'>
+                      <div className='min-w-0'>
+                        <div className='truncate font-medium'>{(field.value as File).name}</div>
+                        <div className='text-muted-foreground'>
+                          {((field.value as File).type || 'Unknown type') +
+                            ' • ' +
+                            formatBytes((field.value as File).size)}
+                        </div>
+                      </div>
+                      <Button type='button' variant='destructive' size='icon' onClick={() => field.onChange(null)}>
+                        <Trash />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </FormControl>
+              {props.description && <FormDescription>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+            </FormItem>
+          )}
+        />
+      )
     default:
       return null
   }

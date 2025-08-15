@@ -1,19 +1,43 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"time"
 
-	"golang.org/x/crypto/bcrypt"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 func main() {
-	hash := "$2a$10$yljkp7BGUe6ARkRb5E39p.tJKr5meWvDD0Wfi6ZTvSQRxz4Smreea"
-	password := "1"
+	endpoint := "103.124.93.139:9000" // bỏ https:// và dấu /
+	accessKey := "admin"
+	secretKey := "12345678"
+	bucketName := "certificates"
+	objectName := "ediplomas/68975e260b5e20fe197fc873.pdf"
 
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	// Kết nối MinIO
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: false, // dùng HTTPS
+	})
 	if err != nil {
-		fmt.Println("❌ Sai mật khẩu:", err)
-	} else {
-		fmt.Println("✅ Mật khẩu đúng")
+		log.Fatalln(err)
 	}
+
+	// Tạo presigned URL có hạn 1 giờ
+	presignedURL, err := minioClient.PresignedGetObject(
+		context.Background(),
+		bucketName,
+		objectName,
+		time.Hour,
+		nil,
+	)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Println("Test download link (valid for 1h):")
+	fmt.Println(presignedURL.String())
 }

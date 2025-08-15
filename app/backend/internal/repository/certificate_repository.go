@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
@@ -12,6 +13,7 @@ import (
 )
 
 type CertificateRepository interface {
+	FindByFacultyIDAndCourse(ctx context.Context, facultyID primitive.ObjectID, course string) ([]*models.Certificate, error)
 	FindOneByFilter(ctx context.Context, filter bson.M) (*models.Certificate, error)
 	FindOneByStudentCodeAndType(ctx context.Context, studentCode string, certificateType string, universityID primitive.ObjectID) (*models.Certificate, error)
 	GetAllCertificates(ctx context.Context) ([]*models.Certificate, error)
@@ -32,6 +34,7 @@ type CertificateRepository interface {
 	UpdateCertificatePath(ctx context.Context, certificateID primitive.ObjectID, path string) error
 	ExistsDegreeByStudentCodeAndType(ctx context.Context, studentCode string, universityID primitive.ObjectID, certType string) (bool, error)
 	FindBySerialAndUniversity(ctx context.Context, serial string, universityID primitive.ObjectID) (*models.Certificate, error)
+	FindByFacultyID(ctx context.Context, facultyID primitive.ObjectID) ([]*models.Certificate, error)
 }
 type certificateRepository struct {
 	col *mongo.Collection
@@ -40,6 +43,20 @@ type certificateRepository struct {
 func NewCertificateRepository(db *mongo.Database) CertificateRepository {
 	col := db.Collection("certificates")
 	return &certificateRepository{col: col}
+}
+func (r *certificateRepository) FindByFacultyIDAndCourse(ctx context.Context, facultyID primitive.ObjectID, course string) ([]*models.Certificate, error) {
+	filter := bson.M{"faculty_id": facultyID, "course": course}
+	cursor, err := r.col.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var certs []*models.Certificate
+	if err := cursor.All(ctx, &certs); err != nil {
+		return nil, err
+	}
+	return certs, nil
 }
 
 func (r *certificateRepository) CreateCertificate(ctx context.Context, cert *models.Certificate) error {
@@ -50,6 +67,23 @@ func (r *certificateRepository) UpdateCertificateByID(ctx context.Context, id pr
 	_, err := r.col.UpdateByID(ctx, id, update)
 	return err
 }
+func (r *certificateRepository) FindByFacultyID(ctx context.Context, facultyID primitive.ObjectID) ([]*models.Certificate, error) {
+	filter := bson.M{"faculty_id": facultyID}
+
+	cursor, err := r.col.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find certificates by faculty ID: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var certificates []*models.Certificate
+	if err := cursor.All(ctx, &certificates); err != nil {
+		return nil, fmt.Errorf("failed to decode certificates: %w", err)
+	}
+
+	return certificates, nil
+}
+
 func (r *certificateRepository) FindOneByFilter(ctx context.Context, filter bson.M) (*models.Certificate, error) {
 	var cert models.Certificate
 	err := r.col.FindOne(ctx, filter).Decode(&cert)

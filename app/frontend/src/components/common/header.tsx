@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '../ui/button'
 import ThemeSwitch from './theme-switch'
 import Image from 'next/image'
@@ -14,66 +16,71 @@ import {
 import Link from 'next/link'
 import ChangePassButton from './change-pass-button'
 import logoKmasc from '../../../public/assets/images/logoKMA.png'
+import UseBreakpoint from '@/lib/hooks/use-breakpoint'
 
 interface Props {
   role: 'student' | 'university_admin' | 'admin' | null
 }
 
-const educationAdminPages: { title: string; href: string }[] = [
-  {
-    title: 'Khoa',
-    href: '/education-admin/faculty-management'
-  },
-  {
-    title: 'Sinh viên',
-    href: '/education-admin/student-management'
-  },
-  // {
-  //   title: 'Quản lý điểm',
-  //   href: '/education-admin/score-management'
-  // },
-  {
-    title: 'Khen thưởng & Kỷ luật',
-    href: '/education-admin/reward-discipline-management'
-  },
-  {
-    title: 'Văn bằng & Chứng chỉ',
-    href: '/education-admin/certificate-management'
-  }
-]
-
-const studentPages: { title: string; href: string }[] = [
-  {
-    title: 'Thông tin cá nhân',
-    href: '/student/information'
-  },
-  // {
-  //   title: 'Kết quả học tập',
-  //   href: '/student/score'
-  // },
-  {
-    title: 'Văn bằng - chứng chỉ',
-    href: '/student/certificate'
-  }
-]
-
-const adminPages: { title: string; href: string }[] = [
-  {
-    title: 'Quản lý tài khoản đào tạo',
-    href: '/admin/education-management'
-  }
-  // {
-  //   title: 'Quản lý tài khoản sinh viên',
-  //   href: '/admin/student--management'
-  // }
-]
-
 const Header: React.FC<Props> = (props) => {
+  const { md, lg } = UseBreakpoint()
+  const educationAdminPages: { title: string; href: string }[] = [
+    {
+      title: md && !lg ? 'CN' : 'Chuyên ngành',
+      href: '/education-admin/faculty-management'
+    },
+    {
+      title: md && !lg ? 'SV' : 'Sinh viên',
+      href: '/education-admin/student-management'
+    },
+    {
+      title: md && !lg ? 'KT&KL' : 'Khen thưởng & Kỷ luật',
+      href: '/education-admin/reward-discipline-management'
+    },
+    {
+      title: md && !lg ? 'VB&CC' : 'Văn bằng & Chứng chỉ',
+      href: '/education-admin/certificate-management'
+    },
+    {
+      title: md && !lg ? 'VB số' : 'Văn bằng số',
+      href: '/education-admin/digital-degree-management'
+    },
+    {
+      title: md && !lg ? 'MB số' : 'Mẫu bằng số',
+      href: '/education-admin/degree-template-management'
+    }
+  ]
+
+  const studentPages: { title: string; href: string }[] = [
+    {
+      title: 'Thông tin cá nhân',
+      href: '/student/information'
+    },
+    // {
+    //   title: 'Kết quả học tập',
+    //   href: '/student/score'
+    // },
+    {
+      title: 'Văn bằng - chứng chỉ',
+      href: '/student/certificate'
+    }
+  ]
+
+  const adminPages: { title: string; href: string }[] = [
+    {
+      title: 'Tài khoản đào tạo',
+      href: '/admin/education-management'
+    },
+    {
+      title: 'Mẫu bằng số',
+      href: '/admin/degree-template-management'
+    }
+  ]
   const navList =
     props.role === 'university_admin' ? educationAdminPages : props.role === 'admin' ? adminPages : studentPages
   return (
-    <div className='fixed top-0 z-10 h-16 w-full bg-primary-foreground shadow-lg'>
-      <header className='container flex h-full items-center justify-between'>
+    <div className='fixed top-0 z-10 h-16 w-full shadow-lg'>
+      <header className='container flex h-full items-center justify-between bg-white dark:bg-black'>
         {props.role !== null ? (
           <div className='flex gap-2 md:hidden'>
             <Sheet>

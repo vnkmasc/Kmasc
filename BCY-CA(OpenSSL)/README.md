@@ -166,7 +166,7 @@ Copy CA TLS cert vào MSP của orderer:
 mkdir -p organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts
 
 cp organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem \
-   organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/CA
+   organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts
 ```
 
 ### 4. Khởi Chạy Network

@@ -23,17 +23,17 @@ const FacultyManagementPage = () => {
   }, [])
   const queryFacultyDetail = useSWR(idDetail, () => getFacultyById(idDetail as string), {
     onError: (error) => {
-      showNotification('error', error.message || 'Lỗi khi lấy thông tin khoa')
+      showNotification('error', error.message || 'Lỗi khi lấy thông tin chuyên ngành')
     }
   })
   const mutateCreateFaculty = useSWRMutation('create-faculty', (_key, { arg }: { arg: any }) => createFaculty(arg), {
     onSuccess: () => {
-      showNotification('success', 'Thêm khoa thành công')
+      showNotification('success', 'Thêm chuyên ngành thành công')
       UseRefetchFacultyList()
       setIdDetail(undefined)
     },
     onError: (error) => {
-      showNotification('error', error.message || 'Lỗi khi thêm khoa')
+      showNotification('error', error.message || 'Lỗi khi thêm chuyên ngành')
     }
   })
   const mutateUpdateFaculty = useSWRMutation(
@@ -41,23 +41,23 @@ const FacultyManagementPage = () => {
     (_key, { arg }: { arg: any }) => updateFaculty(idDetail as string, arg),
     {
       onSuccess: () => {
-        showNotification('success', 'Cập nhật khoa thành công')
+        showNotification('success', 'Cập nhật chuyên ngành thành công')
         UseRefetchFacultyList()
         setIdDetail(undefined)
       },
       onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi cập nhật khoa')
+        showNotification('error', error.message || 'Lỗi khi cập nhật chuyên ngành')
       }
     }
   )
 
   const mutateDeleteFaculty = useSWRMutation('delete-faculty', (_key, { arg }: { arg: any }) => deleteFaculty(arg), {
     onSuccess: () => {
-      showNotification('success', 'Xóa khoa thành công')
+      showNotification('success', 'Xóa chuyên ngành thành công')
       UseRefetchFacultyList()
     },
     onError: (error) => {
-      showNotification('error', error.message || 'Lỗi khi xóa khoa')
+      showNotification('error', error.message || 'Lỗi khi xóa chuyên ngành')
     }
   })
 
@@ -82,7 +82,7 @@ const FacultyManagementPage = () => {
   return (
     <>
       <PageHeader
-        title='Quản lý khoa'
+        title='Quản lý chuyên ngành'
         extra={[
           <Button key='create-faculty' onClick={() => setIdDetail(null)}>
             <PlusIcon />
@@ -94,12 +94,12 @@ const FacultyManagementPage = () => {
         items={[
           {
             type: 'input',
-            placeholder: 'Nhập mã khoa',
+            placeholder: 'Nhập mã chuyên ngành',
             name: 'code'
           },
           {
             type: 'input',
-            placeholder: 'Nhập tên khoa',
+            placeholder: 'Nhập chuyên ngành',
             name: 'name'
           }
         ]}
@@ -108,8 +108,8 @@ const FacultyManagementPage = () => {
       <TableList
         data={data}
         items={[
-          { header: 'Mã khoa', value: 'code', className: 'text-blue-500 font-semibold min-w-[100px]' },
-          { header: 'Tên khoa', value: 'name', className: 'min-w-[200px]' },
+          { header: 'Mã chuyên ngành', value: 'code', className: 'text-blue-500 font-semibold min-w-[100px]' },
+          { header: 'Chuyên ngành', value: 'name', className: 'min-w-[200px]' },
           {
             header: 'Hành động',
             value: 'action',
@@ -123,17 +123,17 @@ const FacultyManagementPage = () => {
         items={[
           {
             type: 'input',
-            placeholder: 'Nhập mã khoa',
+            placeholder: 'Nhập mã chuyên ngành',
             name: 'code',
-            label: 'Mã khoa',
-            validator: validateNoEmpty('Mã khoa')
+            label: 'Mã chuyên ngành',
+            validator: validateNoEmpty('Mã chuyên ngành')
           },
           {
             type: 'input',
-            placeholder: 'Nhập tên khoa',
+            placeholder: 'Nhập chuyên ngành',
             name: 'name',
-            label: 'Tên khoa',
-            validator: validateNoEmpty('Tên khoa')
+            label: 'Chuyên ngành',
+            validator: validateNoEmpty('Chuyên ngành')
           },
           {
             type: 'textarea',
