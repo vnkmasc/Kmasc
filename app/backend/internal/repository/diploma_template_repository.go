@@ -52,7 +52,6 @@ func (r *templateRepository) Update(ctx context.Context, template *models.Diplom
 			"name":          template.Name,
 			"description":   template.Description,
 			"hash_template": template.HashTemplate,
-			"html_content":  template.HTMLContent,
 			"updated_at":    template.UpdatedAt,
 		},
 	}

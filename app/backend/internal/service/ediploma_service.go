@@ -34,19 +34,21 @@ type EDiplomaService interface {
 }
 
 type eDiplomaService struct {
-	universityRepo  repository.UniversityRepository
-	majorRepo       repository.MajorRepository
-	facultyRepo     repository.FacultyRepository
-	repo            repository.EDiplomaRepository
-	certificateRepo repository.CertificateRepository
-	templateRepo    repository.TemplateRepository
-	userRepo        repository.UserRepository
-	minioClient     *database.MinioClient
-	templateEngine  *models.TemplateEngine
-	pdfGenerator    *utils.PDFGenerator
+	templateSampleRepo repository.TemplateSampleRepo
+	universityRepo     repository.UniversityRepository
+	majorRepo          repository.MajorRepository
+	facultyRepo        repository.FacultyRepository
+	repo               repository.EDiplomaRepository
+	certificateRepo    repository.CertificateRepository
+	templateRepo       repository.TemplateRepository
+	userRepo           repository.UserRepository
+	minioClient        *database.MinioClient
+	templateEngine     *models.TemplateEngine
+	pdfGenerator       *utils.PDFGenerator
 }
 
 func NewEDiplomaService(
+	templateSampleRepo repository.TemplateSampleRepo,
 	universityRepo repository.UniversityRepository,
 	majorRepo repository.MajorRepository,
 	facultyRepo repository.FacultyRepository,
@@ -59,16 +61,17 @@ func NewEDiplomaService(
 	pdfGenerator *utils.PDFGenerator,
 ) *eDiplomaService {
 	return &eDiplomaService{
-		universityRepo:  universityRepo,
-		majorRepo:       majorRepo,
-		facultyRepo:     facultyRepo,
-		repo:            repo,
-		certificateRepo: certificateRepo,
-		templateRepo:    templateRepo,
-		userRepo:        userRepo,
-		minioClient:     minioClient,
-		templateEngine:  templateEngine,
-		pdfGenerator:    pdfGenerator,
+		templateSampleRepo: templateSampleRepo,
+		universityRepo:     universityRepo,
+		majorRepo:          majorRepo,
+		facultyRepo:        facultyRepo,
+		repo:               repo,
+		certificateRepo:    certificateRepo,
+		templateRepo:       templateRepo,
+		userRepo:           userRepo,
+		minioClient:        minioClient,
+		templateEngine:     templateEngine,
+		pdfGenerator:       pdfGenerator,
 	}
 }
 
@@ -114,10 +117,18 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		return nil, fmt.Errorf("template not found")
 	}
 
-	calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
+	// Lấy TemplateSample từ Template
+	sample, err := s.templateSampleRepo.GetByID(ctx, template.TemplateSampleID)
+	if err != nil {
+		return nil, fmt.Errorf("template sample not found")
+	}
+
+	// Kiểm tra hash HTMLContent
+	calculatedHash := utils.ComputeSHA256([]byte(sample.HTMLContent))
 	if calculatedHash != template.HashTemplate {
 		return nil, fmt.Errorf("template content hash mismatch - data may be corrupted")
 	}
+
 	user, err := s.userRepo.GetUserByID(ctx, cert.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -143,7 +154,8 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 		"NgayCap":        cert.IssueDate.Format("02/01/2006"),
 	}
 
-	renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
+	// Render PDF từ sample HTML
+	renderedHTML, err := s.templateEngine.Render(sample.HTMLContent, data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render HTML: %w", err)
 	}
@@ -154,7 +166,6 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 	}
 
 	hash := utils.ComputeSHA256(pdfBytes)
-
 	pdfPath := fmt.Sprintf("ediplomas/%s.pdf", primitive.NewObjectID().Hex())
 	if err := s.minioClient.UploadFile(ctx, pdfPath, pdfBytes, "application/pdf"); err != nil {
 		return nil, fmt.Errorf("failed to upload PDF: %w", err)
@@ -162,7 +173,6 @@ func (s *eDiplomaService) GenerateEDiploma(ctx context.Context, certificateIDStr
 
 	_ = s.templateRepo.UpdateIsLocked(ctx, templateID, true)
 
-	// Lưu EDiploma
 	now := time.Now()
 	ediploma := &models.EDiploma{
 		ID:                 primitive.NewObjectID(),
@@ -249,13 +259,19 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 		return nil, errors.New("template does not belong to the given faculty")
 	}
 
-	// 2. Xác minh hash của HTMLContent
-	calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
+	// 2. Lấy TemplateSample
+	sample, err := s.templateSampleRepo.GetByID(ctx, template.TemplateSampleID)
+	if err != nil {
+		return nil, fmt.Errorf("template sample not found: %w", err)
+	}
+
+	// 3. Xác minh hash của HTMLContent
+	calculatedHash := utils.ComputeSHA256([]byte(sample.HTMLContent))
 	if calculatedHash != template.HashTemplate {
 		return nil, fmt.Errorf("template content hash mismatch - data may be corrupted")
 	}
 
-	// 3. Load tất cả certificates của faculty
+	// 4. Load tất cả certificates của faculty
 	certificates, err := s.certificateRepo.FindByFacultyID(ctx, facultyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load certificates: %w", err)
@@ -297,8 +313,8 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			"NgayCap":        cert.IssueDate.Format("02/01/2006"),
 		}
 
-		// Render HTML
-		renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
+		// Render HTML từ TemplateSample
+		renderedHTML, err := s.templateEngine.Render(sample.HTMLContent, data)
 		if err != nil {
 			log.Printf("Render failed for cert %s: %v", cert.ID.Hex(), err)
 			continue
@@ -314,7 +330,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 		// Hash PDF
 		hash := utils.ComputeSHA256(pdfBytes)
 
-		// 📌 Nếu vẫn muốn lưu PDF ở MinIO
+		// Lưu PDF ở MinIO
 		pdfPath := fmt.Sprintf("ediplomas/%s/%s.pdf", university.UniversityCode, cert.StudentCode)
 		if err := s.minioClient.UploadFile(ctx, pdfPath, pdfBytes, "application/pdf"); err != nil {
 			log.Printf("Upload failed for cert %s: %v", cert.ID.Hex(), err)
@@ -554,11 +570,17 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 
 	// 2. Lấy template
 	template, err := s.templateRepo.GetByID(ctx, templateID)
-	if err != nil || template.HTMLContent == "" {
-		return "", errors.New("template not found or empty")
+	if err != nil {
+		return "", errors.New("template not found")
 	}
 
-	// 3. Convert facultyID nếu có
+	// 3. Lấy TemplateSample
+	sample, err := s.templateSampleRepo.GetByID(ctx, template.TemplateSampleID)
+	if err != nil || sample.HTMLContent == "" {
+		return "", errors.New("template sample not found or empty")
+	}
+
+	// 4. Convert facultyID nếu có
 	var facultyID primitive.ObjectID
 	if facultyIDStr != "" {
 		facultyID, err = primitive.ObjectIDFromHex(facultyIDStr)
@@ -567,7 +589,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 		}
 	}
 
-	// 4. Build dynamic filter
+	// 5. Build dynamic filter
 	filter := bson.M{}
 	if !facultyID.IsZero() {
 		filter["faculty_id"] = facultyID
@@ -582,17 +604,16 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 		filter["issued"] = *issued
 	}
 
-	// 5. Lấy danh sách eDiplomas
+	// 6. Lấy danh sách eDiplomas
 	ediplomas, err := s.repo.FindByDynamicFilter(ctx, filter)
 	if err != nil {
 		return "", fmt.Errorf("failed to load eDiplomas: %w", err)
 	}
 	if len(ediplomas) == 0 {
-		// Không tạo file zip, trả về thông báo rỗng
 		return "", nil
 	}
 
-	// 6. Tạo thư mục tạm và xuất PDF
+	// 7. Tạo thư mục tạm
 	tmpDir, err := os.MkdirTemp("", "ediplomas_*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
@@ -619,7 +640,8 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 			"NgayCap":        ed.IssueDate.Format("02/01/2006"),
 		}
 
-		renderedHTML, err := s.templateEngine.Render(template.HTMLContent, data)
+		// Render HTML từ TemplateSample
+		renderedHTML, err := s.templateEngine.Render(sample.HTMLContent, data)
 		if err != nil {
 			continue
 		}
@@ -648,7 +670,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 		generatedFilePaths = append(generatedFilePaths, filePath)
 	}
 
-	// 7. Tạo file zip từ các PDF
+	// 8. Tạo file zip từ các PDF
 	zipFilePath := filepath.Join(tmpDir, "ediplomas.zip")
 	if err := utils.CreateZipFromFiles(zipFilePath, generatedFilePaths); err != nil {
 		return "", fmt.Errorf("failed to create zip: %w", err)
