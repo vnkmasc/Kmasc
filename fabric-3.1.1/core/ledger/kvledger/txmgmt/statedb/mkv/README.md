@@ -1,29 +1,29 @@
-# MKV Key Management System
+# MKV Encryption System
 
-Hệ thống quản lý khóa 2 tầng cho MKV encryption trong Hyperledger Fabric Statedb.
+Hệ thống mã hóa MKV với quản lý khóa tự động trong Hyperledger Fabric Statedb.
 
 ## Tổng quan
 
-Hệ thống sử dụng **2 tầng khóa** theo sơ đồ:
+Hệ thống sử dụng **KeyManager singleton** với `sync.Once` để quản lý khóa mã hóa tự động:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Password      │    │   K0 (32 bytes) │    │   K1 (32 bytes) │
-│   (User Input)  │───▶│   (Derived Key) │───▶│   (Data Key)    │
+│   (from file)   │───▶│   (PBKDF2)      │───▶│   (Random)      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                               │                        │
                               ▼                        ▼
                        ┌─────────────────┐    ┌─────────────────┐
                        │ Encrypted K1    │    │ Encrypted Data  │
-                       │ (Stored in DB)  │    │ (Stored in DB)  │
+                       │ (Stored)        │    │ (Stored)        │
                        └─────────────────┘    └─────────────────┘
 ```
 
 ### Khóa K1 (Data Key)
 - **Kích thước**: 32 bytes (256 bits)
-- **Nguồn gốc**: Sinh ngẫu nhiên khi tạo chain
+- **Nguồn gốc**: Sinh ngẫu nhiên khi khởi tạo KeyManager
 - **Mục đích**: Mã hóa dữ liệu trong statedb
-- **Lưu trữ**: Được mã hóa bằng K0 và lưu trong database
+- **Lưu trữ**: Được mã hóa bằng K0 và lưu trong `encrypted_k1.key`
 
 ### Khóa K0 (Derived Key)
 - **Kích thước**: 32 bytes (256 bits)
@@ -31,23 +31,32 @@ Hệ thống sử dụng **2 tầng khóa** theo sơ đồ:
 - **Mục đích**: Mã hóa K1
 - **Tham số PBKDF2**:
   - **Salt**: 32 bytes ngẫu nhiên (lưu trong `k0_salt.key`)
-  - **Iterations**: 10,000 (theo khuyến nghị OWASP)
+  - **Iterations**: 10,000
   - **PRF**: HMAC-SHA256
 - **Công thức**: `K0 = PBKDF2(password, salt, 10000, 32)`
 
 ## Nội dung thư mục
+
+### Core Files
 - `MKV256.c`, `MKV256.h`, `PrecomputedTable256.h`: Thuật toán mã hóa MKV256
 - `mkv.c`, `mkv.h`: Hàm mã hóa/giải mã dữ liệu dài, padding PKCS#7
-- `mkv.go`: Go wrapper với hệ thống quản lý khóa 2 tầng và PBKDF2
+- `mkv.go`: Go wrapper với hệ thống quản lý khóa tự động
+- `key_manager.go`: **KeyManager singleton** với `sync.Once`
+
+### Test Files
 - `mkv_test.go`: Unit test kiểm tra mã hóa/giải mã
 - `key_test.go`: Test cho hệ thống quản lý khóa
 - `pbkdf2_test.go`: Test riêng cho implementation PBKDF2
+- `key_manager_test.go`: Test cho KeyManager singleton
+
+### Scripts
 - `key_manager.sh`: Script quản lý khóa tương tác
 - `cleanup_all.sh`: Script dọn dẹp hoàn chỉnh
-- `demo.sh`: Script demo hệ thống
+- `init_with_pbkdf2.sh`: Script khởi tạo với PBKDF2
+
+### Build Files
 - `Makefile`: Build shared library `libmkv.so`
 - `.gitignore`: Loại trừ file nhạy cảm và tạm thời
-- `README.md`: File này
 
 ## Cài đặt và Build
 
@@ -56,85 +65,50 @@ Hệ thống sử dụng **2 tầng khóa** theo sơ đồ:
 make clean && make
 ```
 
-### 2. Test MKV Functions
+### 2. Test toàn bộ hệ thống
 ```bash
-LD_LIBRARY_PATH=. go test -v
+go test -v
 ```
 
-### 3. Test Key Management
+### 3. Test riêng từng phần
 ```bash
-LD_LIBRARY_PATH=. go test -v -run TestKeyManagementSystem
-LD_LIBRARY_PATH=. go test -v -run TestDataEncryptionWithK1
+# Test KeyManager
+go test -v -run TestKeyManager
+
+# Test mã hóa/giải mã
+go test -v -run TestEncryptDecryptValueMKV
+
+# Test PBKDF2
+go test -v -run TestPBKDF2
 ```
 
-## Sử dụng Key Manager Script
+## Sử dụng KeyManager
 
-### Khởi tạo hệ thống
-```bash
-./key_manager.sh init
-```
-Script sẽ yêu cầu nhập password và tạo:
-- `k1.key`: K1 ngẫu nhiên (plaintext)
-- `k0.key`: K0 dẫn xuất từ password
-- `encrypted_k1.key`: K1 đã mã bằng K0
-
-### Thay đổi password
-```bash
-./key_manager.sh change
-```
-Script sẽ yêu cầu:
-- Password cũ
-- Password mới
-
-Sau đó giải mã K1 bằng password cũ và mã lại bằng password mới.
-
-### Kiểm tra trạng thái
-```bash
-./key_manager.sh status
-```
-Hiển thị trạng thái các file khóa hiện tại.
-
-### Dọn dẹp file tạm
-```bash
-./key_manager.sh cleanup
-```
-Xóa các file tạm thời (k0.key, decrypted_k1.key).
-
-## Sử dụng trong Code Go
-
-### Khởi tạo hệ thống
+### Khởi tạo tự động
 ```go
 import "github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
 
-// Khởi tạo với password
-err := mkv.InitializeKeyManagement("mysecretpassword")
-if err != nil {
-    log.Fatalf("Failed to initialize: %v", err)
-}
+// Lần đầu gọi sẽ tự động khởi tạo
+keyManager := mkv.GetKeyManager()
+
+// Kiểm tra trạng thái
+status := keyManager.GetStatus()
+fmt.Printf("Initialized: %v\n", status["initialized"])
 ```
 
-### Lấy K1 hiện tại
-```go
-// Lấy K1 bằng password
-k1, err := mkv.GetCurrentK1("mysecretpassword")
-if err != nil {
-    log.Fatalf("Failed to get K1: %v", err)
-}
-```
-
-### Mã hóa dữ liệu với K1
+### Mã hóa/giải mã dữ liệu
 ```go
 // Dữ liệu cần mã hóa
 data := []byte("sensitive data")
 
-// Mã hóa với K1
-encryptedData := mkv.EncryptValueMKV(data, k1)
+// Mã hóa (tự động sử dụng K1 từ KeyManager)
+encryptedData := mkv.EncryptValueMKV(data)
 if encryptedData == nil {
     log.Fatalf("Encryption failed")
 }
 
-// Giải mã với K1
-decryptedData := mkv.DecryptValueMKV(encryptedData, k1)
+// Giải mã (tự động sử dụng K1 từ KeyManager)
+decryptedData := mkv.DecryptValueMKV(encryptedData)
 if decryptedData == nil {
     log.Fatalf("Decryption failed")
 }
@@ -142,70 +116,90 @@ if decryptedData == nil {
 
 ### Thay đổi password
 ```go
-err := mkv.ChangePassword("oldpassword", "newpassword")
+keyManager := mkv.GetKeyManager()
+err := keyManager.ChangePassword("new_password")
 if err != nil {
-    log.Fatalf("Failed to change password: %v", err)
+    log.Printf("Failed to change password: %v", err)
 }
 ```
+
+### Làm mới keys
+```go
+keyManager := mkv.GetKeyManager()
+err := keyManager.RefreshKeys()
+if err != nil {
+    log.Printf("Failed to refresh keys: %v", err)
+}
+```
+
+## Cách hoạt động của KeyManager
+
+### 1. Singleton Pattern với sync.Once
+```go
+var (
+    keyManagerInstance *KeyManager
+    keyManagerOnce     sync.Once
+)
+
+func GetKeyManager() *KeyManager {
+    keyManagerOnce.Do(func() {
+        // Chỉ khởi tạo một lần
+        keyManagerInstance = &KeyManager{...}
+    })
+    return keyManagerInstance
+}
+```
+
+### 2. Tự động khởi tạo
+- **Lần đầu gọi**: Tự động tạo hệ thống khóa
+- **Lần sau**: Sử dụng instance đã có
+- **Thread-safe**: Sử dụng `sync.RWMutex`
+
+### 3. Đọc password từ file
+- **Ưu tiên**: `password.txt` trong thư mục hiện tại
+- **Fallback**: `/tmp/mkv/password.txt`
+- **Default**: "kmasc" nếu không đọc được file
+
+### 4. Quản lý khóa tự động
+- **Tạo K1**: Ngẫu nhiên 32 bytes
+- **Tạo K0**: Từ password bằng PBKDF2
+- **Mã K1**: Bằng K0 và lưu vào `encrypted_k1.key`
+- **Lưu trữ**: Trong nhiều thư mục để đảm bảo khả năng truy cập
 
 ## Tích hợp với Statedb
 
-### LevelDB
-Trong `value_encoding.go`:
+### Sử dụng trực tiếp
 ```go
-// Lấy K1 từ password
-k1, err := mkv.GetCurrentK1("statedb_password")
-if err != nil {
-    return nil, err
-}
+// Mã hóa value
+encryptedValue := mkv.EncryptValueMKV(v.Value)
 
-// Mã hóa value và metadata
-encryptedValue := mkv.EncryptValueMKV(v.Value, k1)
-encryptedMetadata := mkv.EncryptValueMKV(v.Metadata, k1)
+// Giải mã value
+decryptedValue := mkv.DecryptValueMKV(encryptedValue)
 ```
 
-### Private Data Storage
-Trong `store.go`:
+### Tích hợp với LevelDB
 ```go
-// Lấy K1 cho private data
-k1, err := mkv.GetCurrentK1("private_data_password")
-if err != nil {
-    return err
-}
-
-// Mã hóa private data
-encryptedData := mkv.EncryptValueMKV(data, k1)
+// Trong value_encoding.go
+encryptedValue := mkv.EncryptValueMKV(v.Value)
+encryptedMetadata := mkv.EncryptValueMKV(v.Metadata)
 ```
 
-### CouchDB
-Trong `couchdoc_conv.go`:
+### Tích hợp với CouchDB
 ```go
-// Lấy K1 cho CouchDB
-k1, err := mkv.GetCurrentK1("couchdb_password")
-if err != nil {
-    return nil, err
-}
-
-// Mã hóa document
-encryptedValue := mkv.EncryptValueMKV(value, k1)
+// Trong couchdoc_conv.go
+encryptedValue := mkv.EncryptValueMKV(value)
 ```
 
 ## PBKDF2 Implementation
 
 ### Tổng quan
-Hệ thống sử dụng PBKDF2 (Password-Based Key Derivation Function 2) để tạo khóa K0 từ password, thay vì SHA256 đơn giản như trước đây.
+Hệ thống sử dụng PBKDF2 để tạo khóa K0 từ password, thay vì SHA256 đơn giản.
 
 ### Tham số PBKDF2
 - **PRF**: HMAC-SHA256
 - **Salt**: 32 bytes ngẫu nhiên
-- **Iterations**: 10,000 (theo khuyến nghị OWASP)
+- **Iterations**: 10,000
 - **Key length**: 32 bytes (256 bits)
-
-### Ưu điểm so với SHA256 đơn giản
-1. **Salt**: Chống rainbow table attacks
-2. **Iterations**: Làm chậm brute force attacks
-3. **HMAC**: Tăng tính bảo mật so với hash đơn giản
-4. **Tiêu chuẩn**: PBKDF2 là tiêu chuẩn được chấp nhận rộng rãi
 
 ### Backward Compatibility
 - Nếu không tìm thấy file `k0_salt.key`, hệ thống sẽ sử dụng salt cố định
@@ -217,16 +211,11 @@ Hệ thống sử dụng PBKDF2 (Password-Based Key Derivation Function 2) để
 - **K1**: Được mã hóa bằng K0 trước khi lưu
 - **K0**: Không lưu trữ, chỉ dẫn xuất từ password khi cần
 - **Salt**: Lưu trữ trong `k0_salt.key` để tái tạo K0
-- **Password**: Không lưu trữ, chỉ dùng để sinh K0 qua PBKDF2
+- **Password**: Đọc từ file `password.txt`
 
 ### Quyền truy cập file
 - Tất cả file khóa có quyền 600 (chỉ owner đọc/ghi)
 - Log file có quyền 644 (owner đọc/ghi, group/other đọc)
-
-### Xóa file tạm
-- `k0.key`: Xóa sau khi sử dụng
-- `decrypted_k1.key`: Xóa sau khi mã lại
-- `k1.key`: Có thể xóa sau khi đã mã bằng K0
 
 ### Git Security (.gitignore)
 File `.gitignore` đã được cấu hình để **KHÔNG BAO GIỜ** commit các file nhạy cảm:
@@ -235,16 +224,13 @@ File `.gitignore` đã được cấu hình để **KHÔNG BAO GIỜ** commit c�
 - `*.o`, `*.so` - Build artifacts
 - File tạm thời và backup
 
-**⚠️ QUAN TRỌNG**: Luôn kiểm tra `git status` trước khi commit để đảm bảo không có file nhạy cảm nào bị đưa vào repository.
-
 ## Logging
 
 Tất cả thao tác được log vào `/tmp/state_mkv.log`:
 ```
-2024-01-15T10:30:45.123456Z ENCRYPT ns= ns= SUCCESS
-2024-01-15T10:30:45.234567Z DECRYPT ns= ns= SUCCESS
-2024-01-15T10:30:45.345678Z GENERATE_K1 ns= ns= SUCCESS
-2024-01-15T10:30:45.456789Z INIT_KEYS ns= ns= SUCCESS
+2024-01-15T10:30:45.123456Z ENCRYPT ns= key= SUCCESS
+2024-01-15T10:30:45.234567Z DECRYPT ns= key= SUCCESS
+2024-01-15T10:30:45.345678Z KEY_MANAGER_INIT ns= key= SUCCESS
 ```
 
 ## Troubleshooting
@@ -256,9 +242,9 @@ make clean && make
 ```
 
 ### Lỗi "Failed to decrypt K1"
-- Kiểm tra password có đúng không
+- Kiểm tra file `password.txt` có tồn tại không
 - Kiểm tra file `encrypted_k1.key` có tồn tại không
-- Chạy lại: `./key_manager.sh init`
+- Chạy lại: `go test -v`
 
 ### Lỗi "Permission denied"
 ```bash
@@ -267,27 +253,12 @@ chmod 600 *.key
 chmod 644 *.log
 ```
 
-### Lỗi "No K1 found"
-```bash
-# Khởi tạo lại hệ thống
-./key_manager.sh init
-```
-
 ### Lỗi "Test failed"
 ```bash
 # Dọn dẹp và build lại
 ./cleanup_all.sh
 make clean && make
-LD_LIBRARY_PATH=. go test -v
-```
-
-### Lỗi "Demo script failed"
-```bash
-# Kiểm tra trạng thái hệ thống
-./key_manager.sh status
-
-# Nếu chưa khởi tạo, chạy:
-./key_manager.sh init
+go test -v
 ```
 
 ## Hướng dẫn sử dụng từng bước
@@ -297,47 +268,41 @@ LD_LIBRARY_PATH=. go test -v
 # Build thư viện MKV
 make clean && make
 
-# Test các chức năng cơ bản
-LD_LIBRARY_PATH=. go test -v
-
-# Test hệ thống quản lý khóa
-LD_LIBRARY_PATH=. go test -v -run TestKeyManagementSystem
-LD_LIBRARY_PATH=. go test -v -run TestDataEncryptionWithK1
+# Test toàn bộ hệ thống
+go test -v
 ```
 
-### Bước 2: Khởi tạo hệ thống
+### Bước 2: Tạo file password
 ```bash
-# Khởi tạo hệ thống quản lý khóa
-./key_manager.sh init
-# Nhập password khi được yêu cầu (ví dụ: mysecret123)
+# Tạo file password.txt với nội dung "kmasc"
+echo "kmasc" > password.txt
 ```
 
-### Bước 3: Kiểm tra trạng thái
-```bash
-# Kiểm tra trạng thái các file khóa
-./key_manager.sh status
+### Bước 3: Sử dụng trong ứng dụng
+```go
+import "github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/mkv"
+
+// Lấy KeyManager (tự động khởi tạo)
+keyManager := mkv.GetKeyManager()
+
+// Mã hóa dữ liệu
+data := []byte("Hello, World!")
+encrypted := mkv.EncryptValueMKV(data)
+
+// Giải mã dữ liệu
+decrypted := mkv.DecryptValueMKV(encrypted)
 ```
 
-### Bước 4: Sử dụng trong ứng dụng
-```bash
-# Chạy demo hoàn chỉnh
-./demo.sh
+### Bước 4: Quản lý khóa (tùy chọn)
+```go
+// Thay đổi password
+err := keyManager.ChangePassword("new_password")
 
-# Hoặc test thủ công
-LD_LIBRARY_PATH=. go test -v
-```
+// Làm mới keys
+err := keyManager.RefreshKeys()
 
-### Bước 5: Quản lý khóa (tùy chọn)
-```bash
-# Thay đổi password
-./key_manager.sh change
-# Nhập password cũ và password mới
-
-# Dọn dẹp file tạm
-./key_manager.sh cleanup
-
-# Dọn dẹp hoàn toàn (xóa tất cả file khóa)
-./cleanup_all.sh
+// Kiểm tra trạng thái
+status := keyManager.GetStatus()
 ```
 
 ## Ví dụ hoàn chỉnh
@@ -346,90 +311,52 @@ LD_LIBRARY_PATH=. go test -v
 # 1. Build thư viện
 make clean && make
 
-# 2. Test các chức năng
-LD_LIBRARY_PATH=. go test -v
+# 2. Tạo file password
+echo "kmasc" > password.txt
 
-# 3. Khởi tạo hệ thống
-./key_manager.sh init
-# Nhập password: mysecret123
+# 3. Test hệ thống
+go test -v
 
-# 4. Kiểm tra trạng thái
-./key_manager.sh status
-
-# 5. Chạy demo
-./demo.sh
-
-# 6. Thay đổi password (tùy chọn)
-./key_manager.sh change
-# Nhập old password: mysecret123
-# Nhập new password: newsecret456
-
-# 7. Dọn dẹp
-./key_manager.sh cleanup
+# 4. Sử dụng trong code Go
+# (xem ví dụ code ở trên)
 ```
 
 ## Lưu ý
 
+- **Password**: Đặt trong file `password.txt` (mặc định: "kmasc")
 - **Backup**: Luôn backup file `encrypted_k1.key` trước khi thay đổi password
-- **Password**: Sử dụng password mạnh (ít nhất 12 ký tự, có số, chữ hoa, chữ thường, ký tự đặc biệt)
-- **Environment**: Đảm bảo môi trường an toàn khi nhập password
+- **Environment**: Đảm bảo môi trường an toàn khi tạo file password
 - **Rotation**: Nên thay đổi password định kỳ
 - **Recovery**: Có kế hoạch khôi phục khóa trong trường hợp mất password
 
-##  **Hoàn thành!**
+## Hoàn thành!
 
-Hệ thống quản lý khóa MKV đã hoạt động hoàn hảo! Đây là tóm tắt những gì đã được thực hiện:
+Hệ thống MKV với KeyManager singleton đã hoạt động hoàn hảo! Đây là tóm tắt những gì đã được thực hiện:
 
-### ✅ **Đã sửa lỗi thành công:**
+### ✅ **Hệ thống KeyManager hoạt động hoàn hảo:**
 
-1. **Lỗi thay đổi password**: Đã sửa logic trong `key_manager.sh` để không ghi đè K0 trước khi giải mã K1
-2. **Lỗi file tạm**: Đã tạo script `cleanup_all.sh` để dọn dẹp hoàn chỉnh
-3. **Lỗi xung đột main function**: Đã dọn dẹp file C tạm thời trước khi test Go
+1. **Singleton Pattern**: Sử dụng `sync.Once` để đảm bảo chỉ khởi tạo một lần
+2. **Tự động khởi tạo**: Tự động tạo hệ thống khóa khi lần đầu được gọi
+3. **Quản lý khóa tự động**: Tự động tạo, lưu trữ và quản lý các khóa mã hóa
+4. **Thread-safe**: Sử dụng `sync.RWMutex` để đảm bảo an toàn khi truy cập đồng thời
+5. **Fallback mechanism**: Có cơ chế dự phòng khi khởi tạo thất bại
+6. **Logging**: Ghi log tất cả các hoạt động vào file `/tmp/state_mkv.log`
 
-### ✅ **Hệ thống hoạt động hoàn hảo:**
+### 🚀 **Cách sử dụng đơn giản:**
 
-1. **Khởi tạo hệ thống**: ✅
-   - Tạo K1 ngẫu nhiên 32 bytes
-   - Tạo K0 từ password bằng SHA256
-   - Mã K1 bằng K0 và lưu vào file
+```go
+// Lấy KeyManager (tự động khởi tạo)
+keyManager := mkv.GetKeyManager()
 
-2. **Thay đổi password**: ✅
-   - Giải mã K1 bằng password cũ
-   - Mã lại K1 bằng password mới
-   - K1 không thay đổi, chỉ thay đổi cách mã hóa
-
-3. **Go integration**: ✅
-   - Tất cả tests pass
-   - Data encryption/decryption hoạt động
-   - File operations hoạt động
-
-### 🚀 **Thứ tự sử dụng chính xác:**
-
-```bash
-# 1. Build và test
-make clean && make
-LD_LIBRARY_PATH=. go test -v
-
-# 2. Khởi tạo hệ thống
-./key_manager.sh init
-
-# 3. Kiểm tra trạng thái
-./key_manager.sh status
-
-# 4. Sử dụng (demo hoặc tích hợp)
-./demo.sh
-
-# 5. Quản lý khóa (tùy chọn)
-./key_manager.sh change
-./key_manager.sh cleanup
+// Mã hóa/giải mã (tự động sử dụng K1)
+encrypted := mkv.EncryptValueMKV(data)
+decrypted := mkv.DecryptValueMKV(encrypted)
 ```
 
-### 📁 **Files đã tạo:**
+### 📁 **Files chính:**
 
-- `cleanup_all.sh` - Script dọn dẹp hoàn chỉnh
-- `key_manager.sh` - Script quản lý khóa (đã sửa lỗi)
-- `mkv.go` - Go wrapper với hệ thống quản lý khóa 2 tầng
-- `key_test.go` - Tests hoàn chỉnh
-- `.gitignore` - Bảo vệ file nhạy cảm khỏi Git
+- `key_manager.go` - KeyManager singleton với `sync.Once`
+- `mkv.go` - Go wrapper với hệ thống quản lý khóa tự động
+- `key_manager_test.go` - Tests cho KeyManager
+- `mkv_test.go` - Tests cho mã hóa/giải mã
 - `README.md` - Documentation chi tiết
-- `IMPLEMENTATION_SUMMARY.md` - Tóm tắt implementation

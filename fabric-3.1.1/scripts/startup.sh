@@ -6,7 +6,7 @@
 
 set -e
 
-echo "=== Hyperledger Fabric Quick Start ==="
+echo "=== Hyperledger Fabric Startup ==="
 echo "This script will set up everything from scratch"
 echo "Date: $(date)"
 echo
@@ -144,33 +144,10 @@ step5_build_encryption() {
     ./scripts/build-mkv-encryption.sh
 }
 
-# Step 6: Test MKV system (optional - for verification)
-step6_test_mkv_system() {
-    echo "Step 6: Testing MKV system (optional)..."
-    if [ -f "scripts/test-mkv-system.sh" ]; then
-        chmod +x "scripts/test-mkv-system.sh"
-        ./scripts/test-mkv-system.sh
-    else
-        print_status "INFO" "MKV test script not found, skipping test"
-    fi
-}
-
-# Step 7: Build Fabric
-step7_build_fabric() {
-    echo "Step 7: Building Fabric..."
+# Step 6: Build Fabric
+step6_build_fabric() {
+    echo "Step 6: Building Fabric..."
     run_script "scripts/build-fabric.sh" "Fabric build"
-}
-
-# Step 8: Start network
-step8_start_network() {
-    echo "Step 8: Starting test network..."
-    run_script "scripts/start-network.sh" "test network startup"
-}
-
-# Step 9: Next steps
-step9_next_steps() {
-    echo "Step 9: Showing next steps..."
-    ./scripts/next-steps.sh
 }
 
 # Main execution
@@ -184,10 +161,7 @@ main() {
     step3_download_fabric_samples
     step4_test_environment
     step5_build_encryption  # Build MKV library
-    step6_test_mkv_system   # Test MKV system (optional)
-    step7_build_fabric      # Build Fabric
-    step8_start_network     # Start network
-    step9_next_steps        # Show next steps
+    step6_build_fabric      # Build Fabric
 }
 
 # Execute main function directly
@@ -197,10 +171,7 @@ echo "2. Set up the environment (Go, OpenSSL, Docker)"
 echo "3. Download fabric-samples"
 echo "4. Test the environment"
 echo "5. Build the MKV encryption library"
-echo "6. Test the MKV system (optional)"
-echo "7. Build Fabric with encryption"
-echo "8. Start the test network"
-echo "9. Next steps"
+echo "6. Build Fabric with encryption"
 echo
 echo "Starting execution..."
 main "$@" 

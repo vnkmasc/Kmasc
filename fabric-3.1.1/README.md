@@ -1,71 +1,121 @@
-# Hyperledger Fabric with OpenSSL Encryption Integration
+# Hyperledger Fabric với MKV256 Encryption cho StateDB và Private Data
 
 ## Tổng quan
 
-Dự án này tích hợp mã hóa/giải mã sử dụng OpenSSL thông qua CGO vào Hyperledger Fabric, thay thế các thư viện mã hóa Go để tận dụng hiệu suất cao của OpenSSL.
+Dự án này tích hợp thuật toán mã hóa MKV256 vào Hyperledger Fabric để mã hóa dữ liệu trong StateDB và Private Data Collections. Hệ thống sử dụng **KeyManager singleton** với `sync.Once` để quản lý khóa mã hóa tự động, cung cấp giải pháp bảo mật cao cấp cho dữ liệu blockchain.
 
-## Tính năng
+## Tính năng chính
 
-- ✅ Mã hóa/giải mã tự động cho state database
-- ✅ Sử dụng OpenSSL AES-256-CBC
-- ✅ Hỗ trợ MKV256 encryption algorithm
-- ✅ Tích hợp CGO với thư viện C tùy chỉnh
-- ✅ Tương thích với Hyperledger Fabric 3.1.1
-- ✅ Test network hoạt động đầy đủ
-- ✅ Scripts modular và có thể chạy độc lập
+- ✅ **Mã hóa StateDB**: Tự động mã hóa/giải mã dữ liệu trạng thái
+- ✅ **Mã hóa Private Data**: Bảo vệ dữ liệu nhạy cảm trong collections
+- ✅ **MKV256 Algorithm**: Thuật toán mã hóa 256-bit block cipher
+- ✅ **KeyManager tự động**: Quản lý khóa singleton với `sync.Once`
+- ✅ **Password từ file**: Đọc password từ `password.txt` (fallback: "kmasc")
+- ✅ **Tích hợp CGO**: Hiệu suất cao với thư viện C tùy chỉnh
+- ✅ **Tương thích Fabric 3.1.1**: Hoạt động với tất cả chaincode hiện có
 
-## Đã kiểm thử trên
+## Kiến trúc mã hóa
 
-- **Hệ điều hành:** Ubuntu 24.04 LTS
-- **Go:** 1.24.4
-- **Docker:** 24.x (Docker Engine v24.x, Docker Compose v2.x)
-- **Docker hiện tại:** Docker Engine v28.2.2, Docker Compose v2.36.2
+### StateDB Encryption
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Password      │    │   K0 (32 bytes) │    │   K1 (32 bytes) │
+│   (from file)   │───▶│   (PBKDF2)      │───▶│   (Random)      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │                        │
+                              ▼                        ▼
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │ Encrypted K1    │    │ Encrypted Data  │
+                       │ (Stored)        │    │ (StateDB)       │
+                       └─────────────────┘    └─────────────────┘
+```
 
-Dự án đã được xác nhận chạy thành công trên các phiên bản phần mềm trên.
+### Private Data Encryption
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Password      │    │   K0 (32 bytes) │    │   K1 (32 bytes) │
+│   (from file)   │───▶│   (PBKDF2)      │───▶│   (Random)      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │                        │
+                              ▼                        ▼
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │ Encrypted K1    │    │ Encrypted Data  │
+                       │ (Stored)        │    │ (Private Data)  │
+                       └─────────────────┘    └─────────────────┘
+```
 
-## Yêu cầu hệ thống
+## Scripts chính
 
-- Ubuntu 20.04+ hoặc tương đương (Khuyến nghị: Ubuntu 24.04)
-- Docker và Docker Compose (Khuyến nghị: Docker Engine 24.x, Docker Compose 2.x)
-- Go 1.21+ (Khuyến nghị: Go 1.24.4)
-- GCC và OpenSSL development libraries
-- Git
+### 🎯 **Demo và Development**
+- **`quick-start.sh`** - Setup hoàn chỉnh cho demo và development
+  - Build tất cả libraries
+  - Test MKV encryption
+  - Khởi động test network
+  - Phù hợp cho testing và development
+
+### 🚀 **Production và Deployment**
+- **`startup.sh`** - Khởi động network thật cho production
+  - Khởi động network với cấu hình production
+  - Sử dụng MKV encryption đã được test
+  - Phù hợp cho deployment thực tế
 
 ## Cài đặt nhanh
 
-### Phương pháp 1: Setup tự động (Khuyến nghị)
+### Phương pháp 1: Demo và Development (Khuyến nghị cho testing)
 ```bash
 git clone <your-repo-url>
 cd fabric-3.1.1
 ./quick-start.sh
 ```
 
-### Phương pháp 2: Setup từng bước
-Xem [README_SCRIPTS.md](README_SCRIPTS.md) để biết chi tiết về các script có sẵn và cách sử dụng từng bước.
+### Phương pháp 2: Production deployment
+```bash
+# Setup environment trước
+./setup-environment.sh
 
-## Scripts có sẵn
+# Build libraries
+./build-all-libraries.sh
 
-Dự án này bao gồm một bộ scripts modular để dễ dàng setup và quản lý:
+# Test encryption
+./test-mkv.sh
 
-### Scripts chính
-- `quick-start.sh` - Setup hoàn chỉnh từ đầu
-- `setup-environment.sh` - Cài đặt dependencies
-- `build-fabric.sh` - Build Fabric với encryption
-- `build-mkv.sh` - Build MKV library
-- `test-mkv.sh` - Test MKV library
-- `build-all-libraries.sh` - Build cả encryption và MKV libraries
-- `start-network.sh` - Khởi động test network
+# Khởi động production network
+./startup.sh
+```
 
-### Scripts tiện ích
-- `download-fabric-samples.sh` - Tải fabric-samples
-- `build-encryption.sh` - Build encryption library
-- `test-encryption.sh` - Test encryption integration
-- `check-environment.sh` - Kiểm tra môi trường
-- `list-scripts.sh` - Liệt kê tất cả scripts
+## Cách hoạt động của MKV Encryption
 
-**📖 Xem [SCRIPTS.md](SCRIPTS.md) để biết chi tiết về tất cả scripts và cách sử dụng.**
+### 1. **Khởi tạo tự động**
+```go
+// Lần đầu gọi sẽ tự động khởi tạo KeyManager
+keyManager := mkv.GetKeyManager()
 
-## Cài đặt thủ công
+// Tự động tạo:
+// - K1: Khóa mã hóa ngẫu nhiên 32 bytes
+// - K0: Từ password (đọc từ file) bằng PBKDF2
+// - Mã K1 bằng K0 và lưu vào encrypted_k1.key
+```
+
+### 2. **Mã hóa StateDB**
+```go
+// Trong value_encoding.go
+encryptedValue := mkv.EncryptValueMKV(v.Value)
+encryptedMetadata := mkv.EncryptValueMKV(v.Metadata)
+
+// Dữ liệu được tự động mã hóa khi lưu vào StateDB
+// và tự động giải mã khi đọc ra
+```
+
+### 3. **Mã hóa Private Data**
+```go
+// Trong store.go
+encryptedPrivateData := mkv.EncryptValueMKV(privateData)
+
+// Private data được mã hóa trước khi lưu vào collection
+// và giải mã khi truy xuất
+```
+
+## Cài đặt chi tiết
 
 ### Bước 1: Cài đặt dependencies
 ```bash
@@ -73,89 +123,75 @@ Dự án này bao gồm một bộ scripts modular để dễ dàng setup và qu
 sudo apt-get update
 sudo apt-get install -y build-essential libssl-dev git curl
 
-# Cài đặt Go
+# Cài đặt Go 1.24.4
 wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
 source ~/.bashrc
-
-# Cài đặt Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
 ```
 
-### Bước 2: Cài đặt Fabric samples
+### Bước 2: Build MKV libraries
 ```bash
-./fabric-samples-install.sh
-```
-
-### Bước 3: Build encryption libraries
-```bash
-# Build encryption library
-cd core/ledger/kvledger/txmgmt/statedb
-make clean && make
-cd ../../../../../..
-
-# Build MKV library
+# Build MKV library với KeyManager
 cd core/ledger/kvledger/txmgmt/statedb/mkv
 make clean && make
+
+# Tạo file password
+echo "kmasc" > password.txt
+
+# Test hệ thống
+go test -v
 cd ../../../../../../..
 ```
 
-### Bước 4: Build Fabric
+### Bước 3: Build Fabric với MKV
 ```bash
 export CGO_ENABLED=1
 make clean
 make native
 ```
 
-## Kiểm tra cài đặt
-
-### Kiểm tra môi trường
-```bash
-./check-environment.sh
-```
-
-### Test encryption integration
-```bash
-# Test encryption library
-cd core/ledger/kvledger/txmgmt/statedb
-./run_tests.sh
-
-# Test MKV library
-cd mkv
-LD_LIBRARY_PATH=. go test -v
-```
-
 ## Sử dụng
 
-### Khởi động network
+### Demo và Testing (quick-start.sh)
 ```bash
-./start-network.sh
-```
+# Setup hoàn chỉnh cho demo
+./quick-start.sh
 
-### Kiểm tra logs encryption
-```bash
-# Check log trên peer container
-docker exec peer0.org1.example.com cat /root/state_encryption.log
+# Kiểm tra logs encryption
+docker exec peer0.org1.example.com cat /tmp/state_mkv.log
 
-# Xem logs peer với filter encryption
-docker logs -f peer0.org1.example.com | grep -i encrypt
-docker logs -f peer0.org1.example.com | grep -i decrypt
-
-# Hoặc xem toàn bộ logs
-docker logs -f peer0.org1.example.com
-```
-
-### Test chaincode
-```bash
-# Setup environment
-export PATH=${PWD}/fabric-samples/bin:$PATH
-export FABRIC_CFG_PATH=$PWD/fabric-samples/config
-
-# Query asset
+# Test chaincode với encryption
 peer chaincode query -C mychannel -n basic -c '{"function":"ReadAsset","Args":["asset1"]}'
+```
+
+### Production (startup.sh)
+```bash
+# Khởi động production network
+./startup.sh
+
+# Kiểm tra encryption hoạt động
+docker logs -f peer0.org1.example.com | grep -i "ENCRYPT\|DECRYPT"
+```
+
+## Kiểm tra encryption
+
+### Kiểm tra StateDB encryption
+```bash
+# Xem logs encryption
+docker exec peer0.org1.example.com cat /tmp/state_mkv.log
+
+# Kiểm tra dữ liệu đã mã hóa
+docker exec peer0.org1.example.com ls -la /var/hyperledger/production/ledgersData/stateLeveldb/
+```
+
+### Kiểm tra Private Data encryption
+```bash
+# Xem private data collections
+peer lifecycle chaincode queryinstalled
+
+# Kiểm tra dữ liệu trong collection
+peer chaincode query -C mychannel -n basic -c '{"function":"ReadPrivateAsset","Args":["asset1"]}'
 ```
 
 ## Cấu trúc project
@@ -164,75 +200,97 @@ peer chaincode query -C mychannel -n basic -c '{"function":"ReadAsset","Args":["
 fabric-3.1.1/
 ├── core/ledger/kvledger/txmgmt/statedb/
 │   ├── statedb.go          # Go wrapper với CGO
-│   ├── encrypt.c           # C functions cho encryption
-│   ├── encrypt.h           # Header file
-│   ├── Makefile            # Build script
-│   ├── README_ENCRYPTION.md # Chi tiết encryption
-│   └── mkv/                # MKV encryption module
-│       ├── mkv.go          # Go wrapper cho MKV
+│   ├── encrypt.c           # C functions cho AES (legacy)
+│   ├── encrypt.h           # Header file AES
+│   ├── Makefile            # Build script AES
+│   └── mkv/                # MKV encryption module với KeyManager
+│       ├── mkv.go          # Go wrapper với hệ thống quản lý khóa tự động
+│       ├── key_manager.go  # KeyManager singleton với sync.Once
 │       ├── mkv.c           # C functions cho MKV
 │       ├── mkv.h           # Header file cho MKV
-│       ├── MKV256.c        # MKV256 algorithm
+│       ├── MKV256.c        # MKV256 algorithm implementation
 │       ├── MKV256.h        # MKV256 header
 │       ├── Makefile        # Build script cho MKV
-│       └── README.md       # Chi tiết MKV
-├── *.sh                    # Scripts setup và quản lý
-├── README_SCRIPTS.md       # Hướng dẫn chi tiết scripts
-└── README.md              # Tài liệu này
+│       ├── README.md       # Chi tiết MKV
+│       └── KEY_MANAGER_README.md # Chi tiết KeyManager
+├── quick-start.sh          # Setup demo và development
+├── startup.sh              # Khởi động production network
+├── build-all-libraries.sh  # Build tất cả libraries
+├── test-mkv.sh             # Test MKV encryption
+└── README.md               # Tài liệu này
 ```
 
 ## Troubleshooting
 
-### Lỗi Repository (Ubuntu)
+### Lỗi KeyManager không khởi tạo
 ```bash
-./fix-repositories.sh
+cd core/ledger/kvledger/txmgmt/statedb/mkv
+
+# Kiểm tra file password
+ls -la password.txt
+
+# Tạo file password nếu chưa có
+echo "kmasc" > password.txt
+
+# Test hệ thống
+go test -v
 ```
 
-### Lỗi CGO
+### Lỗi MKV library không build
 ```bash
-export CGO_ENABLED=1
-go env CGO_ENABLED
+cd core/ledger/kvledger/txmgmt/statedb/mkv
+
+# Dọn dẹp và build lại
+make clean && make
+
+# Kiểm tra library
+ldd libmkv.so
 ```
 
-### Lỗi OpenSSL
+### Lỗi encryption trong StateDB
 ```bash
-sudo apt-get install libssl-dev
-pkg-config --modversion openssl
+# Kiểm tra logs
+docker exec peer0.org1.example.com cat /tmp/state_mkv.log
+
+# Restart peer nếu cần
+docker restart peer0.org1.example.com
 ```
 
-### Lỗi Docker
+### Lỗi Private Data encryption
 ```bash
-sudo systemctl start docker
-sudo usermod -aG docker $USER
-newgrp docker
+# Kiểm tra cấu hình collection
+peer lifecycle chaincode queryinstalled
+
+# Kiểm tra logs
+docker logs peer0.org1.example.com | grep -i "private\|collection"
 ```
 
-### Lỗi build
-```bash
-make clean
-go mod tidy
-make native
-```
+## Performance và Bảo mật
 
-**🔍 Xem [SCRIPTS.md](SCRIPTS.md) để biết thêm chi tiết về troubleshooting và các script hỗ trợ.**
+### Performance
+- **MKV256**: Thuật toán tối ưu cho blockchain
+- **KeyManager**: Quản lý khóa hiệu quả với singleton pattern
+- **CGO**: Tối thiểu overhead khi gọi C functions
 
-## Performance
+### Bảo mật
+- **Khóa K1**: Sinh ngẫu nhiên 32 bytes cho mỗi instance
+- **Khóa K0**: Dẫn xuất từ password bằng PBKDF2-HMAC-SHA256
+- **Password**: Đọc từ file `password.txt` (fallback: "kmasc")
+- **Salt**: Ngẫu nhiên 32 bytes cho PBKDF2
 
-- OpenSSL AES-256-CBC encryption
-- Tự động mã hóa/giải mã khi lưu/đọc state
-- Overhead CGO tối thiểu
-- Tương thích với tất cả chaincode hiện có
-
-## Bảo mật
-
-⚠️ **Lưu ý**: Khóa mã hóa hiện tại được hardcode cho demo. Trong production cần:
+⚠️ **Lưu ý Production**: 
+- Tạo file `password.txt` với password mạnh
 - Sử dụng HSM hoặc key management system
-- Khóa động thay vì khóa cố định
-- IV ngẫu nhiên cho mỗi lần mã hóa
+- Triển khai xoay khóa định kỳ
 
 ## Hỗ trợ
 
-- Tạo issue trên GitHub
-- Kiểm tra README_ENCRYPTION.md cho chi tiết kỹ thuật
-- Chạy `./check-environment.sh` để debug môi trường
-- Xem [SCRIPTS.md](SCRIPTS.md) để biết chi tiết về scripts
+- **Demo và Development**: Sử dụng `./quick-start.sh`
+- **Production**: Sử dụng `./startup.sh`
+- **Testing**: Chạy `./test-mkv.sh`
+- **Troubleshooting**: Xem logs trong `/tmp/state_mkv.log`
+- **Documentation**: Xem `core/ledger/kvledger/txmgmt/statedb/mkv/README.md`
+
+---
+
+**🎯 Tóm tắt**: Dự án này cung cấp giải pháp mã hóa MKV256 hoàn chỉnh cho Hyperledger Fabric, với KeyManager tự động quản lý khóa và hỗ trợ cả StateDB và Private Data. Sử dụng `quick-start.sh` cho demo/development và `startup.sh` cho production.

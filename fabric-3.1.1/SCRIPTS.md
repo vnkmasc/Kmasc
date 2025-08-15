@@ -14,21 +14,38 @@ chmod +x scripts/quick-start.sh
 
 ## Scripts Khởi động Nhanh
 
-### `quick-start.sh` ⭐ (Khuyến nghị)
-**Mục đích**: Thiết lập hoàn toàn tự động từ đầu
+### `quick-start.sh` ⭐ (Demo và Development)
+**Mục đích**: Thiết lập hoàn toàn tự động cho demo và development
 **Chức năng**:
 - Sửa lỗi repository
 - Thiết lập môi trường (Go, OpenSSL, Docker)
-- Xây dựng thư viện mã hóa
-- Kiểm tra tích hợp mã hóa
-- Xây dựng Fabric với mã hóa
+- Tải xuống fabric-samples
+- Kiểm tra môi trường
+- Xây dựng thư viện MKV encryption
+- Kiểm tra hệ thống MKV
+- Xây dựng Fabric với MKV encryption
 - Khởi động mạng thử nghiệm
 - Cung cấp các bước tiếp theo
 
+### `startup.sh` 🚀 (Production)
+**Mục đích**: Khởi động network thật cho production
+**Chức năng**:
+- Sửa lỗi repository
+- Thiết lập môi trường (Go, OpenSSL, Docker)
+- Tải xuống fabric-samples
+- Kiểm tra môi trường
+- Xây dựng thư viện MKV encryption
+- Xây dựng Fabric với MKV encryption
+
 **Cách sử dụng**:
 ```bash
+# Demo và Development
 chmod +x scripts/quick-start.sh
 ./scripts/quick-start.sh
+
+# Production
+chmod +x scripts/startup.sh
+./scripts/startup.sh
 ```
 
 ## Scripts Thiết lập Môi trường
@@ -130,7 +147,7 @@ chmod +x scripts/download-fabric-samples.sh
 ```
 
 ### `build-encryption.sh`
-**Mục đích**: Build thư viện mã hóa (libencryption.so)
+**Mục đích**: Build thư viện mã hóa AES (libencryption.so)
 **Chức năng**:
 - Biên dịch encrypt.c thành libencryption.so
 - Liên kết với thư viện OpenSSL
@@ -139,6 +156,19 @@ chmod +x scripts/download-fabric-samples.sh
 ```bash
 chmod +x scripts/build-encryption.sh
 ./scripts/build-encryption.sh
+```
+
+### `build-mkv-encryption.sh` ⭐
+**Mục đích**: Build thư viện MKV encryption (libmkv.so)
+**Chức năng**:
+- Biên dịch mkv.c và MKV256.c thành libmkv.so
+- Tích hợp với KeyManager singleton
+- Tự động khởi tạo khóa mã hóa
+
+**Cách sử dụng**:
+```bash
+chmod +x scripts/build-mkv-encryption.sh
+./scripts/build-mkv-encryption.sh
 ```
 
 ## Scripts Mạng
@@ -160,7 +190,7 @@ chmod +x scripts/start-network.sh
 ## Scripts Mã hóa Đặc biệt
 
 ### `test-encryption.sh`
-**Mục đích**: Kiểm tra tích hợp mã hóa
+**Mục đích**: Kiểm tra tích hợp mã hóa AES
 **Chức năng**:
 - Build thư viện C
 - Chạy thử nghiệm Go
@@ -171,6 +201,21 @@ chmod +x scripts/start-network.sh
 ```bash
 chmod +x scripts/test-encryption.sh
 ./scripts/test-encryption.sh
+```
+
+### `test-mkv-system.sh` ⭐
+**Mục đích**: Kiểm tra hệ thống MKV encryption
+**Chức năng**:
+- Kiểm tra file khóa MKV
+- Kiểm tra file thư viện MKV
+- Chạy Go tests cho MKV
+- Kiểm tra tích hợp LevelDB
+- Xác minh KeyManager hoạt động
+
+**Cách sử dụng**:
+```bash
+chmod +x scripts/test-mkv-system.sh
+./scripts/test-mkv-system.sh
 ```
 
 ### `core/ledger/kvledger/txmgmt/statedb/run_tests.sh`
@@ -297,14 +342,18 @@ chmod +x scripts/demo-scripts.sh
 ## Thứ tự Thực thi Script
 
 ### Cho Cài đặt Mới
-1. `quick-start.sh` (khuyến nghị)
+1. **Demo và Development**: `quick-start.sh` (khuyến nghị)
    HOẶC
-2. `fix-repositories.sh` → `setup-environment.sh` → `build-fabric.sh` → `start-network.sh`
+2. **Production**: `startup.sh`
+   HOẶC
+3. **Thủ công**: `fix-repositories.sh` → `setup-environment.sh` → `build-mkv-encryption.sh` → `build-fabric.sh` → `start-network.sh`
 
 ### Cho Phát triển
 1. `check-environment.sh` (xác minh thiết lập)
-2. `core/ledger/kvledger/txmgmt/statedb/run_tests.sh` (kiểm tra mã hóa)
-3. `build-fabric.sh` (build lại nếu cần)
+2. `build-mkv-encryption.sh` (build MKV library)
+3. `test-mkv-system.sh` (kiểm tra hệ thống MKV)
+4. `core/ledger/kvledger/txmgmt/statedb/run_tests.sh` (kiểm tra mã hóa AES)
+5. `build-fabric.sh` (build lại nếu cần)
 
 ### Cho Xử lý Sự cố
 1. `test_environment.sh` (kiểm tra nhanh)
@@ -407,8 +456,15 @@ sudo usermod -aG docker $USER  # Sau đó đăng xuất và đăng nhập lại
 
 ### Kiểm tra Hoạt động Mã hóa
 ```bash
+# Kiểm tra logs MKV encryption
+docker exec peer0.org1.example.com cat /tmp/state_mkv.log
+
+# Kiểm tra logs mã hóa AES
 docker logs -f peer0.org1.example.com | grep -i encrypt
 docker logs -f peer0.org1.example.com | grep -i decrypt
+
+# Kiểm tra logs MKV
+docker logs -f peer0.org1.example.com | grep -i "ENCRYPT\|DECRYPT"
 ```
 
 ### Giám sát Mạng
@@ -420,13 +476,16 @@ cd fabric-samples/test-network
 ## Cấu trúc File
 ```
 fabric-3.1.1
-├── /scripts/quick-start.sh              # Script thiết lập chính
+├── /scripts/quick-start.sh              # Script demo và development
+├── /scripts/startup.sh                  # Script production
 ├── /scripts/setup-environment.sh        # Thiết lập môi trường
 ├── /scripts/build-fabric.sh            # Build Fabric
 ├── /scripts/start-network.sh           # Khởi động mạng
 ├── /scripts/download-fabric-samples.sh # Tải xuống samples
-├── /scripts/build-encryption.sh        # Build mã hóa
-├── /scripts/test-encryption.sh         # Kiểm tra mã hóa
+├── /scripts/build-encryption.sh        # Build mã hóa AES
+├── /scripts/build-mkv-encryption.sh    # Build MKV encryption ⭐
+├── /scripts/test-encryption.sh         # Kiểm tra mã hóa AES
+├── /scripts/test-mkv-system.sh         # Kiểm tra hệ thống MKV ⭐
 ├── /scripts/check-environment.sh       # Kiểm tra môi trường
 ├── /scripts/fix-repositories.sh        # Sửa repository
 ├── /scripts/test_environment.sh        # Thử nghiệm nhanh
@@ -440,7 +499,9 @@ fabric-3.1.1
 
 - Tất cả script được thiết kế cho mục đích phát triển/demo
 - Triển khai sản xuất yêu cầu các biện pháp bảo mật bổ sung
-- Khóa mã hóa được hardcode chỉ để demo
+- **MKV Encryption**: Sử dụng KeyManager với password từ file `password.txt`
+- **Fallback Password**: "kmasc" nếu không đọc được file password
+- **Production**: Sử dụng `startup.sh` thay vì `quick-start.sh`
 - Xem xét script trước khi chạy trong môi trường sản xuất
 
 ## Đóng góp
@@ -463,4 +524,9 @@ Cho vấn đề hoặc câu hỏi:
 
 ---
 
-**Lưu ý**: Tất cả script bao gồm xử lý lỗi và sẽ cung cấp phản hồi rõ ràng về thành công hoặc thất bại. Kiểm tra đầu ra cho bất kỳ cảnh báo hoặc lỗi nào cần chú ý. 
+**Lưu ý**: 
+- Tất cả script bao gồm xử lý lỗi và sẽ cung cấp phản hồi rõ ràng về thành công hoặc thất bại
+- **Không còn prompt Y/N**: Tất cả script chạy tự động mà không cần xác nhận
+- **MKV Encryption**: Hệ thống mã hóa chính với KeyManager tự động
+- **Demo vs Production**: Sử dụng `quick-start.sh` cho demo, `startup.sh` cho production
+- Kiểm tra đầu ra cho bất kỳ cảnh báo hoặc lỗi nào cần chú ý 
