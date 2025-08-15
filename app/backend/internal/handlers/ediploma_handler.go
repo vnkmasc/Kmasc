@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,7 +14,6 @@ import (
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type EDiplomaHandler struct {
@@ -35,15 +33,20 @@ type generateEDiplomaRequest struct {
 	TemplateID    string `json:"template_id"`
 }
 
+// Handler
 func (h *EDiplomaHandler) SearchEDiplomas(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-
+	var issued *bool
+	if issuedStr := c.Query("issued"); issuedStr != "" {
+		v, _ := strconv.ParseBool(issuedStr)
+		issued = &v
+	}
 	filters := models.EDiplomaSearchFilter{
-		StudentCode:     c.Query("student_code"),
 		FacultyCode:     c.Query("faculty_code"),
 		CertificateType: c.Query("certificate_type"),
 		Course:          c.Query("course"),
+		Issued:          issued,
 		Page:            page,
 		PageSize:        pageSize,
 	}
@@ -177,37 +180,6 @@ func (h *EDiplomaHandler) ViewEDiploma(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error streaming file"})
 		return
 	}
-}
-
-func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {
-	facultyID := c.Param("faculty_id")
-	if facultyID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "faculty_id is required"})
-		return
-	}
-
-	ediplomas, err := h.ediplomaService.GetEDiplomasByFaculty(c.Request.Context(), facultyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": ediplomas})
-}
-func (h *EDiplomaHandler) GetEDiplomaByID(c *gin.Context) {
-	id := c.Param("id")
-
-	dto, err := h.ediplomaService.GetEDiplomaDTOByID(c.Request.Context(), id)
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "EDiploma not found"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, dto)
 }
 
 func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {

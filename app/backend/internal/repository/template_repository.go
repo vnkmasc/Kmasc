@@ -51,7 +51,6 @@ func (r *templateRepository) Update(ctx context.Context, template *models.Diplom
 		"$set": bson.M{
 			"name":          template.Name,
 			"description":   template.Description,
-			"file_link":     template.FileLink,
 			"hash_template": template.HashTemplate,
 			"html_content":  template.HTMLContent,
 			"updated_at":    template.UpdatedAt,

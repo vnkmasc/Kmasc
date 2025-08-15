@@ -92,7 +92,7 @@ func main() {
 	userService := service.NewUserService(userRepo, universityRepo, facultyRepo)
 	authService := service.NewAuthService(authRepo, userRepo, emailSender)
 	universityService := service.NewUniversityService(universityRepo, authRepo, emailSender)
-	certificateService := service.NewCertificateService(certificateRepo, userRepo, facultyRepo, universityRepo, minioClient)
+	certificateService := service.NewCertificateService(certificateRepo, ediplomaRepo, userRepo, facultyRepo, universityRepo, minioClient)
 	facultyService := service.NewFacultyService(universityRepo, facultyRepo)
 	verificationService := service.NewVerificationService(verificationRepo, certificateService)
 	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)

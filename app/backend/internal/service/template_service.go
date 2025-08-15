@@ -107,15 +107,6 @@ func (s *templateService) CreateTemplate(
 	return template, nil
 }
 
-// func sanitizeFileName(name string) string {
-// 	// Replace space with underscore
-// 	name = strings.ReplaceAll(name, " ", "_")
-
-// 	// Only keep letters, digits, dashes, underscores, dots
-// 	reg := regexp.MustCompile(`[^a-zA-Z0-9\-_\.]`)
-// 	return reg.ReplaceAllString(name, "")
-// }
-
 func (s *templateService) GetTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
 	// ✅ Tìm faculty theo facultyID và universityID để đảm bảo khoa thuộc đúng trường
 	faculty, err := s.facultyRepo.FindByIDAndUniversityID(ctx, facultyID, universityID)

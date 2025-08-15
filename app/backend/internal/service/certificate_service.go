@@ -47,6 +47,7 @@ type CertificateService interface {
 
 type certificateService struct {
 	certificateRepo repository.CertificateRepository
+	ediplomaRepo    repository.EDiplomaRepository
 	userRepo        repository.UserRepository
 	facultyRepo     repository.FacultyRepository
 	universityRepo  repository.UniversityRepository
@@ -55,6 +56,7 @@ type certificateService struct {
 
 func NewCertificateService(
 	certificateRepo repository.CertificateRepository,
+	ediplomaRepo repository.EDiplomaRepository,
 	userRepo repository.UserRepository,
 	facultyRepo repository.FacultyRepository,
 	universityRepo repository.UniversityRepository,
@@ -62,6 +64,7 @@ func NewCertificateService(
 ) CertificateService {
 	return &certificateService{
 		certificateRepo: certificateRepo,
+		ediplomaRepo:    ediplomaRepo,
 		userRepo:        userRepo,
 		facultyRepo:     facultyRepo,
 		universityRepo:  universityRepo,
@@ -70,6 +73,7 @@ func NewCertificateService(
 }
 
 func (s *certificateService) CreateCertificate(ctx context.Context, claims *utils.CustomClaims, req *models.CreateCertificateRequest) error {
+
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		return common.ErrInvalidToken
@@ -108,12 +112,47 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err := s.certificateRepo.CreateCertificate(ctx, cert); err != nil {
 		return err
 	}
+	ed := mapCertificateToEDiploma(cert, user, faculty)
+	if err := s.ediplomaRepo.Save(ctx, ed); err != nil {
+		return err
+	}
+	return nil
 
 	if req.IsDegree {
 		s.updateUserStatusIfNeeded(ctx, user, req.CertificateType)
 	}
 
 	return nil
+}
+
+func mapCertificateToEDiploma(cert *models.Certificate, user *models.User, faculty *models.Faculty) *models.EDiploma {
+	return &models.EDiploma{
+		ID:                 primitive.NewObjectID(),
+		Name:               cert.Name,
+		UniversityID:       cert.UniversityID,
+		FacultyID:          cert.FacultyID,
+		UserID:             cert.UserID,
+		StudentCode:        cert.StudentCode,
+		FullName:           user.FullName,
+		CertificateType:    cert.CertificateType,
+		Course:             cert.Course,
+		EducationType:      cert.EducationType,
+		GPA:                cert.GPA,
+		GraduationRank:     cert.GraduationRank,
+		IssueDate:          cert.IssueDate,
+		SerialNumber:       cert.SerialNumber,
+		RegistrationNumber: cert.RegNo,
+		Issued:             false,
+		Signed:             false,
+		SignedAt:           cert.SignedAt,
+		DataEncrypted:      false,
+		OnBlockchain:       false,
+		FileHash:           cert.HashFile,
+		Status:             "PENDING",
+		IsLocked:           false,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
 }
 
 func (s *certificateService) checkDuplicateSerialAndRegNo(
