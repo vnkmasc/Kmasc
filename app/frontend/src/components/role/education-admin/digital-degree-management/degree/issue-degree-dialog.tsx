@@ -14,25 +14,27 @@ import {
 import { useEffect, useState } from 'react'
 import { AlertCircleIcon, CheckCircle2Icon, Plus } from 'lucide-react'
 import { UseData } from '@/components/providers/data-provider'
-import { formatDegreeTemplateOptions, formatFacultyOptions } from '@/lib/utils/format-api'
-import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/degree'
+import { formatDegreeTemplateOptions, formatFacultyOptionsByID } from '@/lib/utils/format-api'
+import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/digital-degree'
 import { showNotification } from '@/lib/utils/common'
 import CommonSelect from '../../common-select'
 import { Label } from '@/components/ui/label'
 import useSWRMutation from 'swr/mutation'
 import { OptionType } from '@/types/common'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { getSignDegreeConfig } from '@/lib/utils/handle-storage'
 
 interface Props {
-  faculty_code: string
-  certificate_type: string
+  facultyId: string
+  certificateType: string
   course: string
 }
 
 const IssueDegreeDialog: React.FC<Props> = (props) => {
   const [openSignDialog, setOpenSignDialog] = useState(false)
   const [selectDegreeTemplateId, setSelectDegreeTemplateId] = useState<string>('')
-  const facultyOptions = formatFacultyOptions(UseData().facultyList)
+  const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
+  const signDegreeConfig = getSignDegreeConfig()
 
   const findLabel = (id: string, options: OptionType[]) => {
     return options?.find((o: OptionType) => o.value === id)?.label
@@ -45,13 +47,13 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
       setSelectDegreeTemplateId('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.faculty_code, openSignDialog])
+  }, [props.facultyId, openSignDialog])
 
   const queryDegreeTemplatesByFaculty = useSWRMutation(
-    props.faculty_code ? 'degree-templates-by-faculty' + props.faculty_code : undefined,
+    props.facultyId ? 'degree-templates-by-faculty' + props.facultyId : undefined,
     async () => {
       // *@* Invalid faculty_id
-      const res = await searchDegreeTemplateByFaculty(props.faculty_code)
+      const res = await searchDegreeTemplateByFaculty(props.facultyId)
       return formatDegreeTemplateOptions(res.data)
     },
     {
@@ -65,9 +67,9 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
     'issue-digital-degree-faculty',
     () =>
       issueDownloadDegreeZip(
-        props.faculty_code,
+        props.facultyId,
         selectDegreeTemplateId,
-        `VBS-${findLabel(props.faculty_code, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
+        `VBS-${findLabel(props.facultyId, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
       ),
     {
       onSuccess: () => {
@@ -97,29 +99,40 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
         <DialogHeader>
           <DialogTitle>Cấp văn bằng số</DialogTitle>
           <DialogDescription>
-            Cấp văn bằng số cho các chuyên ngành và tự động tải xuống tệp <span className='font-bold'>.zip</span>
+            Cấp văn bằng số sẽ <span className='font-semibold'>xác minh chữ ký</span>,xác minh thành công sẽ tải xuống{' '}
+            <span className='font-semibold'>thư mục văn bằng.</span>
           </DialogDescription>
         </DialogHeader>
 
-        {props.faculty_code ? (
-          <Alert variant={'success'}>
-            <CheckCircle2Icon />
-            <AlertTitle>Sẵn sàng cấp bằng số</AlertTitle>
-            <AlertDescription>
-              <ul>
-                <li>Chuyên ngành: {findLabel(props.faculty_code, facultyOptions)}</li>
-                {props.certificate_type && <li>Loại bằng: {props.certificate_type}</li>}
-                {props.course && <li>Khóa học: {props.course}</li>}
-              </ul>
-            </AlertDescription>
-          </Alert>
+        {signDegreeConfig?.signService !== '' ? (
+          props.facultyId ? (
+            <Alert variant={'success'}>
+              <CheckCircle2Icon />
+              <AlertTitle>Sẵn sàng cấp bằng số</AlertTitle>
+              <AlertDescription>
+                <ul className='list-inside list-disc'>
+                  <li>Chuyên ngành: {findLabel(props.facultyId, facultyOptions)}</li>
+                  {props.certificateType && <li>Loại bằng: {props.certificateType}</li>}
+                  {props.course && <li>Khóa học: {props.course}</li>}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant={'destructive'}>
+              <AlertCircleIcon />
+              <AlertTitle>Cảnh báo</AlertTitle>
+              <AlertDescription>
+                Vui lòng chọn chuyên ngành trong <span className='font-semibold'>phần tìm kiếm</span> để tiến hành cấp
+                bằng số.
+              </AlertDescription>
+            </Alert>
+          )
         ) : (
           <Alert variant={'destructive'}>
             <AlertCircleIcon />
             <AlertTitle>Cảnh báo</AlertTitle>
             <AlertDescription>
-              Vui lòng chọn chuyên ngành trong <span className='font-bold'>phần tìm kiếm</span> để tiến hành cấp bằng
-              số.
+              Vui lòng cấu hình ký số cho <span className='font-semibold'>link server ký số</span>
             </AlertDescription>
           </Alert>
         )}
@@ -140,9 +153,9 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
             type='submit'
             isLoading={mutateIssueDigitalDegree.isMutating}
             onClick={() => mutateIssueDigitalDegree.trigger()}
-            disabled={selectDegreeTemplateId === ''}
+            disabled={selectDegreeTemplateId === '' || !signDegreeConfig}
           >
-            Ký bằng
+            Ký số
           </Button>
         </DialogFooter>
       </DialogContent>

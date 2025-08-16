@@ -26,10 +26,10 @@ export const GENDER_SELECT_SETTING = {
 }
 
 export const CERTIFICATE_TYPE_OPTIONS = [
-  { value: '1', label: 'Cử nhân' },
-  { value: '2', label: 'Kỹ sư' },
-  { value: '3', label: 'Thạc sĩ' },
-  { value: '4', label: 'Tiến sĩ' }
+  { value: 'Cử nhân', label: 'Cử nhân' },
+  { value: 'Kỹ sư', label: 'Kỹ sư' },
+  { value: 'Thạc sĩ', label: 'Thạc sĩ' },
+  { value: 'Tiến sĩ', label: 'Tiến sĩ' }
 ]
 
 export const REWARD_DISCIPLINE_TYPE_SETTING = {

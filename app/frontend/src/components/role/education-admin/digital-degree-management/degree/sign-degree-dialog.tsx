@@ -16,7 +16,7 @@ import { KeyRound } from 'lucide-react'
 import { UseData } from '@/components/providers/data-provider'
 import { formatDegreeTemplateOptions, formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import useSWR from 'swr'
-import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/degree'
+import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/digital-degree'
 import { showNotification } from '@/lib/utils/common'
 import CommonSelect from '../../common-select'
 import { Label } from '@/components/ui/label'
@@ -24,8 +24,8 @@ import useSWRMutation from 'swr/mutation'
 import { OptionType } from '@/types/common'
 
 interface Props {
-  faculty_code: string
-  certificate_type: string
+  facultyId: string
+  certificateType: string
   course: string
 }
 
@@ -35,13 +35,13 @@ const SignDegreeDialog: React.FC<Props> = (props) => {
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
 
   const findLabel = (id: string, options: OptionType[]) => {
-    return options?.find((o: OptionType) => o.value === id)?.label
+    return options?.find((option: OptionType) => option.value === id)?.label
   }
 
   const queryDegreeTemplatesByFaculty = useSWR(
-    props.faculty_code ? 'degree-templates-by-faculty' + props.faculty_code : undefined,
+    props.facultyId ? 'degree-templates-by-faculty' + props.facultyId : undefined,
     async () => {
-      const res = await searchDegreeTemplateByFaculty(props.faculty_code)
+      const res = await searchDegreeTemplateByFaculty(props.facultyId)
       return formatDegreeTemplateOptions(res.data)
     },
     {
@@ -55,9 +55,9 @@ const SignDegreeDialog: React.FC<Props> = (props) => {
     'issue-digital-degree-faculty',
     () =>
       issueDownloadDegreeZip(
-        props.faculty_code,
+        props.facultyId,
         selectDegreeTemplateId,
-        `VBS-${findLabel(props.faculty_code, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
+        `VBS-${findLabel(props.facultyId, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
       ),
     {
       onSuccess: () => {
@@ -87,7 +87,7 @@ const SignDegreeDialog: React.FC<Props> = (props) => {
         <DialogHeader>
           <DialogTitle>Ký văn bằng số</DialogTitle>
           <DialogDescription>
-            Ký bằng số cho các chuyên ngành và tự động tải xuống tệp <span className='font-bold'>.zip</span>
+            Ký bằng số cho các chuyên ngành và tự động tải xuống tệp <span className='font-semibold'>.zip</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -114,7 +114,7 @@ const SignDegreeDialog: React.FC<Props> = (props) => {
               mutateIssueDigitalDegree.trigger()
             }}
           >
-            Ký bằng
+            Ký số
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -36,7 +36,7 @@ const TinyTextEdit = forwardRef<TinyTextEditRef, TinyTextEditProps>(({ value, on
         }
       }}
       init={{
-        height: 500,
+        height: 700,
         menubar: false,
         plugins: [
           'advlist',

@@ -1,7 +1,7 @@
 import CodeView from '@/components/role/education-admin/code-view'
 import HtmlView from '@/components/role/education-admin/html-view'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { formatExampleTemplateHTML } from '@/lib/utils/format-api'
+import { formatTemplateInterfaceHTML } from '@/lib/utils/format-api'
 
 interface Props {
   baseHtml: string | undefined
@@ -20,7 +20,7 @@ const TemplateView: React.FC<Props> = (props) => {
         <HtmlView html={props.baseHtml} loading={props.htmlLoading} />
       </TabsContent>
       <TabsContent value='example-template'>
-        <HtmlView html={formatExampleTemplateHTML(props.baseHtml || '')} loading={props.htmlLoading} />
+        <HtmlView html={formatTemplateInterfaceHTML(props.baseHtml || '')} loading={props.htmlLoading} />
       </TabsContent>
       <TabsContent value='code'>
         <CodeView code={props.baseHtml || ''} />

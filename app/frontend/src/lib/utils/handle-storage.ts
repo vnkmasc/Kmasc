@@ -31,3 +31,23 @@ export const getDataStorage = (key: string, type: 'local' | 'session' = 'local')
     }
   }
 }
+
+export const removeDataStorage = (key: string, type: 'local' | 'session' = 'local') => {
+  let storage: Storage = localStorage
+  if (type === 'session') {
+    storage = sessionStorage
+  }
+  storage.removeItem(key)
+}
+
+export const getSignDegreeConfig = (): {
+  signService: string
+  pdfSignLocation: string
+} => {
+  return (
+    getDataStorage('setting') ?? {
+      signService: '',
+      pdfSignLocation: ''
+    }
+  )
+}

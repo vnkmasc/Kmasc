@@ -3,20 +3,14 @@
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'
-import DetailDialog from '@/components/role/education-admin/detail-dialog'
 import Filter from '@/components/role/education-admin/filter'
 import TableList from '@/components/role/education-admin/table-list'
 import { Badge } from '@/components/ui/badge'
-import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE, STUDENT_CODE_SEARCH_SETTING } from '@/constants/common'
-
-import { formatFacultyOptions } from '@/lib/utils/format-api'
-import { validateNoEmpty } from '@/lib/utils/validators'
+import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE } from '@/constants/common'
+import { formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { useState } from 'react'
-
-import { useCallback } from 'react'
 import useSWR from 'swr'
-import { searchDigitalDegreeList, uploadDegreeToMinio } from '@/lib/api/degree'
-
+import { searchDigitalDegreeList, uploadDegreeToMinio } from '@/lib/api/digital-degree'
 import { formatDate } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Blocks, FolderUp } from 'lucide-react'
@@ -26,12 +20,7 @@ import IssueDegreeDialog from '@/components/role/education-admin/digital-degree-
 import SignDegreeDialog from './sign-degree-dialog'
 
 const DigitalDegreeManagement = () => {
-  const [idDetail, setIdDetail] = useState<string | null | undefined>(undefined)
-
   const [filter, setFilter] = useState<any>({})
-  const handleCloseDialog = useCallback(() => {
-    setIdDetail(undefined)
-  }, [])
 
   const queryCertificates = useSWR('digital-degree-list' + JSON.stringify(filter), () =>
     searchDigitalDegreeList({
@@ -57,14 +46,14 @@ const DigitalDegreeManagement = () => {
         extra={[
           <IssueDegreeDialog
             key='sign-degree-faculty'
-            faculty_code={filter.faculty_code}
-            certificate_type={filter.certificate_type}
+            facultyId={filter.faculty_id}
+            certificateType={filter.certificate_type}
             course={filter.course}
           />,
           <SignDegreeDialog
             key='sign-degree-dialog'
-            faculty_code={filter.faculty_code}
-            certificate_type={filter.certificate_type}
+            facultyId={filter.faculty_id}
+            certificateType={filter.certificate_type}
             course={filter.course}
           />,
           <Button
@@ -87,14 +76,14 @@ const DigitalDegreeManagement = () => {
         items={[
           {
             type: 'select',
-            name: 'faculty_code',
+            name: 'faculty_id',
             placeholder: 'Chọn chuyên ngành',
             setting: {
               select: {
                 groups: [
                   {
                     label: 'Chuyên ngành',
-                    options: formatFacultyOptions(UseData().facultyList)
+                    options: formatFacultyOptionsByID(UseData().facultyList)
                   }
                 ]
               }
@@ -170,6 +159,26 @@ const DigitalDegreeManagement = () => {
             render: (item) => (
               <Badge variant={item.signed ? 'default' : 'outline'}>{item.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
             )
+          },
+          {
+            header: 'Blockchain',
+            value: 'on_blockchain',
+
+            render: (item) => (
+              <Badge variant={item.on_blockchain ? 'default' : 'outline'}>
+                {item.on_blockchain ? 'Đã đẩy' : 'Chưa đẩy'}
+              </Badge>
+            )
+          },
+          {
+            header: 'Trạng thái mã',
+            value: 'data_encrypted',
+
+            render: (item) => (
+              <Badge variant={item.data_encrypted ? 'default' : 'outline'}>
+                {item.data_encrypted ? 'Đã mã hóa' : 'Chưa mã hóa'}
+              </Badge>
+            )
           }
         ]}
         data={queryCertificates.data?.data || []}
@@ -182,72 +191,6 @@ const DigitalDegreeManagement = () => {
         handleChangePage={(page) => {
           setFilter({ ...filter, page })
         }}
-      />
-      <DetailDialog
-        items={[
-          {
-            type: 'query_select',
-            placeholder: 'Nhập và chọn MSV',
-            name: 'studentCode',
-            setting: STUDENT_CODE_SEARCH_SETTING,
-            label: 'Mã sinh viên',
-            validator: validateNoEmpty('Mã sinh viên')
-          },
-          {
-            type: 'select',
-            placeholder: 'Chọn loại bằng',
-            name: 'certificateType',
-            setting: {
-              select: {
-                groups: [
-                  {
-                    label: undefined,
-                    options: CERTIFICATE_TYPE_OPTIONS
-                  }
-                ]
-              }
-            },
-            label: 'Loại bằng',
-            validator: validateNoEmpty('Loại bằng')
-          },
-          {
-            type: 'input',
-            placeholder: 'Nhập tên bằng',
-            name: 'name',
-            label: 'Tên bằng',
-            validator: validateNoEmpty('Tên bằng')
-          },
-          {
-            type: 'input',
-            name: 'serialNumber',
-            placeholder: 'Nhập số hiệu',
-            label: 'Số hiệu',
-            validator: validateNoEmpty('Số hiệu')
-          },
-          {
-            type: 'input',
-            name: 'regNo',
-            placeholder: 'Nhập số vào sổ gốc cấp văn bằng',
-            label: 'Số vào sổ gốc cấp văn bằng',
-            validator: validateNoEmpty('Số vào sổ gốc cấp văn bằng')
-          },
-          {
-            type: 'input',
-            name: 'date',
-            placeholder: 'Nhập ngày cấp',
-            label: 'Ngày cấp',
-            validator: validateNoEmpty('Ngày cấp'),
-            setting: {
-              input: {
-                type: 'date'
-              }
-            }
-          }
-        ]}
-        data={[]}
-        mode={idDetail === null ? 'create' : undefined}
-        handleSubmit={() => {}}
-        handleClose={handleCloseDialog}
       />
     </>
   )

@@ -41,7 +41,7 @@ const CodeView: React.FC<Props> = ({ code }) => {
   }
 
   return (
-    <div className='overflox-x-scroll relative overflow-y-scroll rounded-lg border border-gray-200 p-4 dark:border-gray-700'>
+    <div className='relative overflow-auto rounded-lg border border-gray-200 p-4 dark:border-gray-700'>
       <button
         onClick={handleCopy}
         className='absolute right-2 top-2 rounded p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800'

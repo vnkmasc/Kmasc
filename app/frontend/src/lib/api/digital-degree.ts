@@ -8,7 +8,11 @@ export const createDegreeTemplate = async (data: any) => {
 
 export const getDegreeTemplateById = async (id: string) => {
   const res = await apiService('GET', `templates/${id}`)
-  return res
+
+  return {
+    ...res.data,
+    faculty_id: res.data.facultyId
+  }
 }
 
 export const updateDegreeTemplate = async (id: string, data: any) => {
@@ -18,12 +22,6 @@ export const updateDegreeTemplate = async (id: string, data: any) => {
 export const searchDegreeTemplateByFaculty = async (facultyId: string) => {
   const res = await apiService('GET', `templates/faculty/${facultyId}`)
   return res
-}
-
-export const getDegreeTemplateView = async (id: string) => {
-  const res = await apiService('GET', `templates/${id}`)
-
-  return res.data?.html_content
 }
 
 export const deleteDegreeTemplate = async (id: string) => {
@@ -78,5 +76,15 @@ export const issueDownloadDegreeZip = async (facultyId: string, templateId: stri
 
 export const uploadDegreeToMinio = async () => {
   const res = await apiService('POST', `ediplomas/upload-local`)
+  return res
+}
+
+export const getTemplateInterfaces = async () => {
+  const res = await apiService('GET', `template-samples`)
+  return res
+}
+
+export const getTemplateInterfaceById = async (id: string) => {
+  const res = await apiService('GET', `template-samples/${id}`)
   return res
 }

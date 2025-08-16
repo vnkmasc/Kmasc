@@ -1,7 +1,7 @@
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import ExampleTemplate from '@/components/role/education-admin/digital-degree-management/example-template/example-template'
+import TemplateInterface from '@/components/role/education-admin/digital-degree-management/template-interface/template-interface'
 import DegreeTemplate from '@/components/role/education-admin/digital-degree-management/template/degree-template'
 import DigitalDegreeManagement from '@/components/role/education-admin/digital-degree-management/degree/degree-management'
 import { useRouter } from 'next/navigation'
@@ -17,7 +17,7 @@ const DigitalDegreeManagementPage = () => {
       <TabsList>
         <TabsTrigger value='degree'>Quản lý văn bằng</TabsTrigger>
         <TabsTrigger value='template'>Quản lý mẫu bằng</TabsTrigger>
-        <TabsTrigger value='example'>Tạo mẫu bằng</TabsTrigger>
+        <TabsTrigger value='template-interface'>Giao diện mẫu bằng</TabsTrigger>
       </TabsList>
       <TabsContent value='degree'>
         <DigitalDegreeManagement />
@@ -25,8 +25,8 @@ const DigitalDegreeManagementPage = () => {
       <TabsContent value='template'>
         <DegreeTemplate />
       </TabsContent>
-      <TabsContent value='example'>
-        <ExampleTemplate />
+      <TabsContent value='template-interface'>
+        <TemplateInterface />
       </TabsContent>
     </Tabs>
   )

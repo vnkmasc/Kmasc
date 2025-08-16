@@ -214,8 +214,8 @@ const CertificateManagementPage = () => {
               <DialogHeader>
                 <DialogTitle>Tải tệp PDF chứng chỉ/văn bằng</DialogTitle>
                 <DialogDescription>
-                  Nếu tải văn bằng thì tên tệp là <span className='font-bold'>số hiệu văn bằng</span>, nếu tải chứng chỉ
-                  thì tên tệp là <span className='font-bold'>mã sinh viên</span>
+                  Nếu tải văn bằng thì tên tệp là <span className='font-semibold'>số hiệu văn bằng</span>, nếu tải chứng
+                  chỉ thì tên tệp là <span className='font-semibold'>mã sinh viên</span>
                 </DialogDescription>
               </DialogHeader>
               <Label>Chọn loại</Label>
@@ -372,7 +372,7 @@ const CertificateManagementPage = () => {
             header: 'Hành động',
             value: 'action',
 
-            render: (item) => <CertificateActionButton id={item.id} />
+            render: (item) => <CertificateActionButton id={item.id} onBlockchain={item.onBlockchain} />
           }
         ]}
         data={queryCertificates.data?.data || []}
