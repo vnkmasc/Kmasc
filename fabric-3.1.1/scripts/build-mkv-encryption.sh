@@ -99,7 +99,7 @@ build_mkv_library() {
     fi
     
     # Return to root directory
-    cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
+    cd "$ROOT_DIR"
 }
 
 # Function to test the library
@@ -117,7 +117,7 @@ test_mkv_library() {
     fi
     
     # Return to root directory
-    cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
+    cd "$ROOT_DIR"
 }
 
 # Main execution

@@ -49,6 +49,9 @@ ensure_correct_directory() {
     print_status "INFO" "Running from correct directory: $(pwd)"
 }
 
+# Save root directory
+ROOT_DIR=$(pwd)
+
 # Function to check key files
 check_key_files() {
     print_status "INFO" "Checking MKV key files..."
@@ -145,7 +148,7 @@ run_go_tests() {
     fi
     
     # Return to root directory
-    cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
+    cd "$ROOT_DIR"
 }
 
 # Function to test integration with LevelDB
