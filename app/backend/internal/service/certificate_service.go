@@ -47,6 +47,7 @@ type CertificateService interface {
 
 type certificateService struct {
 	certificateRepo repository.CertificateRepository
+	ediplomaRepo    repository.EDiplomaRepository
 	userRepo        repository.UserRepository
 	facultyRepo     repository.FacultyRepository
 	universityRepo  repository.UniversityRepository
@@ -55,6 +56,7 @@ type certificateService struct {
 
 func NewCertificateService(
 	certificateRepo repository.CertificateRepository,
+	ediplomaRepo repository.EDiplomaRepository,
 	userRepo repository.UserRepository,
 	facultyRepo repository.FacultyRepository,
 	universityRepo repository.UniversityRepository,
@@ -62,6 +64,7 @@ func NewCertificateService(
 ) CertificateService {
 	return &certificateService{
 		certificateRepo: certificateRepo,
+		ediplomaRepo:    ediplomaRepo,
 		userRepo:        userRepo,
 		facultyRepo:     facultyRepo,
 		universityRepo:  universityRepo,
@@ -74,11 +77,9 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err != nil {
 		return common.ErrInvalidToken
 	}
-	fmt.Println(">>> Tìm sinh viên - code:", strings.TrimSpace(req.StudentCode), "universityID:", universityID.Hex())
 
 	user, err := s.userRepo.FindByStudentCodeAndUniversityID(ctx, strings.TrimSpace(req.StudentCode), universityID)
 	if err != nil || user == nil {
-		fmt.Println(">>> Không tìm thấy sinh viên với code:", req.StudentCode)
 		return common.ErrUserNotExisted
 	}
 	if user.FacultyID.IsZero() {
@@ -88,18 +89,18 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err := s.validateDegreeRequest(ctx, req, universityID); err != nil {
 		return err
 	}
-
 	if err := s.checkDuplicateSerialAndRegNo(ctx, universityID, req); err != nil {
 		return err
+	}
+
+	university, err := s.universityRepo.FindByID(ctx, universityID)
+	if err != nil || university == nil {
+		return common.ErrUniversityNotFound
 	}
 
 	faculty, err := s.facultyRepo.FindByID(ctx, user.FacultyID)
 	if err != nil || faculty == nil {
 		return common.ErrFacultyNotFound
-	}
-	university, err := s.universityRepo.FindByID(ctx, universityID)
-	if err != nil || university == nil {
-		return common.ErrUniversityNotFound
 	}
 
 	cert := models.NewCertificate(req, user, universityID)
@@ -109,11 +110,43 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 		return err
 	}
 
+	ed := mapCertificateToEDiploma(cert, user)
+	if err := s.ediplomaRepo.Save(ctx, ed); err != nil {
+		return err
+	}
+
 	if req.IsDegree {
 		s.updateUserStatusIfNeeded(ctx, user, req.CertificateType)
 	}
 
 	return nil
+}
+
+func mapCertificateToEDiploma(cert *models.Certificate, user *models.User) *models.EDiploma {
+	return &models.EDiploma{
+		ID:                 primitive.NewObjectID(),
+		Name:               cert.Name,
+		UniversityID:       cert.UniversityID,
+		FacultyID:          cert.FacultyID,
+		UserID:             cert.UserID,
+		StudentCode:        cert.StudentCode,
+		FullName:           user.FullName,
+		CertificateType:    cert.CertificateType,
+		Course:             cert.Course,
+		EducationType:      cert.EducationType,
+		GPA:                cert.GPA,
+		GraduationRank:     cert.GraduationRank,
+		IssueDate:          cert.IssueDate,
+		SerialNumber:       cert.SerialNumber,
+		RegistrationNumber: cert.RegNo,
+		Issued:             false,
+		Signed:             false,
+		SignedAt:           cert.SignedAt,
+		DataEncrypted:      false,
+		OnBlockchain:       false,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
 }
 
 func (s *certificateService) checkDuplicateSerialAndRegNo(

@@ -2,32 +2,68 @@ package mapper
 
 import "github.com/vnkmasc/Kmasc/app/backend/internal/models"
 
+// Helpers để tránh nil pointer
+func getUniversityCode(u *models.University) string {
+	if u == nil {
+		return ""
+	}
+	return u.UniversityCode
+}
+
+func getUniversityName(u *models.University) string {
+	if u == nil {
+		return ""
+	}
+	return u.UniversityName
+}
+
+func getFacultyCode(f *models.Faculty) string {
+	if f == nil {
+		return ""
+	}
+	return f.FacultyCode
+}
+
+func getFacultyName(f *models.Faculty) string {
+	if f == nil {
+		return ""
+	}
+	return f.FacultyName
+}
+
+func getTemplateName(t *models.DiplomaTemplate) string {
+	if t == nil {
+		return ""
+	}
+	return t.Name
+}
+
+func getUserFullName(u *models.User) string {
+	if u == nil {
+		return ""
+	}
+	return u.FullName
+}
+
 func MapEDiplomaToDTO(
 	ed *models.EDiploma,
 	university *models.University,
 	faculty *models.Faculty,
-	major *models.Major,
 	template *models.DiplomaTemplate,
 	user *models.User,
-) *models.EDiplomaDTO {
-	return &models.EDiplomaDTO{
+) *models.EDiplomaResponse {
+	return &models.EDiplomaResponse{
 		ID:             ed.ID,
-		TemplateID:     ed.TemplateID,
-		UniversityID:   ed.UniversityID,
-		UniversityCode: university.UniversityCode,
-		UniversityName: university.UniversityName,
+		Name:           ed.Name,
 		FacultyID:      ed.FacultyID,
-		FacultyCode:    faculty.FacultyCode,
-		FacultyName:    faculty.FacultyName,
-		// MajorID:        ed.MajorID,
-		// MajorCode:      ifMajorNotNil(major, major.MajorCode),
-		// MajorName:      ifMajorNotNil(major, major.MajorName),
-
-		UserID:       ed.UserID,
-		StudentCode:  ed.StudentCode,
-		FullName:     ed.FullName,
-		StudentName:  user.FullName,
-		TemplateName: template.Name,
+		UniversityCode: getUniversityCode(university),
+		UniversityName: getUniversityName(university),
+		FacultyCode:    getFacultyCode(faculty),
+		FacultyName:    getFacultyName(faculty),
+		StudentCode:    ed.StudentCode,
+		FullName:       ed.FullName,
+		StudentName:    getUserFullName(user),
+		TemplateName:   getTemplateName(template),
 
 		CertificateType:    ed.CertificateType,
 		Course:             ed.Course,
@@ -37,23 +73,9 @@ func MapEDiplomaToDTO(
 		IssueDate:          ed.IssueDate,
 		SerialNumber:       ed.SerialNumber,
 		RegistrationNumber: ed.RegistrationNumber,
-		FileLink:           ed.FileLink,
-		FileHash:           ed.FileHash,
-		Signature:          ed.Signature,
+		Issued:             ed.Issued,
 		Signed:             ed.Signed,
-		SignedAt:           ed.SignedAt,
+		DataEncrypted:      ed.DataEncrypted,
 		OnBlockchain:       ed.OnBlockchain,
-		CreatedAt:          ed.CreatedAt,
-		UpdatedAt:          ed.UpdatedAt,
-
-		SignatureOfUni:    ed.SignatureOfUni,
-		SignatureOfMinEdu: ed.SignatureOfMinEdu,
 	}
-}
-
-func ifMajorNotNil(m *models.Major, val string) string {
-	if m == nil {
-		return ""
-	}
-	return val
 }

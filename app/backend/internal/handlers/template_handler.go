@@ -1,124 +1,143 @@
 package handlers
 
 import (
-	"fmt"
-	"io"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
-	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
 	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type TemplateHandler struct {
-	templateService service.TemplateService
-	minioClient     *database.MinioClient
-	facultyService  service.FacultyService
+type TemplateSampleHandler struct {
+	service *service.TemplateSampleService
 }
 
-func NewTemplateHandler(
-	templateService service.TemplateService,
-	minioClient *database.MinioClient,
-	facultyService service.FacultyService,
-) *TemplateHandler {
-	return &TemplateHandler{
-		templateService: templateService,
-		minioClient:     minioClient,
-		facultyService:  facultyService,
-	}
+// Constructor
+func NewTemplateSampleHandler(service *service.TemplateSampleService) *TemplateSampleHandler {
+	return &TemplateSampleHandler{service: service}
 }
-
-func (h *TemplateHandler) GetTemplateByID(c *gin.Context) {
-	id := c.Param("id")
-
-	template, err := h.templateService.GetTemplateByID(c.Request.Context(), id)
+func (h *TemplateSampleHandler) GetTemplateSampleByID(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID or template not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid template sample ID"})
+		return
+	}
+
+	sample, err := h.service.GetByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "template sample not found"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": template,
+		"data": sample,
 	})
 }
 
-func (h *TemplateHandler) UpdateTemplate(c *gin.Context) {
-	templateIDHex := c.Param("id")
-	templateID, err := primitive.ObjectIDFromHex(templateIDHex)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+type CreateTemplateSampleRequest struct {
+	Name        string `json:"name" binding:"required"`
+	HTMLContent string `json:"html_content" binding:"required"`
+}
+
+func (h *TemplateSampleHandler) CreateTemplateSample(c *gin.Context) {
+	var req CreateTemplateSampleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid JSON body",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	claimsRaw, exists := c.Get("claims")
+	val, exists := c.Get("claims")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Bạn chưa đăng nhập hoặc token không hợp lệ"})
 		return
 	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
+	claims, ok := val.(*utils.CustomClaims)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ"})
 		return
 	}
 
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID in token"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id in token"})
+		return
+	}
+
+	sample := &models.TemplateSample{
+		Name:         req.Name,
+		HTMLContent:  req.HTMLContent,
+		UniversityID: universityID, // gán từ token
+	}
+
+	id, err := h.service.Create(c.Request.Context(), sample)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Gán ID để trả về
+	sample.ID = id
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Template sample created successfully",
+		"data":    sample,
+	})
+}
+
+type UpdateTemplateSampleRequest struct {
+	Name        string `json:"name" binding:"required"`
+	HTMLContent string `json:"html_content" binding:"required"`
+}
+
+// Handler
+func (h *TemplateSampleHandler) UpdateTemplateSample(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid template sample ID"})
 		return
 	}
 
 	var req struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		HTMLContent string `json:"html_content"`
+		Name        string `json:"name" binding:"required"`
+		HTMLContent string `json:"html_content" binding:"required"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body", "details": err.Error()})
 		return
 	}
 
-	updatedTemplate, err := h.templateService.UpdateTemplate(
-		c.Request.Context(),
-		templateID,
-		universityID,
-		req.Name,
-		req.Description,
-		req.HTMLContent,
-	)
-	if err != nil {
+	sample := &models.TemplateSample{
+		ID:          id,
+		Name:        req.Name,
+		HTMLContent: req.HTMLContent,
+	}
+
+	if err := h.service.Update(c.Request.Context(), sample); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":  "Template updated successfully",
-		"template": updatedTemplate,
+		"message": "Template sample updated successfully",
 	})
 }
 
-func (h *TemplateHandler) VerifyTemplatesByFaculty(c *gin.Context) {
-	facultyIDHex := c.Param("faculty_id")
-	facultyID, err := primitive.ObjectIDFromHex(facultyIDHex)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty ID"})
-		return
-	}
-
-	claimsRaw, exists := c.Get("claims")
+func (h *TemplateSampleHandler) GetAllTemplateSamples(c *gin.Context) {
+	val, exists := c.Get("claims")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Bạn chưa đăng nhập hoặc token không hợp lệ"})
 		return
 	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
+	claims, ok := val.(*utils.CustomClaims)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token không hợp lệ"})
 		return
 	}
 
@@ -128,349 +147,40 @@ func (h *TemplateHandler) VerifyTemplatesByFaculty(c *gin.Context) {
 		return
 	}
 
-	err = h.templateService.VerifyTemplatesByFaculty(c.Request.Context(), universityID, facultyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify templates"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "All templates verified for faculty successfully"})
-}
-
-// POST /templates
-func (h *TemplateHandler) GetTemplatesByFaculty(c *gin.Context) {
-	facultyIDStr := c.Param("faculty_id")
-
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
-		return
-	}
-
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id in token"})
-		return
-	}
-
-	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
-		return
-	}
-
-	templates, err := h.templateService.GetTemplatesByFaculty(c.Request.Context(), universityID, facultyID)
+	samples, err := h.service.GetAllVisible(c.Request.Context(), universityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": templates,
-	})
-}
-func (h *TemplateHandler) GetTemplatesByFacultyAndUniversity(c *gin.Context) {
-	universityIDStr := c.Param("university_id")
-	facultyIDStr := c.Param("faculty_id")
-
-	universityID, err := primitive.ObjectIDFromHex(universityIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id"})
-		return
-	}
-
-	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
-		return
-	}
-
-	templates, err := h.templateService.GetTemplatesByFaculty(c.Request.Context(), universityID, facultyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	var result []gin.H
+	for _, s := range samples {
+		result = append(result, gin.H{
+			"id":   s.ID.Hex(),
+			"name": s.Name,
+		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": templates,
+		"message": "Success",
+		"data":    result,
 	})
 }
 
-func (h *TemplateHandler) CreateTemplate(c *gin.Context) {
-	var req struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		FacultyID   string `json:"faculty_id"`
-		HTMLContent string `json:"html_content"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body", "details": err.Error()})
-		return
-	}
-
-	if req.HTMLContent == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "html_content is required"})
-		return
-	}
-
-	// Chuyển UniversityID từ token sang ObjectID
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
-		return
-	}
-
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id in token"})
-		return
-	}
-
-	facultyID, err := primitive.ObjectIDFromHex(req.FacultyID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
-		return
-	}
-
-	template, err := h.templateService.CreateTemplate(
-		c.Request.Context(),
-		req.Name,
-		req.Description,
-		universityID,
-		facultyID,
-		req.HTMLContent,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":  "Template created successfully",
-		"template": template,
-	})
-}
-
-func (h *TemplateHandler) SignTemplatesByFaculty(c *gin.Context) {
-	facultyIDStr := c.Param("faculty_id")
-
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
-		return
-	}
-
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
-		return
-	}
-
-	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty ID"})
-		return
-	}
-
-	count, err := h.templateService.SignTemplatesByFaculty(c.Request.Context(), universityID, facultyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Successfully signed %d templates", count),
-	})
-}
-
-func (h *TemplateHandler) SignTemplateByID(c *gin.Context) {
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
-		return
-	}
-
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
-		return
-	}
-
-	templateIDHex := c.Param("template_id")
-	templateID, err := primitive.ObjectIDFromHex(templateIDHex)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
-		return
-	}
-
-	// Gọi service, lấy template đã ký
-	template, err := h.templateService.SignTemplateByID(c.Request.Context(), universityID, templateID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Successfully signed template: %s", template.Name),
-	})
-}
-
-func (h *TemplateHandler) SignAllPendingTemplatesOfUniversity(c *gin.Context) {
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
-		return
-	}
-
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
-		return
-	}
-
-	count, err := h.templateService.SignAllPendingTemplatesOfUniversity(c.Request.Context(), universityID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Successfully signed %d templates", count),
-	})
-}
-
-func (h *TemplateHandler) SignTemplatesByMinEdu(c *gin.Context) {
-	universityIDStr := c.Param("university_id")
-	universityID, err := primitive.ObjectIDFromHex(universityIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
-		return
-	}
-
-	count, err := h.templateService.SignAllTemplatesByMinEdu(c.Request.Context(), universityID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign templates by Ministry of Education"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":          fmt.Sprintf("Successfully signed %d templates by Ministry of Education", count),
-		"signed_templates": count,
-	})
-}
-func (h *TemplateHandler) GetTemplateView(c *gin.Context) {
+func (h *TemplateSampleHandler) GetTemplateSampleView(c *gin.Context) {
 	ctx := c.Request.Context()
-	templateIDStr := c.Param("id")
+	templateSampleIDStr := c.Param("id")
 
-	template, err := h.templateService.GetTemplateByID(ctx, templateIDStr)
+	templateSampleID, err := primitive.ObjectIDFromHex(templateSampleIDStr)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "template not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid template sample ID"})
 		return
 	}
-
-	// calculatedHash := utils.ComputeSHA256([]byte(template.HTMLContent))
-	// fmt.Println("[GetTemplateView] Calculated hash:", calculatedHash)
-	// fmt.Println("[GetTemplateView] Stored hash:", template.HashTemplate)
-	// fmt.Println("[GetTemplateView] HTMLContent length:", len(template.HTMLContent))
-	// fmt.Printf("[GetTemplateView] HTMLContent preview: %.100s\n", template.HTMLContent)
-
-	// if calculatedHash != template.HashTemplate {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{
-	// 		"error": "template content hash mismatch - data may be corrupted",
-	// 	})
-	// 	return
-	// }
-
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(template.HTMLContent))
-}
-
-func parseMinioURL(urlStr string) (bucket, objectPath string, err error) {
-	u, err := url.Parse(urlStr)
+	templateSample, err := h.service.GetByID(ctx, templateSampleID)
 	if err != nil {
-		return "", "", err
-	}
-
-	trimmedPath := strings.TrimPrefix(u.Path, "/")
-	parts := strings.SplitN(trimmedPath, "/", 2)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid MinIO file URL")
-	}
-
-	return parts[0], parts[1], nil
-}
-
-func (h *TemplateHandler) GetTemplateFile(c *gin.Context) {
-
-	templateID := c.Param("id")
-	template, err := h.templateService.GetTemplateByID(c.Request.Context(), templateID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "template sample not found"})
 		return
 	}
 
-	// Parse bucket và object từ FileLink
-	// Ví dụ: http://host:9000/bucket/object-path
-	fileLink := template.FileLink
-	parts := strings.SplitN(strings.TrimPrefix(fileLink, "http://"), "/", 2)
-	if len(parts) != 2 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid file link"})
-		return
-	}
-	bucketAndHost := parts[1]
-	idx := strings.Index(bucketAndHost, "/")
-	if idx == -1 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid file link"})
-		return
-	}
-	bucket := bucketAndHost[:idx]
-	object := bucketAndHost[idx+1:]
-
-	// Đọc file từ MinIO
-	obj, err := h.minioClient.GetObject(c, bucket, object)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get file from MinIO"})
-		return
-	}
-	defer obj.Close()
-
-	// Đọc toàn bộ file
-	fileBytes, err := io.ReadAll(obj)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
-		return
-	}
-
-	// Trả về file (ví dụ PDF)
-	c.Data(http.StatusOK, "text/html; charset=utf-8", fileBytes)
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(templateSample.HTMLContent))
 }

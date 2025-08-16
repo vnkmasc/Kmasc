@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -31,6 +32,7 @@ func main() {
 
 	InitValidator()
 	seedAdminAccount(db)
+	SeedTemplateSamples(context.Background(), repository.NewTemplateSampleRepo(db))
 
 	emailSender := utils.NewSMTPSender(
 		os.Getenv("EMAIL_FROM"),
@@ -71,12 +73,14 @@ func main() {
 	majorRepo := repository.NewMajorRepository(db)
 	templateRepo := repository.NewTemplateRepository(db)
 	ediplomaRepo := repository.NewEDiplomaRepository(db, facultyRepo)
+	templateSampleRepo := repository.NewTemplateSampleRepo(db)
 
 	// Services
 	templateEngine := models.NewTemplateEngine() // giả định bạn có utils/template_engine.go
 	pdfGenerator := utils.NewPDFGenerator()      // giả định bạn có utils/pdf_generator.go
 
 	ediplomaService := service.NewEDiplomaService(
+		*templateSampleRepo,
 		universityRepo,
 		majorRepo,
 		facultyRepo,
@@ -92,19 +96,20 @@ func main() {
 	userService := service.NewUserService(userRepo, universityRepo, facultyRepo)
 	authService := service.NewAuthService(authRepo, userRepo, emailSender)
 	universityService := service.NewUniversityService(universityRepo, authRepo, emailSender)
-	certificateService := service.NewCertificateService(certificateRepo, userRepo, facultyRepo, universityRepo, minioClient)
+	certificateService := service.NewCertificateService(certificateRepo, ediplomaRepo, userRepo, facultyRepo, universityRepo, minioClient)
 	facultyService := service.NewFacultyService(universityRepo, facultyRepo)
 	verificationService := service.NewVerificationService(verificationRepo, certificateService)
 	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)
-	blockchainSvc := service.NewBlockchainService(
-		certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient,
-	)
+	blockchainSvc := service.NewBlockchainService(ediplomaRepo, certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient)
 	majorService := service.NewMajorService(majorRepo, facultyRepo)
+	templateSampleService := service.NewTemplateSampleService(templateSampleRepo, templateRepo)
+
 	templateService := service.NewTemplateService(
 		templateRepo,
 		facultyRepo,
 		universityRepo,
 		facultyService,
+		*templateSampleService,
 		minioClient,
 	) // Handlers
 	facultyHandler := handlers.NewFacultyHandler(facultyService)
@@ -132,6 +137,7 @@ func main() {
 
 	fileHandler := handlers.NewFileHandler(minioClient)
 	blockchainHandler := handlers.NewBlockchainHandler(blockchainSvc)
+	templateSampleHandler := handlers.NewTemplateSampleHandler(templateSampleService)
 
 	// Setup router
 	r := routes.SetupRouter(
@@ -147,6 +153,7 @@ func main() {
 		majorHandler,
 		templateHandler,
 		ediplomaHandler,
+		templateSampleHandler,
 	)
 
 	// Xử lý tín hiệu dừng

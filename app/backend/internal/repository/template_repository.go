@@ -11,100 +11,60 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type TemplateRepository interface {
-	FindByIDAndUniversity(ctx context.Context, templateID, universityID primitive.ObjectID) (*models.DiplomaTemplate, error)
-	Create(ctx context.Context, template *models.DiplomaTemplate) error
-	UpdateIfNotLocked(ctx context.Context, id primitive.ObjectID, updated *models.DiplomaTemplate) error
-	GetByID(ctx context.Context, id primitive.ObjectID) (*models.DiplomaTemplate, error)
-	LockTemplate(ctx context.Context, id primitive.ObjectID) error
-	FindByUniversityAndFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
-	FindByFacultyIDs(ctx context.Context, facultyIDs []primitive.ObjectID) ([]*models.DiplomaTemplate, error)
-	FindPendingByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
-	FindPendingByUniversityAndFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
-	UpdateStatusAndSignatureByID(ctx context.Context, id primitive.ObjectID, newStatus string, signatureOfUni string) error
-	UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, status, signature string) error
-	FindSignedByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
-	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
-	UpdateIsLocked(ctx context.Context, id primitive.ObjectID, isLocked bool) error
-	Update(ctx context.Context, template *models.DiplomaTemplate) error
-	DeleteByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error)
-}
-
-type templateRepository struct {
+type TemplateSampleRepo struct {
 	collection *mongo.Collection
 }
 
-func NewTemplateRepository(db *mongo.Database) TemplateRepository {
-	return &templateRepository{
-		collection: db.Collection("diploma_templates"),
+func NewTemplateSampleRepo(db *mongo.Database) *TemplateSampleRepo {
+	return &TemplateSampleRepo{
+		collection: db.Collection("template_samples"),
 	}
 }
 
-func (r *templateRepository) DeleteByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error) {
-	filter := bson.M{"_id": id}
-	return r.collection.DeleteOne(ctx, filter)
-}
-
-func (r *templateRepository) Update(ctx context.Context, template *models.DiplomaTemplate) error {
-	filter := bson.M{"_id": template.ID}
-	update := bson.M{
-		"$set": bson.M{
-			"name":          template.Name,
-			"description":   template.Description,
-			"file_link":     template.FileLink,
-			"hash_template": template.HashTemplate,
-			"html_content":  template.HTMLContent,
-			"updated_at":    template.UpdatedAt,
-		},
+func (r *TemplateSampleRepo) Create(ctx context.Context, sample *models.TemplateSample) (primitive.ObjectID, error) {
+	res, err := r.collection.InsertOne(ctx, sample)
+	if err != nil {
+		return primitive.NilObjectID, err
 	}
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
-}
-
-func (r *templateRepository) UpdateIsLocked(ctx context.Context, id primitive.ObjectID, isLocked bool) error {
-	filter := bson.M{"_id": id}
-	update := bson.M{"$set": bson.M{"isLocked": isLocked}}
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
-}
-
-func (r *templateRepository) VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error {
-	filter := bson.M{
-		"university_id": universityID,
-		"faculty_id":    facultyID,
-		"status":        "SIGNED_BY_UNI",
+	id, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return primitive.NilObjectID, errors.New("failed to convert InsertedID to ObjectID")
 	}
-	update := bson.M{
-		"$set": bson.M{
-			"status":              "SIGNED_BY_MINEDU",
-			"signature_of_minedu": "SIMULATED_SIGNATURE_MINEDU",
-			"updated_at":          time.Now(),
-		},
-	}
-	_, err := r.collection.UpdateMany(ctx, filter, update)
-	return err
+	return id, nil
 }
 
-func (r *templateRepository) FindByFacultyIDs(ctx context.Context, facultyIDs []primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
-	filter := bson.M{"faculty_id": bson.M{"$in": facultyIDs}}
-
-	cursor, err := r.collection.Find(ctx, filter)
+func (r *TemplateSampleRepo) GetByID(ctx context.Context, id primitive.ObjectID) (*models.TemplateSample, error) {
+	var sample models.TemplateSample
+	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&sample)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
-
-	var templates []*models.DiplomaTemplate
-	if err := cursor.All(ctx, &templates); err != nil {
-		return nil, err
+	return &sample, nil
+}
+func (r *TemplateSampleRepo) Update(ctx context.Context, sample *models.TemplateSample) error {
+	if sample.ID.IsZero() {
+		return errors.New("invalid template sample ID")
 	}
-	return templates, nil
+
+	sample.UpdatedAt = time.Now() // cập nhật thời gian
+	update := bson.M{
+		"$set": bson.M{
+			"name":         sample.Name,
+			"html_content": sample.HTMLContent,
+			"updated_at":   sample.UpdatedAt,
+		},
+	}
+
+	_, err := r.collection.UpdateByID(ctx, sample.ID, update)
+	return err
 }
 
-func (r *templateRepository) FindByUniversityAndFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
+func (r *TemplateSampleRepo) GetAllVisible(ctx context.Context, universityID primitive.ObjectID) ([]*models.TemplateSample, error) {
 	filter := bson.M{
-		"university_id": universityID,
-		"faculty_id":    facultyID,
+		"$or": []bson.M{
+			{"university_id": primitive.NilObjectID}, // mẫu global (cố định)
+			{"university_id": universityID},          // mẫu riêng trường
+		},
 	}
 
 	cursor, err := r.collection.Find(ctx, filter)
@@ -113,171 +73,21 @@ func (r *templateRepository) FindByUniversityAndFaculty(ctx context.Context, uni
 	}
 	defer cursor.Close(ctx)
 
-	var templates []*models.DiplomaTemplate
-	if err := cursor.All(ctx, &templates); err != nil {
-		return nil, err
-	}
-
-	return templates, nil
-}
-
-func (r *templateRepository) Create(ctx context.Context, template *models.DiplomaTemplate) error {
-	_, err := r.collection.InsertOne(ctx, template)
-	return err
-}
-
-func (r *templateRepository) FindByIDAndUniversity(ctx context.Context, templateID, universityID primitive.ObjectID) (*models.DiplomaTemplate, error) {
-	filter := bson.M{"_id": templateID, "university_id": universityID}
-	var template models.DiplomaTemplate
-	err := r.collection.FindOne(ctx, filter).Decode(&template)
-	if err != nil {
-		return nil, err
-	}
-	return &template, nil
-}
-
-func (r *templateRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.DiplomaTemplate, error) {
-	var template models.DiplomaTemplate
-	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&template)
-	if err != nil {
-		return nil, err
-	}
-	return &template, nil
-}
-
-func (r *templateRepository) UpdateIfNotLocked(ctx context.Context, id primitive.ObjectID, updated *models.DiplomaTemplate) error {
-	filter := bson.M{"_id": id, "is_locked": false}
-	update := bson.M{
-		"$set": bson.M{
-			"name":        updated.Name,
-			"description": updated.Description,
-			"updated_at":  time.Now(),
-		},
-	}
-	result, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return err
-	}
-	if result.MatchedCount == 0 {
-		return errors.New("template not found or already locked")
-	}
-	return nil
-}
-
-func (r *templateRepository) UpdateStatusAndSignatureByID(
-	ctx context.Context,
-	id primitive.ObjectID,
-	newStatus string,
-	signatureOfUni string,
-) error {
-	filter := bson.M{"_id": id}
-	update := bson.M{"$set": bson.M{
-		"status":           newStatus,
-		"signature_of_uni": signatureOfUni,
-		"updated_at":       time.Now(),
-	}}
-
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
-}
-
-func (r *templateRepository) LockTemplate(ctx context.Context, id primitive.ObjectID) error {
-	update := bson.M{
-		"$set": bson.M{
-			"is_locked":  true,
-			"updated_at": time.Now(),
-		},
-	}
-	_, err := r.collection.UpdateByID(ctx, id, update)
-	return err
-}
-
-// Lấy tất cả template đang Pending theo khoa
-func (r *templateRepository) FindPendingByUniversityAndFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
-	filter := bson.M{
-		"university_id": universityID,
-		"faculty_id":    facultyID,
-		"status":        "PENDING",
-	}
-
-	cursor, err := r.collection.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var result []*models.DiplomaTemplate
+	var samples []*models.TemplateSample
 	for cursor.Next(ctx) {
-		var tmpl models.DiplomaTemplate
-		if err := cursor.Decode(&tmpl); err != nil {
+		var s models.TemplateSample
+		if err := cursor.Decode(&s); err != nil {
 			return nil, err
 		}
-		result = append(result, &tmpl)
+		samples = append(samples, &s)
 	}
 
-	if err := cursor.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return samples, nil
 }
-
-// Lấy tất cả template Pending toàn trường
-func (r *templateRepository) FindPendingByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
-	filter := bson.M{
-		"university_id": universityID,
-		"status":        "PENDING",
-	}
-
-	cursor, err := r.collection.Find(ctx, filter)
+func (r *TemplateSampleRepo) Count(ctx context.Context, filter bson.M) (int64, error) {
+	count, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	defer cursor.Close(ctx)
-
-	var result []*models.DiplomaTemplate
-	for cursor.Next(ctx) {
-		var tmpl models.DiplomaTemplate
-		if err := cursor.Decode(&tmpl); err != nil {
-			return nil, err
-		}
-		result = append(result, &tmpl)
-	}
-
-	if err := cursor.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-func (r *templateRepository) UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, status, signature string) error {
-	filter := bson.M{"_id": id}
-	update := bson.M{
-		"$set": bson.M{
-			"status":              status,
-			"signature_of_minedu": signature,
-			"updated_at":          time.Now(),
-		},
-	}
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
-}
-func (r *templateRepository) FindSignedByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
-	filter := bson.M{
-		"university_id":    universityID,
-		"status":           "SIGNED_BY_UNI",
-		"signature_of_uni": bson.M{"$ne": nil},
-	}
-
-	cursor, err := r.collection.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var templates []*models.DiplomaTemplate
-	if err := cursor.All(ctx, &templates); err != nil {
-		return nil, err
-	}
-	return templates, nil
+	return count, nil
 }

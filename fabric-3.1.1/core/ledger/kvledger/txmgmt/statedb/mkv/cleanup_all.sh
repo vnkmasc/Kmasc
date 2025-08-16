@@ -40,7 +40,7 @@ pkill -f "demo" 2>/dev/null || true
 
 # Step 2: Remove key files
 print_info "2. Removing key files..."
-rm -f k1.key k0.key encrypted_k1.key decrypted_k1.key
+rm -f k1.key k0.key encrypted_k1.key decrypted_k1.key k0_salt.key
 
 # Step 3: Remove temporary C files and executables
 print_info "3. Removing temporary C files and executables..."
@@ -71,18 +71,14 @@ rm -f *.bak
 rm -f *.swp
 rm -f .*.swp
 
-# Step 8: Clean Go cache (optional)
-print_info "8. Cleaning Go cache..."
-go clean -cache -testcache -modcache 2>/dev/null || true
-
-# Step 9: Show what's left
-print_info "9. Remaining files:"
+# Step 8: Show what's left
+print_info "8. Remaining files:"
 echo
 ls -la
 echo
 
-# Step 10: Verify cleanup
-print_info "10. Verifying cleanup..."
+# Step 9: Verify cleanup
+print_info "9. Verifying cleanup..."
 if [ -f "k1.key" ] || [ -f "k0.key" ] || [ -f "encrypted_k1.key" ] || [ -f "decrypted_k1.key" ]; then
     print_error "Some key files still exist!"
     exit 1

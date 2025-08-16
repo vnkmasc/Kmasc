@@ -134,3 +134,39 @@ func (h *BlockchainHandler) VerifyCertificateFile(c *gin.Context) {
 	// Trả file trực tiếp cho người dùng (xem được trong browser)
 	c.DataFromReader(http.StatusOK, -1, contentType, stream, nil)
 }
+
+func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
+	var req struct {
+		FacultyID       string `form:"faculty_id"`       // optional
+		CertificateType string `form:"certificate_type"` // optional
+		Course          string `form:"course"`           // optional
+		Issued          *bool  `form:"issued"`           // optional
+	}
+
+	// Bind form-data
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Gọi service, bỏ qua giá trị count
+	_, err := h.BlockchainSvc.PushToBlockchain(
+		c.Request.Context(),
+		req.FacultyID,
+		req.CertificateType,
+		req.Course,
+		req.Issued,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Response chỉ trả về message
+	c.JSON(http.StatusOK, gin.H{
+		"message": "đã đẩy lên chuỗi khối",
+	})
+}

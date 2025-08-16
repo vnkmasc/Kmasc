@@ -9,6 +9,7 @@ import (
 type EDiploma struct {
 	ID              primitive.ObjectID `bson:"_id" json:"id"`
 	TemplateID      primitive.ObjectID `bson:"template_id" json:"template_id"` // Liên kết mẫu đã được Bộ duyệt
+	Name            string             `bson:"name" json:"name"`               // Tên văn bằng
 	UniversityID    primitive.ObjectID `bson:"university_id" json:"university_id"`
 	FacultyID       primitive.ObjectID `bson:"faculty_id" json:"faculty_id"`
 	UserID          primitive.ObjectID `bson:"user_id" json:"user_id"`
@@ -26,11 +27,16 @@ type EDiploma struct {
 	RegistrationNumber string `bson:"registration_number" json:"registration_number"` // Số vào sổ
 
 	// File văn bằng
-	FileLink  string    `bson:"file_link" json:"file_link"`
-	FileHash  string    `bson:"file_hash" json:"file_hash"` // SHA256 mã băm file PDF
-	Signature string    `bson:"signature" json:"signature"` // Chữ ký số
-	Signed    bool      `bson:"signed" json:"signed"`       // Đã ký hay chưa
-	SignedAt  time.Time `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
+	// FileLink         string `bson:"file_link" json:"file_link"`
+	// FileHash         string `bson:"file_hash" json:"file_hash"`                   // SHA256 mã băm file PDF
+	EDiplomaFileLink string `bson:"ediploma_file_link" json:"ediploma_file_link"` // Đường dẫn đến file văn bằng số
+	EDiplomaFileHash string `bson:"ediploma_file_hash" json:"ediploma_file_hash"` // Mã băm của văn bằng số
+	// Ch
+	Signature     string    `bson:"signature" json:"signature"`           // Chữ ký số
+	Signed        bool      `bson:"signed" json:"signed"`                 // Đã ký hay chưa
+	DataEncrypted bool      `bson:"data_encrypted" json:"data_encrypted"` //Đã mã hóa dữ liệu hay chưa
+	Issued        bool      `bson:"issued" json:"issued"`                 // Đã cấp bằng số hay chưa
+	SignedAt      time.Time `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
 
 	// Blockchain & trạng thái
 	OnBlockchain   bool   `bson:"on_blockchain" json:"on_blockchain"`
@@ -38,8 +44,6 @@ type EDiploma struct {
 
 	SignatureOfUni    string `bson:"signature_of_uni,omitempty" json:"signatureOfUni,omitempty"`
 	SignatureOfMinEdu string `bson:"signature_of_minedu,omitempty" json:"signatureOfMinEdu,omitempty"`
-	Status            string `bson:"status" json:"status"` // PENDING, VERIFIED,...
-	IsLocked          bool   `bson:"is_locked" json:"isLocked"`
 
 	// Metadata
 	Description string    `bson:"description,omitempty" json:"description,omitempty"`
@@ -47,20 +51,15 @@ type EDiploma struct {
 	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
 }
 
-type EDiplomaDTO struct {
+type EDiplomaResponse struct {
 	ID                 primitive.ObjectID `json:"id"`
-	TemplateID         primitive.ObjectID `json:"template_id"`
+	Name               string             `json:"name"`
 	TemplateName       string             `json:"template_name"`
-	UniversityID       primitive.ObjectID `json:"university_id"`
 	UniversityCode     string             `json:"university_code"`
 	UniversityName     string             `json:"university_name"`
 	FacultyID          primitive.ObjectID `json:"faculty_id"`
 	FacultyCode        string             `json:"faculty_code"`
 	FacultyName        string             `json:"faculty_name"`
-	MajorID            primitive.ObjectID `json:"major_id"`
-	MajorCode          string             `json:"major_code"`
-	MajorName          string             `json:"major_name"`
-	UserID             primitive.ObjectID `json:"user_id"`
 	StudentName        string             `json:"student_name"`
 	StudentCode        string             `json:"student_code"`
 	FullName           string             `json:"full_name"`
@@ -72,25 +71,16 @@ type EDiplomaDTO struct {
 	IssueDate          time.Time          `json:"issue_date"`
 	SerialNumber       string             `json:"serial_number"`
 	RegistrationNumber string             `json:"registration_number"`
-	FileLink           string             `json:"file_link"`
-	FileHash           string             `json:"file_hash"`
-	Signature          string             `json:"signature"`
+	Issued             bool               `json:"issued"`
 	Signed             bool               `json:"signed"`
-	SignedAt           time.Time          `json:"signed_at"`
+	DataEncrypted      bool               `json:"data_encrypted"`
 	OnBlockchain       bool               `json:"on_blockchain"`
-	SignatureOfUni     string             `json:"signatureOfUni,omitempty"`
-	SignatureOfMinEdu  string             `json:"signatureOfMinEdu,omitempty"`
-	Status             string             `json:"status"`
-	IsLocked           bool               `json:"isLocked"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
 }
 type EDiplomaSearchFilter struct {
-	StudentCode     string `json:"student_code"`
-	FacultyCode     string `json:"faculty_code"`
+	FacultyID       string `json:"faculty_id"`
 	CertificateType string `json:"certificate_type"`
 	Course          string `json:"course"`
+	Issued          *bool  `json:"issued"`
 	Page            int    `json:"page"`
 	PageSize        int    `json:"page_size"`
 }

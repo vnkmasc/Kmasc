@@ -42,6 +42,8 @@ var (
 	ErrCertificateAlreadyOnChain = errors.New("certificate đã được ghi lên blockchain")
 	ErrCertificateMissingHash    = errors.New("certificate chưa có cert_hash")
 
+	ErrTemplateNotFound = errors.New("template_not_found")
+
 	//RewardDiscipline
 	ErrDecisionNumberExists = errors.New("decision_number_exists")
 

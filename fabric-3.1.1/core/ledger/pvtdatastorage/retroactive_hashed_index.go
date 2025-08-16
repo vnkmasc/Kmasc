@@ -115,12 +115,7 @@ func constructHashedIndexFor(ledgerID string, db *leveldbhelper.DBHandle) error 
 					return err
 				}
 				// Encrypt value before storing
-				mkvKey, err := mkv.GetCurrentK1("statedb_leveldb_password")
-				if err != nil {
-					// Fallback to hardcoded key if key management not initialized
-					mkvKey = []byte("1234567890abcdef1234567890abcdef")
-				}
-				dataVal = mkv.EncryptValueMKV(dataVal, mkvKey)
+				dataVal = mkv.EncryptValueMKV(dataVal)
 				batch.Put(dataKey, dataVal)
 				if err := addHashedIndexEntriesInto(batch, dataEntry.key, dataEntry.value); err != nil {
 					return err

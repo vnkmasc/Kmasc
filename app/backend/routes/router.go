@@ -20,6 +20,7 @@ func SetupRouter(
 	majorHandler *handlers.MajorHandler,
 	templateHandler *handlers.TemplateHandler,
 	ediplomaHandler *handlers.EDiplomaHandler,
+	templateSampleHandler *handlers.TemplateSampleHandler,
 
 ) *gin.Engine {
 	r := gin.Default()
@@ -121,6 +122,7 @@ func SetupRouter(
 	blockchainGroup.GET("/certificate-on-chain/:id", blockchainHandler.GetCertificateByID)
 	blockchainGroup.GET("/verify/:id", blockchainHandler.VerifyCertificateIntegrity)
 	blockchainGroup.GET("/verify-file/:id", blockchainHandler.VerifyCertificateFile)
+	blockchainGroup.POST("/push-ediploma", blockchainHandler.PushEDiplomasToBlockchain)
 
 	// ===== Major routes =====
 	majorGroup := api.Group("/majors")
@@ -138,22 +140,25 @@ func SetupRouter(
 	templateGroup.POST("/sign/university", templateHandler.SignAllPendingTemplatesOfUniversity)
 	templateGroup.POST("/sign/minedu/:university_id", templateHandler.SignTemplatesByMinEdu)
 	templateGroup.POST("/verify/faculty/:faculty_id", templateHandler.VerifyTemplatesByFaculty)
-	templateGroup.GET("/:id/file", templateHandler.GetTemplateFile)
-	templateGroup.GET("/view/:id", templateHandler.GetTemplateView)
-	templateGroup.PUT("/:id", templateHandler.UpdateTemplate)
 	templateGroup.GET("/:id", templateHandler.GetTemplateByID)
 	templateGroup.POST("/:template_id/sign", templateHandler.SignTemplateByID)
 
+	templateSampleGroup := api.Group("/template-samples")
+	templateSampleGroup.Use(middleware.JWTAuthMiddleware())
+	templateSampleGroup.POST("", templateSampleHandler.CreateTemplateSample)
+	templateSampleGroup.GET("/:id", templateSampleHandler.GetTemplateSampleByID)
+	templateSampleGroup.PUT("/:id", templateSampleHandler.UpdateTemplateSample)
+	templateSampleGroup.GET("", templateSampleHandler.GetAllTemplateSamples)
+	templateSampleGroup.GET("/view/:id", templateSampleHandler.GetTemplateSampleView)
+
 	ediplomaGroup := api.Group("/ediplomas")
 	ediplomaGroup.Use(middleware.JWTAuthMiddleware())
+	ediplomaGroup.GET("/:id", ediplomaHandler.GetEDiplomaByID)
 	ediplomaGroup.POST("/generate", ediplomaHandler.GenerateEDiploma)
 	ediplomaGroup.POST("/generate-bulk", ediplomaHandler.GenerateBulkEDiplomas)
 	ediplomaGroup.POST("/generate-bulk-zip", ediplomaHandler.GenerateBulkEDiplomasZip)
-
 	ediplomaGroup.POST("/upload-zip", ediplomaHandler.UploadEDiplomasZip)
-	ediplomaGroup.GET("/faculty/:faculty_id", ediplomaHandler.GetEDiplomasByFaculty)
 	ediplomaGroup.GET("/search", ediplomaHandler.SearchEDiplomas)
-	ediplomaGroup.GET("/:id", ediplomaHandler.GetEDiplomaByID)
-	ediplomaGroup.GET("/file/:id", ediplomaHandler.ViewEDiploma)
+	ediplomaGroup.GET("/file/:id", ediplomaHandler.ViewEDiplomaFile)
 	return r
 }

@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"errors"
-	"fmt"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -14,12 +11,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"github.com/vnkmasc/Kmasc/app/backend/pkg/database"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type EDiplomaHandler struct {
-	ediplomaService service.EDiplomaService
+	universityService service.UniversityService
+	ediplomaService   service.EDiplomaService
+	minioClient       *database.MinioClient
 }
 
 func NewEDiplomaHandler(
@@ -35,15 +35,21 @@ type generateEDiplomaRequest struct {
 	TemplateID    string `json:"template_id"`
 }
 
+// Handler
 func (h *EDiplomaHandler) SearchEDiplomas(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	var issued *bool
+	if issuedStr := c.Query("issued"); issuedStr != "" {
+		v, _ := strconv.ParseBool(issuedStr)
+		issued = &v
+	}
 
 	filters := models.EDiplomaSearchFilter{
-		StudentCode:     c.Query("student_code"),
-		FacultyCode:     c.Query("faculty_code"),
+		FacultyID:       c.Query("faculty_id"), // dùng trực tiếp faculty_id từ query
 		CertificateType: c.Query("certificate_type"),
 		Course:          c.Query("course"),
+		Issued:          issued,
 		Page:            page,
 		PageSize:        pageSize,
 	}
@@ -116,6 +122,25 @@ func (h *EDiplomaHandler) UploadLocalEDiplomas(c *gin.Context) {
 }
 
 func (h *EDiplomaHandler) UploadEDiplomasZip(c *gin.Context) {
+
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+		return
+	}
+
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing zip file"})
@@ -137,88 +162,34 @@ func (h *EDiplomaHandler) UploadEDiplomasZip(c *gin.Context) {
 	}
 	defer out.Close()
 
-	io.Copy(out, file)
+	if _, err := io.Copy(out, file); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save uploaded file"})
+		return
+	}
 
-	// Gọi service xử lý zip
-	results, err := h.ediplomaService.ProcessZip(c.Request.Context(), tempZipPath)
+	// Gọi service xử lý zip và lấy các bản ghi EDiploma đã update
+	updatedDiplomas, err := h.ediplomaService.ProcessZip(c.Request.Context(), tempZipPath, universityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"total_files": len(results),
-		"results":     results,
+		"total_files": len(updatedDiplomas),
+		"results":     updatedDiplomas,
 	})
-}
-
-func (h *EDiplomaHandler) ViewEDiploma(c *gin.Context) {
-	ctx := c.Request.Context()
-	diplomaID := c.Param("id")
-
-	objID, err := primitive.ObjectIDFromHex(diplomaID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid diploma ID"})
-		return
-	}
-
-	obj, size, contentType, err := h.ediplomaService.GetDiplomaPDF(ctx, objID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-	defer obj.Close()
-
-	c.Header("Content-Type", contentType)
-	c.Header("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, filepath.Base(diplomaID+".pdf")))
-	c.Header("Content-Length", fmt.Sprintf("%d", size))
-
-	if _, err := io.Copy(c.Writer, obj); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error streaming file"})
-		return
-	}
-}
-
-func (h *EDiplomaHandler) GetEDiplomasByFaculty(c *gin.Context) {
-	facultyID := c.Param("faculty_id")
-	if facultyID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "faculty_id is required"})
-		return
-	}
-
-	ediplomas, err := h.ediplomaService.GetEDiplomasByFaculty(c.Request.Context(), facultyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": ediplomas})
-}
-func (h *EDiplomaHandler) GetEDiplomaByID(c *gin.Context) {
-	id := c.Param("id")
-
-	dto, err := h.ediplomaService.GetEDiplomaDTOByID(c.Request.Context(), id)
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "EDiploma not found"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, dto)
 }
 
 func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 	var req struct {
-		FacultyID  string `json:"faculty_id" binding:"required"`
-		TemplateID string `json:"template_id" binding:"required"`
-		Course     string `json:"course"` // tùy chọn
+		FacultyID       string `form:"faculty_id" json:"faculty_id"`
+		CertificateType string `form:"certificate_type" json:"certificate_type"` // optional
+		Course          string `form:"course" json:"course"`                     // optional
+		Issued          *bool  `form:"issued" json:"issued"`                     // optional
+		TemplateID      string `form:"template_id" json:"template_id" binding:"required"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("❌ Invalid request body: %v", err)
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid input",
 			"details": err.Error(),
@@ -229,20 +200,85 @@ func (h *EDiplomaHandler) GenerateBulkEDiplomasZip(c *gin.Context) {
 	zipFilePath, err := h.ediplomaService.GenerateBulkEDiplomasZip(
 		c.Request.Context(),
 		req.FacultyID,
+		req.CertificateType,
+		req.Course,
+		req.Issued,
 		req.TemplateID,
-		req.Course, // truyền xuống service
 	)
 	if err != nil {
-		log.Printf("❌ Failed to generate diplomas: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Printf("✅ Generated diplomas zip: %s", zipFilePath)
+	if zipFilePath == "" {
+		// Không có văn bằng nào được cấp
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Không có văn bằng nào được cấp theo bộ lọc này",
+		})
+		return
+	}
 
-	// Trả file zip về client
+	// Nếu có zip, gửi file
 	c.FileAttachment(zipFilePath, "ediplomas.zip")
-
-	// Xóa file sau khi gửi
 	_ = os.Remove(zipFilePath)
+}
+
+func (h *EDiplomaHandler) GetEDiplomaByID(c *gin.Context) {
+	ctx := c.Request.Context()
+	ediplomaIDHex := c.Param("id")
+	ediplomaID, err := primitive.ObjectIDFromHex(ediplomaIDHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ediploma ID"})
+		return
+	}
+
+	dto, err := h.ediplomaService.GetEDiplomaDTOByID(ctx, ediplomaID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "EDiploma not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": dto})
+}
+
+func (h *EDiplomaHandler) ViewEDiplomaFile(c *gin.Context) {
+	// Lấy claims từ token
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims"})
+		return
+	}
+	universityID, _ := primitive.ObjectIDFromHex(claims.UniversityID)
+
+	// Lấy ediplomaID từ URL
+	ediplomaIDHex := c.Param("id")
+	ediplomaID, err := primitive.ObjectIDFromHex(ediplomaIDHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ediploma ID"})
+		return
+	}
+
+	// Lấy stream và content type từ service
+	stream, contentType, err := h.ediplomaService.GetEDiplomaFile(c.Request.Context(), ediplomaID, universityID)
+	if err != nil {
+		if err.Error() == "EDiploma not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "access denied" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer stream.Close()
+
+	// Trả file về client
+	c.DataFromReader(http.StatusOK, -1, contentType, stream, nil)
 }

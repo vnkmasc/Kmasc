@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 	"time"
 
@@ -24,9 +25,11 @@ type BlockchainService interface {
 	GetCertificateFromChain(ctx context.Context, certificateID string) (*models.CertificateOnChain, error)
 	VerifyFileByID(ctx context.Context, certID primitive.ObjectID) (io.ReadCloser, string, error)
 	VerifyCertificateIntegrity(ctx context.Context, certID string) (bool, string, *models.CertificateOnChain, *models.Certificate, *models.User, *models.Faculty, *models.University, error)
+	PushToBlockchain(ctx context.Context, facultyIDStr, certificateType, course string, issued *bool) (int, error)
 }
 
 type blockchainService struct {
+	ediplomaRepo   repository.EDiplomaRepository
 	certRepo       repository.CertificateRepository
 	userRepo       repository.UserRepository
 	facultyRepo    repository.FacultyRepository
@@ -36,6 +39,7 @@ type blockchainService struct {
 }
 
 func NewBlockchainService(
+	ediplomaRepo repository.EDiplomaRepository,
 	certRepo repository.CertificateRepository,
 	userRepo repository.UserRepository,
 	facultyRepo repository.FacultyRepository,
@@ -44,6 +48,7 @@ func NewBlockchainService(
 	minioClient *database.MinioClient,
 ) BlockchainService {
 	return &blockchainService{
+		ediplomaRepo:   ediplomaRepo,
 		certRepo:       certRepo,
 		userRepo:       userRepo,
 		facultyRepo:    facultyRepo,
@@ -200,4 +205,51 @@ func (s *blockchainService) VerifyFileByID(ctx context.Context, certID primitive
 	// Tạo lại reader mới để trả cho handler
 	newReader := io.NopCloser(bytes.NewReader(buf.Bytes()))
 	return newReader, contentType, nil
+}
+
+func (s *blockchainService) PushToBlockchain(
+	ctx context.Context,
+	facultyIDStr, certificateType, course string,
+	issued *bool,
+) (int, error) {
+
+	// Build dynamic filter
+	filter := bson.M{}
+	if facultyIDStr != "" {
+		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+		if err != nil {
+			return 0, fmt.Errorf("invalid faculty_id")
+		}
+		filter["faculty_id"] = facultyID
+	}
+	if certificateType != "" {
+		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+	}
+	if course != "" {
+		filter["course"] = bson.M{"$regex": course, "$options": "i"}
+	}
+	if issued != nil {
+		filter["issued"] = *issued
+	}
+
+	// Lấy danh sách EDiploma thỏa filter
+	ediplomas, err := s.ediplomaRepo.FindByDynamicFilter(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("failed to load eDiplomas: %w", err)
+	}
+
+	updatedCount := 0
+	for _, ed := range ediplomas {
+		if ed.DataEncrypted && ed.Issued && !ed.OnBlockchain {
+			ed.OnBlockchain = true
+			ed.UpdatedAt = time.Now()
+			if err := s.ediplomaRepo.Update(ctx, ed.ID, ed); err != nil {
+				log.Printf("Failed to update OnBlockchain for %s: %v", ed.StudentCode, err)
+				continue
+			}
+			updatedCount++
+		}
+	}
+
+	return updatedCount, nil
 }
