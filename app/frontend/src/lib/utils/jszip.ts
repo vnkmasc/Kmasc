@@ -7,16 +7,23 @@ export type ZipEntry = {
 
 const MIME_ZIP = 'application/zip'
 
+export async function ensurePermission(handle: any, mode: 'read' | 'readwrite' = 'read'): Promise<boolean> {
+  try {
+    const status = await handle?.queryPermission?.({ mode })
+    if (status === 'granted') return true
+  } catch {
+    console.error('Error querying permission')
+  }
+  try {
+    const granted = await handle?.requestPermission?.({ mode })
+    return granted === 'granted'
+  } catch {
+    return false
+  }
+}
+
 async function ensureReadWritePermission(dirHandle: FileSystemDirectoryHandle): Promise<boolean> {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const opts = { mode: 'readwrite' }
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  if ((await dirHandle.queryPermission(opts)) === 'granted') return true
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  return (await dirHandle.requestPermission(opts)) === 'granted'
+  return ensurePermission(dirHandle, 'readwrite')
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

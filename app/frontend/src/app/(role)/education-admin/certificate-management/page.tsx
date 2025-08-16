@@ -214,8 +214,8 @@ const CertificateManagementPage = () => {
               <DialogHeader>
                 <DialogTitle>Tải tệp PDF chứng chỉ/văn bằng</DialogTitle>
                 <DialogDescription>
-                  Nếu tải văn bằng thì tên tệp là <span className='font-semibold'>số hiệu văn bằng</span>, nếu tải chứng
-                  chỉ thì tên tệp là <span className='font-semibold'>mã sinh viên</span>
+                  Nếu tải văn bằng thì tên tệp là <strong>số hiệu văn bằng</strong>, nếu tải chứng chỉ thì tên tệp là{' '}
+                  <strong>mã sinh viên</strong>
                 </DialogDescription>
               </DialogHeader>
               <Label>Chọn loại</Label>

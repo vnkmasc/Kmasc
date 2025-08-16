@@ -10,18 +10,30 @@ import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE } from '@/constants/common'
 import { formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { useState } from 'react'
 import useSWR from 'swr'
-import { searchDigitalDegreeList, uploadDegreeToMinio } from '@/lib/api/digital-degree'
+import { searchDigitalDegreeList, uploadDigitalDegreesBlockchain } from '@/lib/api/digital-degree'
 import { formatDate } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { Blocks, FolderUp } from 'lucide-react'
-import useSWRMutation from 'swr/mutation'
-import { showNotification } from '@/lib/utils/common'
+import { AlertCircleIcon, Blocks, CheckCircle2Icon } from 'lucide-react'
 import IssueDegreeDialog from '@/components/role/education-admin/digital-degree-management/degree/issue-degree-dialog'
-import SignDegreeDialog from './sign-degree-dialog'
+import SignDegreeButton from './sign-degree-button'
+import { HashUploadButton } from './hash-upload-button'
+import { findLabel, showNotification } from '@/lib/utils/common'
+import useSWRMutation from 'swr/mutation'
+import { AlertDialog } from '@radix-ui/react-alert-dialog'
+import {
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const DigitalDegreeManagement = () => {
   const [filter, setFilter] = useState<any>({})
-
+  const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
   const queryCertificates = useSWR('digital-degree-list' + JSON.stringify(filter), () =>
     searchDigitalDegreeList({
       ...filter,
@@ -30,14 +42,27 @@ const DigitalDegreeManagement = () => {
       is_issued: filter.is_issued === 'true'
     })
   )
-  const mutateUploadDegreeToMinio = useSWRMutation('upload-degree-to-minio', uploadDegreeToMinio, {
-    onError: (error) => {
-      showNotification('error', error.message || 'Lỗi khi mã hóa và đẩy lên Minio')
+
+  const mutatePushDegreesBlockchain = useSWRMutation(
+    'push-digital-degree-blockchain',
+    async (_key, { arg }: { arg: any }) => {
+      const formData = new FormData()
+      formData.append('faculty_id', arg.faculty_id)
+      if (filter.course !== '') formData.append('course', arg.course)
+      if (filter.certificate_type !== '') formData.append('certificate_type', arg.certificate_type)
+
+      const res = await uploadDigitalDegreesBlockchain(formData)
+      return res
     },
-    onSuccess: () => {
-      showNotification('success', 'Mã hóa và đẩy lên Minio thành công')
+    {
+      onError: (error) => {
+        showNotification('error', error.message || 'Lỗi khi đẩy lên Blockchain')
+      },
+      onSuccess: () => {
+        showNotification('success', 'Đẩy lên Blockchain thành công')
+      }
     }
-  })
+  )
 
   return (
     <>
@@ -50,25 +75,51 @@ const DigitalDegreeManagement = () => {
             certificateType={filter.certificate_type}
             course={filter.course}
           />,
-          <SignDegreeDialog
-            key='sign-degree-dialog'
-            facultyId={filter.faculty_id}
-            certificateType={filter.certificate_type}
-            course={filter.course}
-          />,
-          <Button
-            key='minio'
-            isLoading={mutateUploadDegreeToMinio.isMutating}
-            onClick={() => mutateUploadDegreeToMinio.trigger()}
-            title='Mã hóa & lưu lên Minio'
-          >
-            <FolderUp />
-            <span className='hidden md:block'>Minio</span>
-          </Button>,
-          <Button key='blockchain' title='Đẩy lên Blockchain' variant={'outline'}>
-            <Blocks />
-            <span className='hidden md:block'>Blockchain</span>
-          </Button>
+          <SignDegreeButton key='sign-degree-button' />,
+          <HashUploadButton key='hash-upload-button' />,
+          <AlertDialog key='blockchain-alert'>
+            <AlertDialogTrigger asChild>
+              <Button title='Đẩy lên Blockchain' variant={'outline'}>
+                <Blocks />
+                <span className='hidden md:block'>Blockchain</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xác nhận đẩy lên Blockchain</AlertDialogTitle>
+              </AlertDialogHeader>
+              {filter.faculty_id ? (
+                <Alert variant={'success'}>
+                  <CheckCircle2Icon />
+                  <AlertTitle>Sẵn sàng</AlertTitle>
+                  <AlertDescription>
+                    <ul className='list-inside list-disc'>
+                      <li>Chuyên ngành: {findLabel(filter.faculty_id, facultyOptions)}</li>
+                      {filter.certificate_type && <li>Loại bằng: {filter.certificate_type}</li>}
+                      {filter.course && <li>Khóa học: {filter.course}</li>}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert variant={'warning'}>
+                  <AlertCircleIcon />
+                  <AlertTitle>Cảnh báo</AlertTitle>
+                  <AlertDescription>
+                    Vui lòng chọn chuyên ngành trong <strong>phần tìm kiếm</strong> để tiến hành cấp bằng số.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={!filter.faculty_id}
+                  onClick={() => mutatePushDegreesBlockchain.trigger(filter)}
+                >
+                  Xác nhận
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         ]}
       />
 
@@ -83,7 +134,7 @@ const DigitalDegreeManagement = () => {
                 groups: [
                   {
                     label: 'Chuyên ngành',
-                    options: formatFacultyOptionsByID(UseData().facultyList)
+                    options: facultyOptions
                   }
                 ]
               }

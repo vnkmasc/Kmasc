@@ -16,15 +16,14 @@ import { AlertCircleIcon, CheckCircle2Icon, Plus } from 'lucide-react'
 import { UseData } from '@/components/providers/data-provider'
 import { formatDegreeTemplateOptions, formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/digital-degree'
-import { showMessage, showNotification } from '@/lib/utils/common'
+import { findLabel, showMessage, showNotification } from '@/lib/utils/common'
 import CommonSelect from '../../common-select'
 import { Label } from '@/components/ui/label'
 import useSWRMutation from 'swr/mutation'
-import { OptionType } from '@/types/common'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { getSignDegreeConfig } from '@/lib/utils/handle-storage'
 import { verifyDigitalSignature } from '@/lib/utils/handle-vgca'
-import { unzipAndSaveClient } from '@/lib/utils/jszip'
+import { ensurePermission, unzipAndSaveClient } from '@/lib/utils/jszip'
 
 interface Props {
   facultyId: string
@@ -38,10 +37,6 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
   const signDegreeConfig = getSignDegreeConfig()
   const [issueLoading, setIssueLoading] = useState(false)
-
-  const findLabel = (id: string, options: OptionType[]) => {
-    return options?.find((o: OptionType) => o.value === id)?.label
-  }
 
   useEffect(() => {
     if (openSignDialog) {
@@ -86,9 +81,10 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
       setIssueLoading(true)
       const dirHandle = await (window as any).showDirectoryPicker()
 
-      const perm = await dirHandle.requestPermission({ mode: 'readwrite' })
-      if (perm !== 'granted') {
-        throw new Error('Bạn đã từ chối quyền truy cập thư mục')
+      const granted = await ensurePermission(dirHandle, 'readwrite')
+      if (!granted) {
+        showMessage('Bạn đã từ chối quyền đọc thư mục')
+        return
       }
 
       const blob = await issueDownloadDegreeZip(props.facultyId, selectDegreeTemplateId)
@@ -98,7 +94,6 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
       showNotification('success', 'Cấp bằng số thành công')
       setOpenSignDialog(false)
     } catch (err: any) {
-      console.log(err)
       showNotification('error', err.message || 'Lỗi khi cấp bằng số')
     } finally {
       setIssueLoading(false)
@@ -125,8 +120,8 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
         <DialogHeader>
           <DialogTitle>Cấp văn bằng số</DialogTitle>
           <DialogDescription>
-            Cấp văn bằng số sẽ <span className='font-semibold'>xác minh chữ ký</span>,xác minh thành công sẽ tải xuống{' '}
-            <span className='font-semibold'>thư mục văn bằng.</span>
+            Cấp văn bằng số sẽ <strong>xác minh chữ ký</strong>,xác minh thành công sẽ tải xuống{' '}
+            <strong>thư mục văn bằng.</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -144,21 +139,20 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
               </AlertDescription>
             </Alert>
           ) : (
-            <Alert variant={'destructive'}>
+            <Alert variant={'warning'}>
               <AlertCircleIcon />
               <AlertTitle>Cảnh báo</AlertTitle>
               <AlertDescription>
-                Vui lòng chọn chuyên ngành trong <span className='font-semibold'>phần tìm kiếm</span> để tiến hành cấp
-                bằng số.
+                Vui lòng chọn chuyên ngành trong <strong>phần tìm kiếm</strong> để tiến hành cấp bằng số.
               </AlertDescription>
             </Alert>
           )
         ) : (
-          <Alert variant={'destructive'}>
+          <Alert variant={'warning'}>
             <AlertCircleIcon />
             <AlertTitle>Cảnh báo</AlertTitle>
             <AlertDescription>
-              Vui lòng cấu hình ký số cho <span className='font-semibold'>link server ký số</span>
+              Vui lòng cấu hình ký số cho <strong>link server ký số</strong>
             </AlertDescription>
           </Alert>
         )}

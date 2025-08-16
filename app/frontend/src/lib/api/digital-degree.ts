@@ -35,7 +35,7 @@ export const signDegreeTemplateFaculty = async (facultyId: string) => {
 }
 
 export const signDegreeTemplateUni = async () => {
-  const res = await apiService('POST', `templates/sign/university`)
+  const res = await apiService('POST', 'templates/sign/university')
   return res
 }
 
@@ -65,13 +65,18 @@ export const issueDownloadDegreeZip = async (facultyId: string, templateId: stri
   return blob
 }
 
-export const uploadDegreeToMinio = async () => {
-  const res = await apiService('POST', `ediplomas/upload-local`)
+export const uploadDigitalDegreesMinio = async (data: FormData) => {
+  const res = await apiService('POST', 'ediplomas/upload-zip', data)
+  return res
+}
+
+export const uploadDigitalDegreesBlockchain = async (data: FormData) => {
+  const res = await apiService('POST', 'blockchain/push-ediploma', data)
   return res
 }
 
 export const getTemplateInterfaces = async () => {
-  const res = await apiService('GET', `template-samples`)
+  const res = await apiService('GET', 'template-samples')
   return res
 }
 
