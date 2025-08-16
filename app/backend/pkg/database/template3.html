@@ -1,214 +1,112 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Văn Bằng Tốt Nghiệp</title>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=Montserrat:wght@400;500;700&family=Dancing+Script:wght@700&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      :root {
-        --primary-color: #d9534f; /* Màu cam-đỏ */
-        --secondary-color: #c0392b; /* Màu đỏ đậm hơn */
-        --bg-color: #fffaf5; /* Màu nền giấy hơi ngả cam */
-        --text-color: #4a4a4a;
-        --border-color: #e8a09d;
-      }
+<div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f0f0f0; padding: 2rem; box-sizing: border-box;">
 
-      body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background-color: #f0f0f0;
-        padding: 2rem;
-        margin: 0;
-        font-family: 'Roboto Slab', serif;
-        color: var(--text-color);
-      }
-
-      .certificate-container {
-        width: 100%;
-        max-width: 70rem;
-        aspect-ratio: 1.414 / 1;
-        background-color: var(--bg-color);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        border: 1px solid #ddd;
-      }
-
-      /* Viền trang trí */
-      .border-frame {
-        position: absolute;
-        top: 1.5rem;
-        left: 1.5rem;
-        right: 1.5rem;
-        bottom: 1.5rem;
-        border: 2px solid var(--border-color);
-        pointer-events: none;
-      }
-      .corner-decoration {
-        position: absolute;
-        width: 50px;
-        height: 50px;
-        border-color: var(--primary-color);
-        border-style: solid;
-      }
-      .corner-tl {
-        top: -2px;
-        left: -2px;
-        border-width: 3px 0 0 3px;
-      }
-      .corner-tr {
-        top: -2px;
-        right: -2px;
-        border-width: 3px 3px 0 0;
-      }
-      .corner-bl {
-        bottom: -2px;
-        left: -2px;
-        border-width: 0 0 3px 3px;
-      }
-      .corner-br {
-        bottom: -2px;
-        right: -2px;
-        border-width: 0 3px 3px 0;
-      }
-
-      .certificate-header {
-        background-color: var(--primary-color);
-        padding: 1rem 3.5rem;
+  <div
+    style="
+      width: 100%;
+      max-width: 70rem;
+      aspect-ratio: 1.414 / 1; /* Tỷ lệ A4 ngang */
+      background-color: #ffffff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e0e0e0;
+      box-sizing: border-box;
+      font-family: 'EB Garamond', serif;
+      color: #333333;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    "
+  >
+    <header
+      style="
+        background-color: #c00000; /* Màu đỏ chủ đạo */
+        color: #ffffff;
+        padding: 1.5rem 2.5rem;
         text-align: center;
-      }
+        box-sizing: border-box;
+      "
+    >
+      <p style="font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 700; margin: 0;">
+        CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+      </p>
+      <p style="font-size: 1.2rem; font-style: italic; letter-spacing: 0.1em; margin: 0.25rem 0 1rem 0;">
+        Độc lập - Tự do - Hạnh phúc
+      </p>
+      <h2
+        style="
+          font-family: 'Montserrat', sans-serif;
+          font-size: 1.2rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          margin: 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.5);
+          padding-top: 1rem;
+        "
+      >
+        {{ .TenTruong }}
+      </h2>
+    </header>
 
-      .degree-title {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 2.5rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: white;
-        letter-spacing: 0.2em;
-        margin: 0;
-      }
-
-      .certificate-body {
+    <main
+      style="
         flex-grow: 1;
-        padding: 2rem 3.5rem;
+        padding: 2rem 3rem;
         display: flex;
         flex-direction: column;
-        justify-content: space-around;
-      }
-
-      .issuer-info {
+        justify-content: center;
         text-align: center;
-        line-height: 1.5;
-        margin-bottom: 2rem;
-      }
-      .issuer-info .national-name {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 1.1rem;
-        font-weight: 700;
-      }
-      .issuer-info .motto {
-        font-size: 1.1rem;
-        font-style: italic;
-        border-bottom: 1px solid var(--border-color);
-        display: inline-block;
-        padding-bottom: 0.25rem;
-        margin-bottom: 0.5rem;
-      }
-      .issuer-info .university-name {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 1rem;
-        text-transform: uppercase;
-        font-weight: 500;
-        letter-spacing: 0.1em;
-      }
+        box-sizing: border-box;
+      "
+    >
+      <h1
+        style="
+          font-family: 'Montserrat', sans-serif;
+          font-size: 2.8rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          margin: 0 0 1rem 0;
+        "
+      >
+        {{ .LoaiVanBang }}
+      </h1>
+      <p style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 2rem 0;">
+        Chứng nhận
+      </p>
 
-      .main-content {
-        text-align: center;
-        margin: 1rem 0;
-      }
-      .subtitle {
-        font-size: 1.2rem;
-        color: var(--secondary-color);
-        margin-bottom: 1.5rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-      }
-      .recipient-name {
-        font-family: 'Dancing Script', cursive;
-        font-size: 4.5rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        margin: 1rem 0;
-      }
-      .award-text {
-        font-size: 1.15rem;
-        line-height: 1.9;
-        margin: 1.5rem auto 0;
-        max-width: 90%;
-      }
-      .award-text .highlight {
-        font-weight: 700;
-        color: var(--secondary-color);
-      }
+      <h2
+        style="
+          font-family: 'Montserrat', sans-serif;
+          font-size: 3rem;
+          font-weight: 700;
+          color: #c00000; /* Màu đỏ chủ đạo */
+          margin: 0 0 2rem 0;
+        "
+      >
+        {{ .HoTen }}
+      </h2>
 
-      .certificate-footer {
-        text-align: center;
-        font-size: 0.9rem;
-        color: #777;
-        padding: 1rem 3.5rem;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="certificate-container">
-      <!-- Decorative border elements -->
-      <div class="border-frame">
-        <div class="corner-decoration corner-tl"></div>
-        <div class="corner-decoration corner-tr"></div>
-        <div class="corner-decoration corner-bl"></div>
-        <div class="corner-decoration corner-br"></div>
+      <p style="font-size: 1.2rem; line-height: 1.8; margin: 0 auto; max-width: 90%;">
+        Sinh ngày <strong style="color: #333">{{ .NgaySinh }}</strong>, đã hoàn thành chương trình đào tạo <strong style="color: #333">{{ .HinhThucDaoTao }}</strong>,
+        ngành <strong style="color: #333">{{ .Nganh }}</strong>, khóa học <strong style="color: #333">{{ .Khoa }}</strong>.
+        <br />
+        Xếp loại tốt nghiệp: <strong style="color: #333">{{ .XepLoai }}</strong>.
+      </p>
+    </main>
+
+    <footer style="padding: 0 2.5rem 2rem 2.5rem; text-align: right;">
+      <div style="display: inline-block; text-align: center;">
+        <p style="font-size: 1.1rem; margin: 0 0 3rem 0;">
+          Cấp ngày {{ .NgayCap }}
+        </p>
+        <p style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.2rem; margin: 0;">
+          Phạm Văn Hưởng
+        </p>
+        <p style="border-top: 1px solid #333; padding-top: 0.5rem; margin-top: 0.25rem; font-size: 1.1rem;">
+          HIỆU TRƯỞNG
+        </p>
       </div>
+    </footer>
+  </div>
 
-      <header class="certificate-header">
-        <h1 class="degree-title">{{ .LoaiVanBang }}</h1>
-      </header>
-
-      <div class="certificate-body">
-        <div class="issuer-info">
-          <div class="national-name">Cộng hòa Xã hội Chủ nghĩa Việt Nam</div>
-          <div class="motto">Độc lập - Tự do - Hạnh phúc</div>
-          <div class="university-name">{{ .TenTruong }}</div>
-        </div>
-
-        <main class="main-content">
-          <p class="subtitle">Trân trọng chứng nhận</p>
-          <h2 class="recipient-name">{{ .HoTen }}</h2>
-          <p class="award-text">
-            Sinh ngày <span class="highlight">{{ .NgaySinh }}</span>, đã hoàn thành xuất sắc chương trình đào tạo
-            <span class="highlight">{{ .HinhThucDaoTao }}</span> ngành <span class="highlight">{{ .Nganh }}</span>, khóa
-            học <span class="highlight">{{ .Khoa }}</span> với xếp loại tốt nghiệp:
-            <span class="highlight">{{ .XepLoai }}</span>.
-          </p>
-        </main>
-
-        <footer class="certificate-footer">
-          <span>Cấp ngày {{ .NgayCap }}</span>
-          <span>|</span>
-          <span>Số hiệu: {{ .SoHieu }}</span>
-          <span>|</span>
-          <span>Số vào sổ: {{ .SoVaoSo }}</span>
-        </footer>
-      </div>
-    </div>
-  </body>
-</html>
+</div>

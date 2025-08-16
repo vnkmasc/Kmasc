@@ -1,153 +1,106 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Văn Bằng</title>
-  </head>
-  <body>
+<div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #e0e0e0; padding: 2rem; box-sizing: border-box;">
+
+  <div
+    style="
+      width: 100%;
+      max-width: 70rem;
+      aspect-ratio: 1.414 / 1;
+      background-color: #fdfdfa;
+      padding: 2.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
+      position: relative;
+      border: 10px solid #0d3d6f;
+      box-sizing: border-box;
+      font-family: 'EB Garamond', serif;
+      color: #333333;
+    "
+  >
     <div
       style="
-        width: 100%;
-        aspect-ratio: 1.414;
-        background-color: #fefbed;
-        padding: 2rem;
-        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-        font-family: 'Times New Roman', Times, serif;
-        border: 10px solid transparent;
-        border-image: url(&quot;data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E.s%7Bfill:none;stroke:%23e6c669;stroke-width:2%7D%3C/style%3E%3Cpath class='s' d='M0 50h25M75 50h25M50 0v25M50 75v25'/%3E%3Cpath class='s' d='M0 0h10v10H0zM90 0h10v10H90zM0 90h10v10H0zM90 90h10v10H90z'/%3E%3Cpath class='s' d='M25 25h50v50H25z'/%3E%3C/svg%3E&quot;)
-          20 round;
-        position: relative;
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+        border: 3px solid #a47b37;
+        padding: 0.5rem;
+        border-style: double;
       "
     >
-      <!-- Nội dung văn bằng -->
-      <div style="position: relative; z-index: 10; text-align: center; color: #1f2937">
-        <p style="font-size: 14px; letter-spacing: 0.1em">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-        <p style="font-size: 14px; font-weight: 600; letter-spacing: 0.05em">Độc lập - Tự do - Hạnh phúc</p>
-        <div style="margin: 0.5rem auto; height: 1px; width: 96px; background-color: #4b5563"></div>
+      <div style="position: absolute; top: -11px; left: -11px; width: 20px; height: 20px; border: 2px solid #a47b37; background: #fdfdfa;"></div>
+      <div style="position: absolute; top: -11px; right: -11px; width: 20px; height: 20px; border: 2px solid #a47b37; background: #fdfdfa;"></div>
+      <div style="position: absolute; bottom: -11px; left: -11px; width: 20px; height: 20px; border: 2px solid #a47b37; background: #fdfdfa;"></div>
+      <div style="position: absolute; bottom: -11px; right: -11px; width: 20px; height: 20px; border: 2px solid #a47b37; background: #fdfdfa;"></div>
+    </div>
 
-        <p style="margin-top: 2rem; font-size: 18px; font-weight: 600; text-transform: uppercase">{{ .TenTruong }}</p>
-        <p style="margin-top: 1rem; font-size: 16px">cấp</p>
+    <div
+      style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #0d3d6f;
+        opacity: 0.08;
+        z-index: 1;
+      "
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 25rem; height: 25rem">
+        <path d="M256 0c-12.24 0-24.13 1.83-35.5 5.23C124.44 36.7 64 134.63 64 240c0 49.33 17.55 94.55 47.31 130.65C141.4 419.6 195.31 448 256 448s114.6-28.4 144.69-77.35C430.45 334.55 448 289.33 448 240c0-105.37-60.44-203.3-156.5-234.77C280.13 1.83 268.24 0 256 0zm0 48c52.88 0 98.05 24.17 124.69 61.33C407.25 146.5 416 190.84 416 240c0 88.22-55.27 169.31-131.31 201.35C271.85 445.83 264.12 448 256 448s-15.85-2.17-28.69-6.65C151.27 409.31 96 328.22 96 240c0-49.16 8.75-93.5 35.31-130.67C157.95 72.17 203.12 48 256 48z"></path>
+        <path d="M256 128c-61.75 0-112 50.25-112 112s50.25 112 112 112 112-50.25 112-112-50.25-112-112-112zm0 192c-44.11 0-80-35.89-80-80s35.89-80 80-80 80 35.89 80 80-35.89 80-80 80z"></path>
+      </svg>
+    </div>
 
-        <h1
-          style="
-            margin: 1.5rem 0;
-            font-size: 3rem;
-            text-transform: uppercase;
-            color: #b91c1c;
-            font-family: 'Playfair Display', serif;
-            text-transform: uppercase;
-          "
-        >
-          {{ .LoaiVanBang }}
-        </h1>
+    <div
+      style="
+        position: relative;
+        z-index: 2;
+        display: flex;
+        height: 100%;
+        flex-direction: column;
+        text-align: center;
+      "
+    >
+      <header style="line-height: 1.4; margin-bottom: 1.5rem">
+        <div style="font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 700;">
+          Cộng hòa Xã hội Chủ nghĩa Việt Nam
+        </div>
+        <div style="font-family: 'EB Garamond', serif; font-size: 1.2rem; font-style: italic; letter-spacing: 0.1em; margin-top: 0.25rem; border-bottom: 1px solid #333333; display: inline-block; padding-bottom: 0.25rem;">
+          Độc lập - Tự do - Hạnh phúc
+        </div>
+        <div style="font-family: 'Montserrat', sans-serif; font-size: 1rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em; margin-top: 1rem;">
+          {{ .TenTruong }}
+        </div>
+      </header>
 
-        <div style="margin: 2rem auto 0; max-width: 32rem; text-align: left; font-size: 18px">
-          <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
-            <span style="width: 12rem; font-weight: 600">Ngành:</span>
-            <span
-              style="
-                flex: 1;
-                border-bottom: 1px dotted #6b7280;
-                padding-bottom: 0.25rem;
-                text-align: center;
-                font-weight: bold;
-              "
-            >
-              {{ .Nganh }}
-            </span>
+      <main style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h1 style="font-family: 'Montserrat', sans-serif; font-size: 3rem; font-weight: 700; text-transform: uppercase; color: #0d3d6f; letter-spacing: 0.15em; margin: 0.5rem 0;">
+            {{ .LoaiVanBang }}
+          </h1>
+          <p style="font-size: 1.2rem; margin-bottom: 1rem;">CHỨNG NHẬN</p>
+          <h2 style="font-family: 'Great Vibes', cursive; font-size: 4rem; font-weight: 500; color: #a47b37; margin: 1rem 0;">
+            {{ .HoTen }}
+          </h2>
+          <p style="font-size: 1.2rem; line-height: 1.8; margin: 0.5rem auto; max-width: 85%;">
+            Sinh ngày: <span style="font-weight: 700; font-style: italic;">{{ .NgaySinh }}</span>. Đã hoàn thành chương trình đào tạo <span style="font-weight: 700; font-style: italic;">{{ .HinhThucDaoTao }}</span>, ngành <span style="font-weight: 700; font-style: italic;">{{ .Nganh }}</span>, khóa học <span style="font-weight: 700; font-style: italic;">{{ .Khoa }}</span>. Xếp loại tốt nghiệp: <span style="font-weight: 700; font-style: italic;">{{ .XepLoai }}</span>.
+          </p>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: flex-end; padding-right: 3rem; box-sizing: border-box;">
+            <div style="text-align: center;">
+              <p style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; margin-top: 0;">HIỆU TRƯỞNG</p>
+              <p style="font-family: 'EB Garamond', serif; font-style: italic; font-size: 1rem; margin-bottom: 3.5rem; margin-top: 0;">(Ký, ghi rõ họ tên và đóng dấu)</p>
+              <p style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.1rem; margin-top: 0; margin-bottom: 0;">Phạm Văn Hưởng</p>
+            </div>
           </div>
-          <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
-            <span style="width: 12rem; font-weight: 600">Cấp cho:</span>
-            <span
-              style="
-                flex: 1;
-                border-bottom: 1px dotted #6b7280;
-                padding-bottom: 0.25rem;
-                text-align: center;
-                font-weight: bold;
-              "
-            >
-              {{ .HoTen }}
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
-            <span style="width: 12rem; font-weight: 600">Ngày sinh:</span>
-            <span
-              style="
-                flex: 1;
-                border-bottom: 1px dotted #6b7280;
-                padding-bottom: 0.25rem;
-                text-align: center;
-                font-weight: bold;
-              "
-            >
-              {{ .NgaySinh }}
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
-            <span style="width: 12rem; font-weight: 600">Khóa:</span>
-            <span
-              style="
-                flex: 1;
-                border-bottom: 1px dotted #6b7280;
-                padding-bottom: 0.25rem;
-                text-align: center;
-                font-weight: bold;
-              "
-            >
-              {{ .Khoa }}
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
-            <span style="width: 12rem; font-weight: 600">Xếp loại:</span>
-            <span
-              style="
-                flex: 1;
-                border-bottom: 1px dotted #6b7280;
-                padding-bottom: 0.25rem;
-                text-align: center;
-                font-weight: bold;
-              "
-            >
-              {{ .XepLoai }}
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
-            <span style="width: 12rem; font-weight: 600">Hình thức đào tạo:</span>
-            <span
-              style="
-                flex: 1;
-                border-bottom: 1px dotted #6b7280;
-                padding-bottom: 0.25rem;
-                text-align: center;
-                font-weight: bold;
-              "
-            >
-              {{ .HinhThucDaoTao }}
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; margin-bottom: 0.75rem">
-            <span style="width: 12rem; font-weight: 600">Cấp ngày:</span>
-            <span
-              style="
-                flex: 1;
-                border-bottom: 1px dotted #6b7280;
-                padding-bottom: 0.25rem;
-                text-align: center;
-                font-weight: bold;
-              "
-            >
-              {{ .NgayCap }}
-            </span>
+
+          <div style="font-size: 0.9rem; color: #555; margin-top: 1rem;">
+            Cấp ngày {{ .NgayCap }} | Số hiệu: {{ .SoHieu }} | Số vào sổ: {{ .SoVaoSo }}
           </div>
         </div>
-      </div>
-
-      <!-- Góc dưới bên trái -->
-      <div style="position: absolute; bottom: 0rem; left: 2rem; font-size: 12px">
-        <p style="font-weight: 600">Số hiệu: {{ .SoHieu }}</p>
-        <p style="font-weight: 600">Số vào sổ: {{ .SoVaoSo }}</p>
-      </div>
+      </main>
     </div>
-  </body>
-</html>
+  </div>
+
+</div>
