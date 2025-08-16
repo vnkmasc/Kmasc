@@ -1,37 +1,30 @@
-
-# SPDX-License-Identifier: Apache-2.0
-version: '2.1'
-
-volumes:
-  pgdata:
-  walletstore:
-
-networks:
-  mynetwork.com:
-    name: fabric_test
-
 services:
-
   explorerdb.mynetwork.com:
-    image: ghcr.io/hyperledger-labs/explorer-db:latest
+    image: postgres:13
     container_name: explorerdb.mynetwork.com
     hostname: explorerdb.mynetwork.com
     environment:
-      - DATABASE_DATABASE=fabricexplorer
-      - DATABASE_USERNAME=hppoc
-      - DATABASE_PASSWORD=password
+      - POSTGRES_DB=fabricexplorer
+      - POSTGRES_USER=hppoc
+      - POSTGRES_PASSWORD=password
     healthcheck:
       test: "pg_isready -h localhost -p 5432 -q -U postgres"
       interval: 30s
       timeout: 10s
       retries: 5
     volumes:
+      - ./app/persistence/fabric/postgreSQL/db/explorerpg.sql:/docker-entrypoint-initdb.d/explorerpg.sql
       - pgdata:/var/lib/postgresql/data
     networks:
       - mynetwork.com
+    ports:
+      - 5432:5432
 
   explorer.mynetwork.com:
-    image: ghcr.io/hyperledger-labs/explorer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kmasc/hyperledger-explorer:fabric
     container_name: explorer.mynetwork.com
     hostname: explorer.mynetwork.com
     environment:
@@ -39,21 +32,32 @@ services:
       - DATABASE_DATABASE=fabricexplorer
       - DATABASE_USERNAME=hppoc
       - DATABASE_PASSWD=password
-      - LOG_LEVEL_APP=info
-      - LOG_LEVEL_DB=info
-      - LOG_LEVEL_CONSOLE=debug
+      - LOG_LEVEL_APP=debug
+      - LOG_LEVEL_DB=debug
+      - LOG_LEVEL_CONSOLE=info
       - LOG_CONSOLE_STDOUT=true
       - DISCOVERY_AS_LOCALHOST=false
-      - PORT=${PORT:-8080}
+      - PORT=9090
     volumes:
-      - ${EXPLORER_CONFIG_FILE_PATH}:/opt/explorer/app/platform/fabric/config.json
-      - ${EXPLORER_PROFILE_DIR_PATH}:/opt/explorer/app/platform/fabric/connection-profile
-      - ${FABRIC_CRYPTO_PATH}:/tmp/crypto
-      - walletstore:/opt/explorer/wallet
+      - ./config.json:/opt/explorer/app/platform/fabric/config.json
+      - ./connection-profile:/opt/explorer/app/platform/fabric/connection-profile
+      - /root/Kmasc/fabric-3.1.1/fabric-samples/test-network/organizations:/opt/explorer/crypto
     ports:
-      - ${PORT:-8080}:${PORT:-8080}
+      - 9090:9090
     depends_on:
       explorerdb.mynetwork.com:
         condition: service_healthy
     networks:
       - mynetwork.com
+    external_links:
+      - peer0.org1.example.com:peer0.org1.example.com
+      - peer0.org2.example.com:peer0.org2.example.com
+      - orderer.example.com:orderer.example.com
+
+volumes:
+  pgdata:
+
+networks:
+  mynetwork.com:
+    external: true
+    name: fabric_test
