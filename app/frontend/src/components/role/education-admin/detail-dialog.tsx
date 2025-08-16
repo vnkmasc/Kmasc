@@ -76,7 +76,7 @@ const DetailDialog: React.FC<Props> = (props) => {
 
   return (
     <Dialog open={props.mode !== undefined} onOpenChange={handleOpenChange}>
-      <DialogContent className='max-h-[80vh] overflow-y-scroll sm:max-w-[500px]'>
+      <DialogContent className='max-h-[80vh] overflow-y-auto sm:max-w-[500px]'>
         <DialogHeader>
           <DialogTitle>{props.title || (localMode === 'create' ? 'Tạo mới dữ liệu' : 'Cập nhật dữ liệu')}</DialogTitle>
         </DialogHeader>

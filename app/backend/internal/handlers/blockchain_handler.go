@@ -152,7 +152,8 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 		return
 	}
 
-	updatedCount, err := h.BlockchainSvc.PushToBlockchain(
+	// Gọi service, bỏ qua giá trị count
+	_, err := h.BlockchainSvc.PushToBlockchain(
 		c.Request.Context(),
 		req.FacultyID,
 		req.CertificateType,
@@ -164,9 +165,8 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 		return
 	}
 
+	// Response chỉ trả về message
 	c.JSON(http.StatusOK, gin.H{
 		"message": "đã đẩy lên chuỗi khối",
-		"count":   updatedCount,
 	})
-
 }

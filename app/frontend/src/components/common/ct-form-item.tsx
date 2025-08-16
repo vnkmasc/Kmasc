@@ -8,7 +8,7 @@ import { Check, ChevronsUpDown, Eye, EyeOff, Trash } from 'lucide-react'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Button } from '../ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/common'
 import { useState } from 'react'
 import { Textarea } from '../ui/textarea'
 import { formatBytes } from '@/lib/utils/common'
@@ -58,8 +58,8 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
                   )}
                 </div>
               </FormControl>
-              {props.description && <FormDescription>{props.description}</FormDescription>}
-              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+              {props.description && <FormDescription className='!mt-1'>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-1'}`} />
             </FormItem>
           )}
         />
@@ -100,8 +100,8 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
                   )}
                 </SelectContent>
               </Select>
-              {props.description && <FormDescription>{props.description}</FormDescription>}
-              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+              {props.description && <FormDescription className='!mt-1'>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-1'}`} />
             </FormItem>
           )}
         />
@@ -167,8 +167,8 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
                   </Command>
                 </PopoverContent>
               </Popover>
-              {props.description && <FormDescription>{props.description}</FormDescription>}
-              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+              {props.description && <FormDescription className='!mt-1'>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-1'}`} />
             </FormItem>
           )}
         />
@@ -191,8 +191,8 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
                   rows={props.setting?.textarea?.rows || 3}
                 />
               </FormControl>
-              {props.description && <FormDescription>{props.description}</FormDescription>}
-              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+              {props.description && <FormDescription className='!mt-1'>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-1'}`} />
             </FormItem>
           )}
         />
@@ -233,8 +233,8 @@ const CustomFormItem: React.FC<CustomFormItem> = (props) => {
                   ) : null}
                 </div>
               </FormControl>
-              {props.description && <FormDescription>{props.description}</FormDescription>}
-              <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+              {props.description && <FormDescription className='!mt-1'>{props.description}</FormDescription>}
+              <FormMessage className={`${props.description ? '!mt-0' : '!mt-1'}`} />
             </FormItem>
           )}
         />

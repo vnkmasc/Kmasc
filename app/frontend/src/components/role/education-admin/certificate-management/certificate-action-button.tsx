@@ -10,6 +10,7 @@ import CertificateQrCode from '../../../common/certificate-qr-code'
 
 interface Props {
   id: string
+  onBlockchain: boolean
 }
 
 const CertificateActionButton: React.FC<Props> = (props) => {
@@ -41,6 +42,7 @@ const CertificateActionButton: React.FC<Props> = (props) => {
       <CertificateQrCode id={props.id} isIcon={true} />
 
       <Button
+        disabled={props.onBlockchain}
         size={'icon'}
         title='Đẩy dữ liệu lên blockchain'
         onClick={() => mutatePushCertificateIntoBlockchain.trigger(props.id)}

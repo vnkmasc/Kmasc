@@ -12,13 +12,14 @@ import {
   AlertDialogAction
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { deleteDegreeTemplate, getDegreeTemplateView, signDegreeTemplateById } from '@/lib/api/degree'
-import { showNotification } from '@/lib/utils/common'
+import { deleteDegreeTemplate, signDegreeTemplateById } from '@/lib/api/digital-degree'
+import { showMessage, showNotification } from '@/lib/utils/common'
 import { CodeXml, KeyRound, PencilIcon, TrashIcon } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
 import useSWRMutation from 'swr/mutation'
-import TemplateView from '../template-view'
+import Link from 'next/link'
+import { getSignDegreeConfig } from '@/lib/utils/handle-storage'
+import { signDigitalSignature } from '@/lib/utils/handle-vgca'
 
 interface Props {
   id: string
@@ -26,17 +27,15 @@ interface Props {
   canEdit: boolean
   canSign: boolean
   refetch: () => void
+  hashTemplate: string
+  templateSampleId: string
 }
 
 const TableActionButton: React.FC<Props> = (props) => {
-  const queryTemplateView = useSWRMutation(props.id ? `templates/view/${props.id}` : null, async () => {
-    const res = await getDegreeTemplateView(props.id)
-    return res
-  })
-
+  const signDegreeConfig = getSignDegreeConfig()
   const mutateSignDegreeTemplateById = useSWRMutation(
     'sign-degree-template-by-id',
-    () => signDegreeTemplateById(props.id),
+    (_, { arg }: { arg: string }) => signDegreeTemplateById(props.id, arg),
     {
       onSuccess: () => {
         showNotification('success', 'Ký mẫu bằng số thành công')
@@ -63,23 +62,31 @@ const TableActionButton: React.FC<Props> = (props) => {
       <Button variant='outline' size='icon' onClick={() => props.handleSetIdDetail(props.id)} disabled={!props.canEdit}>
         <PencilIcon />
       </Button>
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button size='icon' onClick={() => queryTemplateView.trigger()}>
-            <CodeXml />
-          </Button>
-        </SheetTrigger>
-        <SheetContent className='min-w-full max-w-full md:min-w-[900px]'>
-          <SheetHeader>
-            <SheetTitle>Mẫu văn bằng số</SheetTitle>
-          </SheetHeader>
-          <TemplateView baseHtml={queryTemplateView.data} htmlLoading={queryTemplateView.isMutating} />
-        </SheetContent>
-      </Sheet>
+      <Link
+        href={`/education-admin/digital-degree-management?tab=template-interface&id=${props.templateSampleId}`}
+        target='_blank'
+      >
+        <Button size='icon'>
+          <CodeXml />
+        </Button>
+      </Link>
       <Button
         size='icon'
         variant={'secondary'}
-        onClick={() => mutateSignDegreeTemplateById.trigger()}
+        onClick={async () => {
+          if (signDegreeConfig?.signService === '') {
+            showMessage('Vui lòng cấu hình số cho link server ký số')
+            return
+          }
+          // *@*
+          const signature = await signDigitalSignature(props.hashTemplate)
+          if (!signature) {
+            showMessage('Ký số không thành công')
+            return
+          }
+
+          mutateSignDegreeTemplateById.trigger('ED25519_SIGNATURE_FROM_CLIENT')
+        }}
         disabled={!props.canSign}
         isLoading={mutateSignDegreeTemplateById.isMutating}
       >

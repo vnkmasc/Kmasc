@@ -12,8 +12,7 @@ type DiplomaTemplate struct {
 	ID                primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name              string             `bson:"name" json:"name"`
 	Description       string             `bson:"description" json:"description"`
-	HTMLContent       string             `bson:"html_content" json:"html_content"`
-	FileLink          string             `bson:"file_link" json:"fileLink"`
+	TemplateSampleID  primitive.ObjectID `bson:"template_sample_id" json:"template_sample_id"`
 	HashTemplate      string             `bson:"hash_template" json:"hash_template"`
 	SignatureOfUni    string             `bson:"signature_of_uni,omitempty" json:"signatureOfUni,omitempty"`
 	SignatureOfMinEdu string             `bson:"signature_of_minedu,omitempty" json:"signatureOfMinEdu,omitempty"`

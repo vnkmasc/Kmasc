@@ -1,4 +1,4 @@
-import { DegreeTemplateType } from '@/types/common'
+import { DegreeTemplateType, OptionType } from '@/types/common'
 import { format } from 'date-fns'
 
 export const formatStudent = (data: any, isSendToServer: boolean = false) => {
@@ -96,7 +96,8 @@ export const formatCertificate = (data: any, isSendToServer: boolean = false) =>
         date: data.issue_date,
         signed: data.signed,
         name: data.name,
-        isDegree: data.certificate_type !== undefined
+        isDegree: data.certificate_type !== undefined,
+        onBlockchain: data.on_blockchain
       }
 }
 
@@ -196,7 +197,7 @@ export const formatDegreeTemplateFormData = (data: DegreeTemplateType, isCreate:
   return formData
 }
 
-export const formatExampleTemplateHTML = (html: string) => {
+export const formatTemplateInterfaceHTML = (html: string) => {
   const newHtml = html
     .replace('{{ .TenTruong }}', 'GIÁM ĐỐC HỌC VIỆN KỸ THUẬT MẬT MÃ')
     .replace('{{ .LoaiVanBang }}', 'BẰNG KỸ SƯ')
@@ -214,4 +215,11 @@ export const formatExampleTemplateHTML = (html: string) => {
     .replace('{{ .Khoa }}', 'AT18')
 
   return newHtml
+}
+
+export const formatTemplateInterfaceOptions = (data: any): OptionType[] => {
+  return data.map((item: any) => ({
+    value: item.id,
+    label: item.name
+  }))
 }

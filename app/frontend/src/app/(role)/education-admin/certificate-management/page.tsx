@@ -193,7 +193,7 @@ const CertificateManagementPage = () => {
           />,
           <Button key='create-new-degree' onClick={() => setOpenCreateDegreeDialog(true)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Cấp văn bằng</span>
+            <span className='hidden md:block'>Cấp văn bằng</span>
           </Button>,
           <Button
             variant={'secondary'}
@@ -201,21 +201,21 @@ const CertificateManagementPage = () => {
             onClick={() => setOpenCreateCertificateDialog(true)}
           >
             <PlusIcon />
-            <span className='hidden sm:block'>Cấp chứng chỉ</span>
+            <span className='hidden md:block'>Cấp chứng chỉ</span>
           </Button>,
           <Dialog key='upload-pdf' open={openUploadDialog} onOpenChange={setOpenUploadDialog}>
-            <DialogTrigger>
+            <DialogTrigger asChild>
               <Button variant={'outline'} title='Có hỗ trợ tải nhiều tệp cùng lúc'>
                 <FileUpIcon />
-                <span className='hidden sm:block'>Tải tệp (PDF)</span>
+                <span className='hidden md:block'>Tải tệp (PDF)</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Tải tệp PDF chứng chỉ/văn bằng</DialogTitle>
                 <DialogDescription>
-                  Nếu tải văn bằng thì tên tệp là <span className='font-bold'>số hiệu văn bằng</span>, nếu tải chứng chỉ
-                  thì tên tệp là <span className='font-bold'>mã sinh viên</span>
+                  Nếu tải văn bằng thì tên tệp là <strong>số hiệu văn bằng</strong>, nếu tải chứng chỉ thì tên tệp là{' '}
+                  <strong>mã sinh viên</strong>
                 </DialogDescription>
               </DialogHeader>
               <Label>Chọn loại</Label>
@@ -359,10 +359,20 @@ const CertificateManagementPage = () => {
             )
           },
           {
+            header: 'Blockchain',
+            value: 'onBlockchain',
+
+            render: (item) => (
+              <Badge variant={item.onBlockchain ? 'default' : 'outline'}>
+                {item.onBlockchain ? 'Đã đẩy' : 'Chưa đẩy'}
+              </Badge>
+            )
+          },
+          {
             header: 'Hành động',
             value: 'action',
 
-            render: (item) => <CertificateActionButton id={item.id} />
+            render: (item) => <CertificateActionButton id={item.id} onBlockchain={item.onBlockchain} />
           }
         ]}
         data={queryCertificates.data?.data || []}

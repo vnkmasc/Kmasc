@@ -2,11 +2,10 @@
 
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
 import { CommandGroup, CommandItem, CommandEmpty, CommandInput, CommandList, Command } from '../ui/command'
-import { PopoverContent, PopoverTrigger } from '../ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { FormControl, FormField, FormItem, FormLabel, FormDescription, FormMessage } from '../ui/form'
-import { Popover } from '@radix-ui/react-popover'
 import { Button } from '../ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/common'
 import { CustomFormItem } from '@/types/common'
 import { debounce } from '@/lib/utils/common'
 import useSWR from 'swr'
@@ -86,7 +85,7 @@ const QuerySelect: React.FC<CustomFormItem> = (props) => {
             </PopoverContent>
           </Popover>
           {props.description && <FormDescription>{props.description}</FormDescription>}
-          <FormMessage className={`${props.description ? '!mt-0' : '!mt-2'}`} />
+          <FormMessage className={`${props.description ? '!mt-0' : '!mt-1'}`} />
         </FormItem>
       )}
     />

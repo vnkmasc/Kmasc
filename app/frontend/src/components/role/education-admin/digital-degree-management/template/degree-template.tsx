@@ -2,39 +2,33 @@
 
 import PageHeader from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
-import { Key, KeyRound, PlusIcon } from 'lucide-react'
+import { PlusIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import Filter from '../../filter'
-import { formatFacultyOptionsByID } from '@/lib/utils/format-api'
+import { formatFacultyOptionsByID, formatTemplateInterfaceOptions } from '@/lib/utils/format-api'
 import { UseData } from '@/components/providers/data-provider'
 import useSWR from 'swr'
-import { searchDegreeTemplateByFaculty, signDegreeTemplateFaculty, signDegreeTemplateUni } from '@/lib/api/degree'
-import { showMessage, showNotification } from '@/lib/utils/common'
+import {
+  createDegreeTemplate,
+  getDegreeTemplateById,
+  getTemplateInterfaces,
+  searchDegreeTemplateByFaculty,
+  updateDegreeTemplate
+} from '@/lib/api/digital-degree'
+import { showNotification } from '@/lib/utils/common'
 import TableList from '../../table-list'
 import useSWRMutation from 'swr/mutation'
 import { OptionType } from '@/types/common'
 import TableActionButton from './table-action-button'
 import { Badge } from '@/components/ui/badge'
 import { DEGREE_TEMPLATE_STATUS } from '@/constants/common'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog'
-import CommonSelect from '../../common-select'
-import { Label } from '@/components/ui/label'
-import DegreeTemplateSheet from './degree-template-sheet'
+import DetailDialog from '../../detail-dialog'
+import { validateNoEmpty } from '@/lib/utils/validators'
 
 const DegreeTemplate: React.FC = () => {
   const [idDetail, setIdDetail] = useState<string | null | undefined>(undefined)
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
-  const [openSignDialog, setOpenSignDialog] = useState(false)
-  const [selectFacultyId, setSelectFacultyId] = useState<string>('')
+
   const [filter, setFilter] = useState<any>({
     faculty: ''
   })
@@ -51,40 +45,55 @@ const DegreeTemplate: React.FC = () => {
       }
     }
   )
+  const queryTemplateInterfaces = useSWR('example-templates', async () => {
+    const res = await getTemplateInterfaces()
 
-  const mutateSignDegreeTemplateFaculty = useSWRMutation(
-    'sign-degree-template-faculty',
-    (_key, { arg }: { arg: any }) =>
-      async () => {
-        if (selectFacultyId === '') {
-          showMessage('Chuyên ngành không được để trống')
-          return
-        }
-        return await signDegreeTemplateFaculty(arg)
-      },
+    return formatTemplateInterfaceOptions(res.data)
+  })
+
+  const queryDegreeTemplateDetail = useSWR(idDetail, () => getDegreeTemplateById(idDetail as string), {
+    onError: (error) => {
+      showNotification('error', error.message || 'Lỗi khi lấy thông tin mẫu bằng số')
+    }
+  })
+
+  const mutateCreateDegreeTemplate = useSWRMutation(
+    'create-degree-template',
+    (_key, { arg }: { arg: any }) => createDegreeTemplate(arg),
     {
       onSuccess: () => {
-        if (selectFacultyId === '') return
-        const matchFaculty = facultyOptions.find((faculty: OptionType) => faculty.value === selectFacultyId)
-        showNotification('success', `Ký mẫu bằng số cho ${matchFaculty.label} thành công`)
-        setOpenSignDialog(false)
+        showNotification('success', 'Tạo mẫu bằng số thành công')
+        setIdDetail(undefined)
         queryDegreeTemplatesByFaculty.mutate()
       },
       onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi ký mẫu bằng số cho chuyên ngành ')
+        showNotification('error', error.message || 'Lỗi khi tạo mẫu bằng số')
       }
     }
   )
 
-  const mutateSignDegreeTemplateUni = useSWRMutation('sign-degree-template-uni', () => signDegreeTemplateUni(), {
-    onSuccess: () => {
-      showNotification('success', 'Ký mẫu bằng số cho trường thành công')
-      queryDegreeTemplatesByFaculty.mutate()
-    },
-    onError: (error) => {
-      showNotification('error', error.message || 'Lỗi khi ký mẫu bằng số cho trường')
+  const mutateUpdateDegreeTemplate = useSWRMutation(
+    'update-degree-template',
+    (_key, { arg }: { arg: any }) => updateDegreeTemplate(idDetail as string, arg),
+    {
+      onSuccess: () => {
+        showNotification('success', 'Cập nhật mẫu bằng số thành công')
+        setIdDetail(undefined)
+        queryDegreeTemplatesByFaculty.mutate()
+      },
+      onError: (error) => {
+        showNotification('error', error.message || 'Lỗi khi cập nhật mẫu bằng số')
+      }
     }
-  })
+  )
+
+  const handleSubmit = (data: any) => {
+    if (idDetail) {
+      mutateUpdateDegreeTemplate.trigger(data)
+    } else {
+      mutateCreateDegreeTemplate.trigger(data)
+    }
+  }
 
   const handleRefetchQueryList = useCallback(() => {
     queryDegreeTemplatesByFaculty.mutate()
@@ -95,52 +104,9 @@ const DegreeTemplate: React.FC = () => {
       <PageHeader
         title='Quản lý mẫu bằng số'
         extra={[
-          <Button
-            key='sign-degree-template-all'
-            variant={'secondary'}
-            isLoading={mutateSignDegreeTemplateUni.isMutating}
-            onClick={() => mutateSignDegreeTemplateUni.trigger()}
-          >
-            <Key />
-            <span className='hidden sm:block'>Ký trường</span>
-          </Button>,
-          <Dialog key='sign-degree-template-faculty' open={openSignDialog} onOpenChange={setOpenSignDialog}>
-            <DialogTrigger asChild>
-              <Button variant={'outline'}>
-                <KeyRound />
-                <span className='hidden sm:block'>Ký khoa</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Ký số cho khoa</DialogTitle>
-                <DialogDescription>Ký số cho các mẫu văn bằng số của khoa</DialogDescription>
-              </DialogHeader>
-              <Label>Chọn chuyên ngành</Label>
-              <CommonSelect
-                value={selectFacultyId}
-                options={facultyOptions}
-                handleSelect={setSelectFacultyId}
-                placeholder='Chọn chuyên ngành'
-                selectLabel='Chuyên ngành'
-              />
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant='outline'>Hủy bỏ</Button>
-                </DialogClose>
-                <Button
-                  type='submit'
-                  isLoading={mutateSignDegreeTemplateFaculty.isMutating}
-                  onClick={() => mutateSignDegreeTemplateFaculty.trigger(selectFacultyId)}
-                >
-                  Ký số
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>,
           <Button key='create-degree-template' onClick={() => setIdDetail(null)}>
             <PlusIcon />
-            <span className='hidden sm:block'>Tạo mới</span>
+            <span className='hidden md:block'>Tạo mới</span>
           </Button>
         ]}
       />
@@ -209,12 +175,64 @@ const DegreeTemplate: React.FC = () => {
                 handleSetIdDetail={setIdDetail}
                 id={item.id}
                 refetch={handleRefetchQueryList}
+                hashTemplate={item.hash_template}
+                templateSampleId={item.template_sample_id}
               />
             )
           }
         ]}
       />
-      <DegreeTemplateSheet id={idDetail} onClose={handleCloseDetailDialog} handleRefetch={handleRefetchQueryList} />
+      <DetailDialog
+        mode={idDetail === undefined ? undefined : idDetail ? 'update' : 'create'}
+        data={queryDegreeTemplateDetail.data || {}}
+        handleClose={handleCloseDetailDialog}
+        handleSubmit={handleSubmit}
+        items={[
+          {
+            type: 'input',
+            name: 'name',
+            placeholder: 'Nhập tên mẫu bằng số',
+            label: 'Tên mẫu bằng số',
+            validator: validateNoEmpty('Tên mẫu bằng số')
+          },
+          { type: 'textarea', name: 'description', placeholder: 'Nhập mô tả', label: 'Mô tả' },
+          {
+            type: 'select',
+            name: 'faculty_id',
+            placeholder: 'Chọn chuyên ngành',
+            label: 'Chuyên ngành',
+            setting: {
+              select: {
+                groups: [
+                  {
+                    label: 'Chuyên ngành',
+                    options: facultyOptions
+                  }
+                ]
+              }
+            },
+            validator: validateNoEmpty('Chuyên ngành'),
+            disabled: !!idDetail
+          },
+          {
+            type: 'select',
+            name: 'template_sample_id',
+            placeholder: 'Chọn giao diện mẫu bằng',
+            label: 'Mẫu bằng',
+            setting: {
+              select: {
+                groups: [
+                  {
+                    label: 'Mẫu bằng',
+                    options: queryTemplateInterfaces.data || []
+                  }
+                ]
+              }
+            },
+            validator: validateNoEmpty('Mẫu bằng')
+          }
+        ]}
+      />
     </div>
   )
 }

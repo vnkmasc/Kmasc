@@ -22,7 +22,7 @@ import {
   searchRewardDiscipline,
   updateRewardDiscipline
 } from '@/lib/api/reward-discipline'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/common'
 import { showNotification } from '@/lib/utils/common'
 import { formatRewardDiscipline } from '@/lib/utils/format-api'
 import { validateNoEmpty } from '@/lib/utils/validators'

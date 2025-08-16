@@ -4,7 +4,7 @@ import TableList from '@/components/role/education-admin/table-list'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { approveUniversity, getUniversityList, rejectUniversity } from '@/lib/api/university'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/common'
 
 import { PackageCheckIcon, PackageXIcon } from 'lucide-react'
 import useSWR from 'swr'

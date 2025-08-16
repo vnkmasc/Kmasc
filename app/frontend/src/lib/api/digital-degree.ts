@@ -8,7 +8,11 @@ export const createDegreeTemplate = async (data: any) => {
 
 export const getDegreeTemplateById = async (id: string) => {
   const res = await apiService('GET', `templates/${id}`)
-  return res
+
+  return {
+    ...res.data,
+    faculty_id: res.data.facultyId
+  }
 }
 
 export const updateDegreeTemplate = async (id: string, data: any) => {
@@ -18,12 +22,6 @@ export const updateDegreeTemplate = async (id: string, data: any) => {
 export const searchDegreeTemplateByFaculty = async (facultyId: string) => {
   const res = await apiService('GET', `templates/faculty/${facultyId}`)
   return res
-}
-
-export const getDegreeTemplateView = async (id: string) => {
-  const res = await apiService('GET', `templates/${id}`)
-
-  return res.data?.html_content
 }
 
 export const deleteDegreeTemplate = async (id: string) => {
@@ -37,12 +35,12 @@ export const signDegreeTemplateFaculty = async (facultyId: string) => {
 }
 
 export const signDegreeTemplateUni = async () => {
-  const res = await apiService('POST', `templates/sign/university`)
+  const res = await apiService('POST', 'templates/sign/university')
   return res
 }
 
-export const signDegreeTemplateById = async (id: string) => {
-  const res = await apiService('POST', `templates/${id}/sign`)
+export const signDegreeTemplateById = async (id: string, signature: string) => {
+  const res = await apiService('POST', `templates/${id}/sign`, { signature })
   return res
 }
 
@@ -51,7 +49,7 @@ export const searchDigitalDegreeList = async (params: any) => {
   return res
 }
 
-export const issueDownloadDegreeZip = async (facultyId: string, templateId: string, fileName: string) => {
+export const issueDownloadDegreeZip = async (facultyId: string, templateId: string) => {
   const blob = await apiService(
     'POST',
     `ediplomas/generate-bulk-zip`,
@@ -64,19 +62,35 @@ export const issueDownloadDegreeZip = async (facultyId: string, templateId: stri
     true
   )
 
-  const url = window.URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  window.URL.revokeObjectURL(url)
-
   return blob
 }
 
-export const uploadDegreeToMinio = async () => {
-  const res = await apiService('POST', `ediplomas/upload-local`)
+export const uploadDigitalDegreesMinio = async (data: FormData) => {
+  const res = await apiService('POST', 'ediplomas/upload-zip', data)
+  return res
+}
+
+export const uploadDigitalDegreesBlockchain = async (data: FormData) => {
+  const res = await apiService('POST', 'blockchain/push-ediploma', data)
+  return res
+}
+
+export const getTemplateInterfaces = async () => {
+  const res = await apiService('GET', 'template-samples')
+  return res
+}
+
+export const getTemplateInterfaceById = async (id: string) => {
+  const res = await apiService('GET', `template-samples/${id}`)
+  return res
+}
+
+export const updateTemplateInterface = async (id: string, data: any) => {
+  const res = await apiService('PUT', `template-samples/${id}`, data)
+  return res
+}
+
+export const createTemplateInterface = async (data: any) => {
+  const res = await apiService('POST', 'template-samples', data)
   return res
 }

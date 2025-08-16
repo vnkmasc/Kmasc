@@ -66,7 +66,7 @@ const UploadButton = forwardRef<UploadButtonRef, Props>((props, ref) => {
         title='Có hỗ trợ tải nhiều tệp cùng lúc'
       >
         {props.icon || <UploadIcon />}
-        <span className='hidden sm:block'>{props.title || 'Tải tệp lên'}</span>
+        <span className='hidden md:block'>{props.title || 'Tải tệp lên'}</span>
       </Button>
     </>
   )

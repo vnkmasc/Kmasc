@@ -1,4 +1,11 @@
 import { ExternalToast, toast } from 'sonner'
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+import { OptionType } from '@/types/common'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 // eslint-disable-next-line no-unused-vars
 export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -85,4 +92,8 @@ export const formatBytes = (bytes: number) => {
   const value = bytes / Math.pow(k, i)
   const digits = value >= 100 ? 0 : value >= 10 ? 1 : 2
   return `${value.toFixed(digits)} ${sizes[i]}`
+}
+
+export const findLabel = (id: string, options: OptionType[]) => {
+  return options?.find((o: OptionType) => o.value === id)?.label
 }

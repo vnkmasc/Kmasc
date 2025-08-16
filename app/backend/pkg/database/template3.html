@@ -1,0 +1,112 @@
+<div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f0f0f0; padding: 2rem; box-sizing: border-box;">
+
+  <div
+    style="
+      width: 100%;
+      max-width: 70rem;
+      aspect-ratio: 1.414 / 1; /* Tỷ lệ A4 ngang */
+      background-color: #ffffff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e0e0e0;
+      box-sizing: border-box;
+      font-family: 'EB Garamond', serif;
+      color: #333333;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    "
+  >
+    <header
+      style="
+        background-color: #c00000; /* Màu đỏ chủ đạo */
+        color: #ffffff;
+        padding: 1.5rem 2.5rem;
+        text-align: center;
+        box-sizing: border-box;
+      "
+    >
+      <p style="font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 700; margin: 0;">
+        CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+      </p>
+      <p style="font-size: 1.2rem; font-style: italic; letter-spacing: 0.1em; margin: 0.25rem 0 1rem 0;">
+        Độc lập - Tự do - Hạnh phúc
+      </p>
+      <h2
+        style="
+          font-family: 'Montserrat', sans-serif;
+          font-size: 1.2rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          margin: 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.5);
+          padding-top: 1rem;
+        "
+      >
+        {{ .TenTruong }}
+      </h2>
+    </header>
+
+    <main
+      style="
+        flex-grow: 1;
+        padding: 2rem 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+      "
+    >
+      <h1
+        style="
+          font-family: 'Montserrat', sans-serif;
+          font-size: 2.8rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          margin: 0 0 1rem 0;
+        "
+      >
+        {{ .LoaiVanBang }}
+      </h1>
+      <p style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 2rem 0;">
+        Chứng nhận
+      </p>
+
+      <h2
+        style="
+          font-family: 'Montserrat', sans-serif;
+          font-size: 3rem;
+          font-weight: 700;
+          color: #c00000; /* Màu đỏ chủ đạo */
+          margin: 0 0 2rem 0;
+        "
+      >
+        {{ .HoTen }}
+      </h2>
+
+      <p style="font-size: 1.2rem; line-height: 1.8; margin: 0 auto; max-width: 90%;">
+        Sinh ngày <strong style="color: #333">{{ .NgaySinh }}</strong>, đã hoàn thành chương trình đào tạo <strong style="color: #333">{{ .HinhThucDaoTao }}</strong>,
+        ngành <strong style="color: #333">{{ .Nganh }}</strong>, khóa học <strong style="color: #333">{{ .Khoa }}</strong>.
+        <br />
+        Xếp loại tốt nghiệp: <strong style="color: #333">{{ .XepLoai }}</strong>.
+      </p>
+    </main>
+
+    <footer style="padding: 0 2.5rem 2rem 2.5rem; text-align: right;">
+      <div style="display: inline-block; text-align: center;">
+        <p style="font-size: 1.1rem; margin: 0 0 3rem 0;">
+          Cấp ngày {{ .NgayCap }}
+        </p>
+        <p style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.2rem; margin: 0;">
+          Phạm Văn Hưởng
+        </p>
+        <p style="border-top: 1px solid #333; padding-top: 0.5rem; margin-top: 0.25rem; font-size: 1.1rem;">
+          HIỆU TRƯỞNG
+        </p>
+      </div>
+    </footer>
+  </div>
+
+</div>

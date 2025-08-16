@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
@@ -16,7 +17,6 @@ type TemplateRepository interface {
 	Create(ctx context.Context, template *models.DiplomaTemplate) error
 	UpdateIfNotLocked(ctx context.Context, id primitive.ObjectID, updated *models.DiplomaTemplate) error
 	GetByID(ctx context.Context, id primitive.ObjectID) (*models.DiplomaTemplate, error)
-	LockTemplate(ctx context.Context, id primitive.ObjectID) error
 	FindByUniversityAndFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	FindByFacultyIDs(ctx context.Context, facultyIDs []primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	FindPendingByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
@@ -25,9 +25,10 @@ type TemplateRepository interface {
 	UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, status, signature string) error
 	FindSignedByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
-	UpdateIsLocked(ctx context.Context, id primitive.ObjectID, isLocked bool) error
 	Update(ctx context.Context, template *models.DiplomaTemplate) error
+	LockTemplate(ctx context.Context, templateID primitive.ObjectID) error
 	DeleteByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error)
+	FindByTemplateSampleID(ctx context.Context, sampleID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 }
 
 type templateRepository struct {
@@ -52,7 +53,6 @@ func (r *templateRepository) Update(ctx context.Context, template *models.Diplom
 			"name":          template.Name,
 			"description":   template.Description,
 			"hash_template": template.HashTemplate,
-			"html_content":  template.HTMLContent,
 			"updated_at":    template.UpdatedAt,
 		},
 	}
@@ -60,9 +60,14 @@ func (r *templateRepository) Update(ctx context.Context, template *models.Diplom
 	return err
 }
 
-func (r *templateRepository) UpdateIsLocked(ctx context.Context, id primitive.ObjectID, isLocked bool) error {
-	filter := bson.M{"_id": id}
-	update := bson.M{"$set": bson.M{"isLocked": isLocked}}
+func (r *templateRepository) LockTemplate(ctx context.Context, templateID primitive.ObjectID) error {
+	filter := bson.M{"_id": templateID}
+	update := bson.M{
+		"$set": bson.M{
+			"is_locked":  true,
+			"updated_at": time.Now(),
+		},
+	}
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -180,17 +185,6 @@ func (r *templateRepository) UpdateStatusAndSignatureByID(
 	return err
 }
 
-func (r *templateRepository) LockTemplate(ctx context.Context, id primitive.ObjectID) error {
-	update := bson.M{
-		"$set": bson.M{
-			"is_locked":  true,
-			"updated_at": time.Now(),
-		},
-	}
-	_, err := r.collection.UpdateByID(ctx, id, update)
-	return err
-}
-
 // Lấy tất cả template đang Pending theo khoa
 func (r *templateRepository) FindPendingByUniversityAndFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
 	filter := bson.M{
@@ -278,5 +272,31 @@ func (r *templateRepository) FindSignedByUniversity(ctx context.Context, univers
 	if err := cursor.All(ctx, &templates); err != nil {
 		return nil, err
 	}
+	return templates, nil
+}
+func (r *templateRepository) FindByTemplateSampleID(ctx context.Context, sampleID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
+	filter := bson.M{
+		"template_sample_id": sampleID,
+	}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find templates: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var templates []*models.DiplomaTemplate
+	for cursor.Next(ctx) {
+		var tmpl models.DiplomaTemplate
+		if err := cursor.Decode(&tmpl); err != nil {
+			return nil, fmt.Errorf("failed to decode template: %w", err)
+		}
+		templates = append(templates, &tmpl)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("cursor error: %w", err)
+	}
+
 	return templates, nil
 }

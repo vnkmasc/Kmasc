@@ -1,10 +1,8 @@
 'use client'
 
 import { Button } from '../ui/button'
-import ThemeSwitch from './theme-switch'
 import Image from 'next/image'
-import SignOutButton from './signout-button'
-import { LogInIcon, MenuIcon } from 'lucide-react'
+import { LogInIcon, MenuIcon, Settings } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet'
 import {
   NavigationMenu,
@@ -14,9 +12,22 @@ import {
   navigationMenuTriggerStyle
 } from '../ui/navigation-menu'
 import Link from 'next/link'
-import ChangePassButton from './change-pass-button'
 import logoKmasc from '../../../public/assets/images/logoKMA.png'
 import UseBreakpoint from '@/lib/hooks/use-breakpoint'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '../ui/dropdown-menu'
+import { useState } from 'react'
+import SignoutDialog from './signout-dialog'
+import ChangePassDialog from './change-pass-dialog'
+import ThemeSwitch from './theme-switch'
+import SignSetting from './sign-setting'
 
 interface Props {
   role: 'student' | 'university_admin' | 'admin' | null
@@ -44,10 +55,6 @@ const Header: React.FC<Props> = (props) => {
     {
       title: md && !lg ? 'VB số' : 'Văn bằng số',
       href: '/education-admin/digital-degree-management'
-    },
-    {
-      title: md && !lg ? 'MB số' : 'Mẫu bằng số',
-      href: '/education-admin/degree-template-management'
     }
   ]
 
@@ -76,6 +83,10 @@ const Header: React.FC<Props> = (props) => {
       href: '/admin/degree-template-management'
     }
   ]
+  const [openSignoutDialog, setOpenSignoutDialog] = useState<boolean>(false)
+  const [openChangePassDialog, setOpenChangePassDialog] = useState<boolean>(false)
+  const [openSignSetting, setOpenSignSetting] = useState<boolean>(false)
+
   const navList =
     props.role === 'university_admin' ? educationAdminPages : props.role === 'admin' ? adminPages : studentPages
   return (
@@ -84,7 +95,7 @@ const Header: React.FC<Props> = (props) => {
         {props.role !== null ? (
           <div className='flex gap-2 md:hidden'>
             <Sheet>
-              <SheetTrigger>
+              <SheetTrigger asChild>
                 <div className='rounded-md border p-1 hover:bg-accent'>
                   <MenuIcon />
                 </div>
@@ -103,7 +114,6 @@ const Header: React.FC<Props> = (props) => {
                 ))}
               </SheetContent>
             </Sheet>
-            {props.role !== 'admin' && <ChangePassButton className='flex md:hidden' />}
           </div>
         ) : null}
 
@@ -128,21 +138,47 @@ const Header: React.FC<Props> = (props) => {
           </NavigationMenu>
         ) : null}
 
-        <div className='flex items-center gap-2'>
-          {props.role !== null ? (
-            <>
-              <SignOutButton />
-              {props.role !== 'admin' && <ChangePassButton className='hidden md:flex' />}
-            </>
-          ) : (
-            <Link href='/auth/sign-in'>
-              <Button>
-                <LogInIcon /> <span className='hidden md:block'>Đăng nhập</span>
+        {props.role !== null ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size={'icon'}>
+                <Settings />
               </Button>
-            </Link>
-          )}
-          <ThemeSwitch />
-        </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end' className='w-40'>
+              <DropdownMenuLabel>Cấu hình</DropdownMenuLabel>
+              <DropdownMenuGroup>
+                {props.role !== 'student' && (
+                  <DropdownMenuItem onClick={() => setOpenSignSetting(true)}>Cấu hình ký số</DropdownMenuItem>
+                )}
+                <DropdownMenuItem>
+                  <ThemeSwitch />
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Tài khoản</DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setOpenChangePassDialog(true)}>Đổi mật khẩu</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setOpenSignoutDialog(true)}
+                  className='text-destructive hover:!text-destructive'
+                >
+                  Đăng xuất
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Link href='/auth/sign-in'>
+            <Button>
+              <LogInIcon /> <span className='hidden md:block'>Đăng nhập</span>
+            </Button>
+          </Link>
+        )}
+
+        <SignoutDialog open={openSignoutDialog} onOpenChange={setOpenSignoutDialog} />
+        <ChangePassDialog open={openChangePassDialog} setOpen={setOpenChangePassDialog} />
+        <SignSetting open={openSignSetting} onOpenChange={setOpenSignSetting} role={props.role as string} />
       </header>
     </div>
   )

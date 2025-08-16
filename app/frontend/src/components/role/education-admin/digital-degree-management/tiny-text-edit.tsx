@@ -36,7 +36,7 @@ const TinyTextEdit = forwardRef<TinyTextEditRef, TinyTextEditProps>(({ value, on
         }
       }}
       init={{
-        height: 500,
+        height: 700,
         menubar: false,
         plugins: [
           'advlist',
@@ -59,7 +59,9 @@ const TinyTextEdit = forwardRef<TinyTextEditRef, TinyTextEditProps>(({ value, on
           'bold italic forecolor | alignleft aligncenter ' +
           'alignright alignjustify | bullist numlist outdent indent | ' +
           'removeformat | help',
-        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+        skin_url: '/assets/libs/tinymce/skins/ui/oxide',
+        content_css: '/assets/libs/tinymce/skins/content/default/content.min.css'
       }}
     />
   )
