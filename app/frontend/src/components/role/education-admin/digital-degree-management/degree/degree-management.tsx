@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
-const DigitalDegreeManagement = () => {
+const DegreeManagement = () => {
   const [filter, setFilter] = useState<any>({})
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
   const queryCertificates = useSWR('digital-degree-list' + JSON.stringify(filter), () =>
@@ -248,4 +248,4 @@ const DigitalDegreeManagement = () => {
   )
 }
 
-export default DigitalDegreeManagement
+export default DegreeManagement

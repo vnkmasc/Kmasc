@@ -1,31 +1,29 @@
-'use client'
-
 export const saveDataStorage = (key: string, data: any, type: 'local' | 'session' = 'local') => {
-  let storage: Storage = localStorage
-  if (type === 'session') {
-    storage = sessionStorage
-  }
+  if (typeof window === 'undefined') return
+
+  const storage = type === 'session' ? window.sessionStorage : window.localStorage
+
   if (Array.isArray(data) || typeof data === 'object') {
     storage.setItem(key, JSON.stringify(data))
   } else if (data === null || data === undefined) {
-    console.log('No data to save into local')
+    console.log('No data to save into storage')
     return
   } else {
     storage.setItem(key, data)
   }
 }
+
 export const getDataStorage = (key: string, type: 'local' | 'session' = 'local') => {
-  let storage: Storage = localStorage
-  if (type === 'session') {
-    storage = sessionStorage
-  }
+  if (typeof window === 'undefined') return null
+
+  const storage = type === 'session' ? window.sessionStorage : window.localStorage
+
   const dataStorage = storage.getItem(key)
   if (dataStorage === null) {
     return null
   } else {
     try {
-      const data = JSON.parse(dataStorage)
-      return data
+      return JSON.parse(dataStorage)
     } catch {
       return dataStorage
     }
@@ -33,10 +31,9 @@ export const getDataStorage = (key: string, type: 'local' | 'session' = 'local')
 }
 
 export const removeDataStorage = (key: string, type: 'local' | 'session' = 'local') => {
-  let storage: Storage = localStorage
-  if (type === 'session') {
-    storage = sessionStorage
-  }
+  if (typeof window === 'undefined') return
+
+  const storage = type === 'session' ? window.sessionStorage : window.localStorage
   storage.removeItem(key)
 }
 
@@ -45,6 +42,14 @@ export const getSignDegreeConfig = (): {
   pdfSignLocation: string
   verifyService: string
 } => {
+  if (typeof window === 'undefined') {
+    return {
+      signService: '',
+      pdfSignLocation: '',
+      verifyService: ''
+    }
+  }
+
   return (
     getDataStorage('setting') ?? {
       signService: '',
