@@ -84,3 +84,13 @@ export const getTemplateInterfaceById = async (id: string) => {
   const res = await apiService('GET', `template-samples/${id}`)
   return res
 }
+
+export const updateTemplateInterface = async (id: string, data: any) => {
+  const res = await apiService('PUT', `template-samples/${id}`, data)
+  return res
+}
+
+export const createTemplateInterface = async (data: any) => {
+  const res = await apiService('POST', 'template-samples', data)
+  return res
+}

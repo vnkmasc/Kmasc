@@ -70,12 +70,15 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
       return
     }
 
-    await verifyDigitalSignature(matchDegreeTemplate?.signatureOfUni, matchDegreeTemplate?.hash_template)
+    const successVerify = await verifyDigitalSignature(
+      matchDegreeTemplate?.signatureOfUni,
+      matchDegreeTemplate?.hash_template
+    )
     // *@*
-    // if (!successVerify) {
-    //   showMessage('Xác minh chữ ký không thành công')
-    //   return
-    // }
+    if (!successVerify) {
+      showMessage('Xác minh chữ ký không thành công')
+      return
+    }
 
     try {
       setIssueLoading(true)

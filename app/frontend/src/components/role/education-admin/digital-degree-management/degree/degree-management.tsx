@@ -19,8 +19,9 @@ import SignDegreeButton from './sign-degree-button'
 import { HashUploadButton } from './hash-upload-button'
 import { findLabel, showNotification } from '@/lib/utils/common'
 import useSWRMutation from 'swr/mutation'
-import { AlertDialog } from '@radix-ui/react-alert-dialog'
+
 import {
+  AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,

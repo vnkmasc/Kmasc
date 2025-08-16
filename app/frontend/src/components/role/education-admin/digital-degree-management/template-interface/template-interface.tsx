@@ -4,35 +4,96 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import TemplateView from '@/components/role/education-admin/digital-degree-management/template-view'
 import PageHeader from '@/components/common/page-header'
 import useSWR from 'swr'
-import { getTemplateInterfaceById, getTemplateInterfaces } from '@/lib/api/digital-degree'
+import {
+  createTemplateInterface,
+  getTemplateInterfaceById,
+  getTemplateInterfaces,
+  updateTemplateInterface
+} from '@/lib/api/digital-degree'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Edit2, Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { ChevronsLeftRightEllipsis, Edit2, Plus, Save } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import TinyTextEdit, { TinyTextEditRef } from '../tiny-text-edit'
+import useSWRMutation from 'swr/mutation'
+import { cn, showNotification } from '@/lib/utils/common'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import HtmlEditView from '../template/html-edit-view'
+import { Textarea } from '@/components/ui/textarea'
 
 const TemplateInterface: React.FC = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [mode, setMode] = useState<'view' | 'edit' | 'create'>('view')
   const tinyEditorRef = useRef<TinyTextEditRef>(null)
-  const [tinyValue, setTinyValue] = useState<string | undefined>(undefined)
+  const [tinyValue, setTinyValue] = useState<string>('')
+  const [templateName, setTemplateName] = useState<string>('')
+  const [tinyMode, setTinyMode] = useState<boolean>(true)
 
-  const queryTemplateInterfaces = useSWR('example-templates', getTemplateInterfaces)
+  const queryTemplateInterfaces = useSWR('sample-templates', getTemplateInterfaces)
   const queryTemplateInterfaceById = useSWR(
-    queryTemplateInterfaces.data ? 'example-templates-id' + searchParams.get('id') : undefined,
+    queryTemplateInterfaces.data ? 'sample-templates-id' + searchParams.get('id') : undefined,
     async () => {
       const res = await getTemplateInterfaceById(searchParams.get('id') ?? queryTemplateInterfaces.data?.data[0].id)
       setTinyValue(res.data.HTMLContent)
+      setTemplateName(res.data.Name)
       return res
     }
   )
 
-  // useEffect(() => {
-  //   if (queryTemplateInterfaces.data) {
-  //     queryTemplateInterfaceById.mutate()
-  //   }
-  // })
+  const mutateUpdateTemplateInterface = useSWRMutation(
+    'update-template-interface',
+    (_, { arg }: { arg: any }) =>
+      updateTemplateInterface(searchParams.get('id') ?? queryTemplateInterfaces.data?.data?.[0].id, arg),
+    {
+      onSuccess: () => {
+        queryTemplateInterfaceById.mutate()
+        showNotification('success', 'Cập nhật giao diện mẫu thành công')
+      },
+      onError: (error: any) => {
+        showNotification('error', error.message || 'Cập nhật giao diện mẫu thất bại')
+      }
+    }
+  )
+
+  const mutateCreateTemplateInterface = useSWRMutation(
+    'create-template-interface',
+    (_, { arg }: { arg: any }) => createTemplateInterface(arg),
+    {
+      onSuccess: () => {
+        queryTemplateInterfaces.mutate()
+        showNotification('success', 'Tạo giao diện mẫu thành công')
+      },
+      onError: (error: any) => {
+        showNotification('error', error.message || 'Tạo giao diện mẫu thất bại')
+      }
+    }
+  )
+
+  const handleSubmit = () => {
+    if (mode === 'edit') {
+      mutateUpdateTemplateInterface.trigger({
+        name: templateName,
+        html_content: tinyValue
+      })
+    } else {
+      mutateCreateTemplateInterface.trigger({
+        name: templateName,
+        html_content: tinyValue
+      })
+    }
+  }
+
+  useEffect(() => {
+    if (mode === 'create') {
+      setTinyValue('')
+      setTemplateName('')
+    }
+    setTinyMode(true)
+  }, [mode])
 
   return (
     <>
@@ -46,43 +107,90 @@ const TemplateInterface: React.FC = () => {
             key='create'
             onClick={() => {
               setMode('create')
-              setTinyValue(undefined)
             }}
           >
             <Plus /> <span className='hidden md:block'>Tạo mới</span>
           </Button>
         ]}
       />
-      <Tabs
-        className='w-full'
-        defaultValue={searchParams.get('id') ?? queryTemplateInterfaces.data?.data?.[0].id}
-        onValueChange={(value) => {
-          router.push(`/education-admin/digital-degree-management?tab=template-interface&id=${value}`)
-          setMode('view')
-        }}
-      >
-        <TabsList>
+      {queryTemplateInterfaces.data && (
+        <Tabs
+          className='w-full'
+          defaultValue={searchParams.get('id') ?? queryTemplateInterfaces.data?.data?.[0].id}
+          onValueChange={(value) => {
+            router.push(`/education-admin/digital-degree-management?tab=template-interface&id=${value}`)
+            setMode('view')
+          }}
+        >
+          <TabsList className={cn(mode === 'create' && 'hidden')}>
+            {queryTemplateInterfaces.data?.data?.map((template: any) => (
+              <TabsTrigger key={template.id} value={`${template.id}`}>
+                {template.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
           {queryTemplateInterfaces.data?.data?.map((template: any) => (
-            <TabsTrigger key={template.id} value={`${template.id}`}>
-              {template.name}
-            </TabsTrigger>
+            <TabsContent key={template.id} value={`${template.id}`}>
+              {mode !== 'view' ? (
+                <Card>
+                  <CardHeader className='flex flex-row items-center justify-between'>
+                    <div>
+                      {' '}
+                      <CardTitle className='mb-1'>
+                        {mode === 'edit' ? 'Chỉnh sửa giao diện mẫu' : 'Tạo giao diện mẫu'}
+                      </CardTitle>
+                      <CardDescription>
+                        Chỉnh sửa mẫu giao diện bằng <strong>chế độ soạn thảo</strong> hoặc{' '}
+                        <strong>nhập mã code</strong>
+                      </CardDescription>
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <Button variant={'destructive'} onClick={() => setMode('view')}>
+                        Hủy bỏ
+                      </Button>
+                      <Button variant={'secondary'} onClick={handleSubmit}>
+                        <Save />
+                        <span className='hidden md:block'>{mode === 'edit' ? 'Cập nhật' : 'Tạo mới'}</span>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Label htmlFor='template-name'>Tên giao diện mẫu</Label>
+                    <Input
+                      id='template-name'
+                      placeholder='Nhập tên giao diện mẫu'
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      className='mb-2 max-w-56'
+                    />
+                    <div className='mt-2 flex items-center gap-2'>
+                      <Label>Mẫu bằng số</Label>
+                      <ChevronsLeftRightEllipsis />
+                      <span className='text-sm font-semibold'>Chế độ soạn thảo</span>
+                      <Switch onCheckedChange={setTinyMode} checked={tinyMode} />
+                    </div>
+                    {tinyMode ? (
+                      <TinyTextEdit ref={tinyEditorRef} value={tinyValue} onChange={setTinyValue} />
+                    ) : (
+                      <HtmlEditView
+                        textarea={
+                          <Textarea rows={25} value={tinyValue} onChange={(e) => setTinyValue(e.target.value)} />
+                        }
+                        html={tinyValue}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <TemplateView
+                  baseHtml={queryTemplateInterfaceById.data?.data.HTMLContent}
+                  htmlLoading={queryTemplateInterfaceById.isLoading}
+                />
+              )}
+            </TabsContent>
           ))}
-        </TabsList>
-        {queryTemplateInterfaces.data?.data?.map((template: any) => (
-          <TabsContent key={template.id} value={`${template.id}`}>
-            {mode !== 'view' ? (
-              <div>
-                <TinyTextEdit ref={tinyEditorRef} value={tinyValue} onChange={setTinyValue} />
-              </div>
-            ) : (
-              <TemplateView
-                baseHtml={queryTemplateInterfaceById.data?.data.HTMLContent}
-                htmlLoading={queryTemplateInterfaceById.isLoading}
-              />
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+        </Tabs>
+      )}
     </>
   )
 }
