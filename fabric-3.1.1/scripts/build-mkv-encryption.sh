@@ -11,6 +11,9 @@ echo "This script will build the MKV encryption library"
 echo "Date: $(date)"
 echo
 
+# Save root directory
+ROOT_DIR=$(pwd)
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -99,7 +102,7 @@ build_mkv_library() {
     fi
     
     # Return to root directory
-    cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
+    cd "$ROOT_DIR"
 }
 
 # Function to test the library
@@ -117,7 +120,7 @@ test_mkv_library() {
     fi
     
     # Return to root directory
-    cd /home/phongnh/go-src/Kmasc/fabric-3.1.1
+    cd "$ROOT_DIR"
 }
 
 # Main execution
