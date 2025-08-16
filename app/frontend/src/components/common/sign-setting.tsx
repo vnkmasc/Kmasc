@@ -5,7 +5,7 @@ import DetailDialog from '../role/education-admin/detail-dialog'
 import { validateNoEmpty } from '@/lib/utils/validators'
 import { CustomZodFormItem } from '@/types/common'
 import { getDataStorage, saveDataStorage } from '@/lib/utils/handle-storage'
-import { showNotification } from '@/lib/utils/common'
+import { debounce, showNotification } from '@/lib/utils/common'
 
 interface Props {
   open: boolean
@@ -19,6 +19,10 @@ const SignSetting: React.FC<Props> = (props) => {
     saveDataStorage('setting', values)
     showNotification('success', 'Cập nhật cài đặt ký số thành công')
     props.onOpenChange(false)
+
+    debounce(() => {
+      window.location.reload()
+    }, 200)()
   }
 
   useEffect(() => {
@@ -37,6 +41,14 @@ const SignSetting: React.FC<Props> = (props) => {
             name: 'signService',
             placeholder: 'Nhập link server ký số',
             validator: validateNoEmpty('Link server ký số'),
+            description: 'Link server để tiến hành xác minh chữ ký số.'
+          },
+          {
+            type: 'input',
+            label: 'Link server xác minh chữ ký',
+            name: 'verifyService',
+            placeholder: 'Nhập link server xác minh chữ ký',
+            validator: validateNoEmpty('Link server xác minh chữ ký'),
             description: 'Link server để tiến hành xác minh chữ ký số.'
           },
           {

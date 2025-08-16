@@ -39,8 +39,8 @@ export const signDegreeTemplateUni = async () => {
   return res
 }
 
-export const signDegreeTemplateById = async (id: string) => {
-  const res = await apiService('POST', `templates/${id}/sign`)
+export const signDegreeTemplateById = async (id: string, signature: string) => {
+  const res = await apiService('POST', `templates/${id}/sign`, { signature })
   return res
 }
 
@@ -49,7 +49,7 @@ export const searchDigitalDegreeList = async (params: any) => {
   return res
 }
 
-export const issueDownloadDegreeZip = async (facultyId: string, templateId: string, fileName: string) => {
+export const issueDownloadDegreeZip = async (facultyId: string, templateId: string) => {
   const blob = await apiService(
     'POST',
     `ediplomas/generate-bulk-zip`,
@@ -61,15 +61,6 @@ export const issueDownloadDegreeZip = async (facultyId: string, templateId: stri
     { Accept: 'application/zip' },
     true
   )
-
-  const url = window.URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  window.URL.revokeObjectURL(url)
 
   return blob
 }

@@ -16,13 +16,15 @@ import { AlertCircleIcon, CheckCircle2Icon, Plus } from 'lucide-react'
 import { UseData } from '@/components/providers/data-provider'
 import { formatDegreeTemplateOptions, formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { issueDownloadDegreeZip, searchDegreeTemplateByFaculty } from '@/lib/api/digital-degree'
-import { showNotification } from '@/lib/utils/common'
+import { showMessage, showNotification } from '@/lib/utils/common'
 import CommonSelect from '../../common-select'
 import { Label } from '@/components/ui/label'
 import useSWRMutation from 'swr/mutation'
 import { OptionType } from '@/types/common'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { getSignDegreeConfig } from '@/lib/utils/handle-storage'
+import { verifyDigitalSignature } from '@/lib/utils/handle-vgca'
+import { unzipAndSaveClient } from '@/lib/utils/jszip'
 
 interface Props {
   facultyId: string
@@ -35,6 +37,7 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
   const [selectDegreeTemplateId, setSelectDegreeTemplateId] = useState<string>('')
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
   const signDegreeConfig = getSignDegreeConfig()
+  const [issueLoading, setIssueLoading] = useState(false)
 
   const findLabel = (id: string, options: OptionType[]) => {
     return options?.find((o: OptionType) => o.value === id)?.label
@@ -52,9 +55,8 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
   const queryDegreeTemplatesByFaculty = useSWRMutation(
     props.facultyId ? 'degree-templates-by-faculty' + props.facultyId : undefined,
     async () => {
-      // *@* Invalid faculty_id
       const res = await searchDegreeTemplateByFaculty(props.facultyId)
-      return formatDegreeTemplateOptions(res.data)
+      return res.data
     },
     {
       onError: (error) => {
@@ -63,21 +65,45 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
     }
   )
 
-  const mutateIssueDigitalDegree = useSWRMutation(
-    'issue-digital-degree-faculty',
-    () =>
-      issueDownloadDegreeZip(
-        props.facultyId,
-        selectDegreeTemplateId,
-        `VBS-${findLabel(props.facultyId, facultyOptions)}-${findLabel(selectDegreeTemplateId, queryDegreeTemplatesByFaculty.data ?? [])}.zip`
-      ),
-    {
-      onSuccess: () => {
-        showNotification('success', 'Ký bằng số cho chuyên ngành thành công')
-        setOpenSignDialog(false)
-      }
+  const handleIssueDegreeClick = async () => {
+    const matchDegreeTemplate = queryDegreeTemplatesByFaculty.data.find(
+      (item: any) => item.id === selectDegreeTemplateId
+    )
+
+    if (matchDegreeTemplate.signatureOfUni === '') {
+      showMessage('Chưa có chữ ký số cho mẫu của trường văn bằng này')
+      return
     }
-  )
+
+    await verifyDigitalSignature(matchDegreeTemplate?.signatureOfUni, matchDegreeTemplate?.hash_template)
+    // *@*
+    // if (!successVerify) {
+    //   showMessage('Xác minh chữ ký không thành công')
+    //   return
+    // }
+
+    try {
+      setIssueLoading(true)
+      const dirHandle = await (window as any).showDirectoryPicker()
+
+      const perm = await dirHandle.requestPermission({ mode: 'readwrite' })
+      if (perm !== 'granted') {
+        throw new Error('Bạn đã từ chối quyền truy cập thư mục')
+      }
+
+      const blob = await issueDownloadDegreeZip(props.facultyId, selectDegreeTemplateId)
+
+      await unzipAndSaveClient(blob, dirHandle)
+
+      showNotification('success', 'Cấp bằng số thành công')
+      setOpenSignDialog(false)
+    } catch (err: any) {
+      console.log(err)
+      showNotification('error', err.message || 'Lỗi khi cấp bằng số')
+    } finally {
+      setIssueLoading(false)
+    }
+  }
 
   return (
     <Dialog
@@ -104,7 +130,7 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
           </DialogDescription>
         </DialogHeader>
 
-        {signDegreeConfig?.signService !== '' ? (
+        {signDegreeConfig?.verifyService !== '' ? (
           props.facultyId ? (
             <Alert variant={'success'}>
               <CheckCircle2Icon />
@@ -140,7 +166,7 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
         <Label>Chọn mẫu văn bằng</Label>
         <CommonSelect
           value={selectDegreeTemplateId}
-          options={queryDegreeTemplatesByFaculty.data || []}
+          options={formatDegreeTemplateOptions(queryDegreeTemplatesByFaculty.data || [])}
           handleSelect={setSelectDegreeTemplateId}
           placeholder='Chọn mẫu văn bằng số'
         />
@@ -151,11 +177,11 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
           </DialogClose>
           <Button
             type='submit'
-            isLoading={mutateIssueDigitalDegree.isMutating}
-            onClick={() => mutateIssueDigitalDegree.trigger()}
-            disabled={selectDegreeTemplateId === '' || !signDegreeConfig}
+            isLoading={issueLoading}
+            onClick={handleIssueDegreeClick}
+            disabled={selectDegreeTemplateId === '' || signDegreeConfig.verifyService === ''}
           >
-            Ký số
+            Cấp bằng
           </Button>
         </DialogFooter>
       </DialogContent>

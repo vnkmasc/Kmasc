@@ -19,6 +19,7 @@ import { Dispatch, SetStateAction } from 'react'
 import useSWRMutation from 'swr/mutation'
 import Link from 'next/link'
 import { getSignDegreeConfig } from '@/lib/utils/handle-storage'
+import { signDigitalSignature } from '@/lib/utils/handle-vgca'
 
 interface Props {
   id: string
@@ -26,13 +27,15 @@ interface Props {
   canEdit: boolean
   canSign: boolean
   refetch: () => void
+  hashTemplate: string
+  templateSampleId: string
 }
 
 const TableActionButton: React.FC<Props> = (props) => {
   const signDegreeConfig = getSignDegreeConfig()
   const mutateSignDegreeTemplateById = useSWRMutation(
     'sign-degree-template-by-id',
-    () => signDegreeTemplateById(props.id),
+    (_, { arg }: { arg: string }) => signDegreeTemplateById(props.id, arg),
     {
       onSuccess: () => {
         showNotification('success', 'Ký mẫu bằng số thành công')
@@ -59,7 +62,10 @@ const TableActionButton: React.FC<Props> = (props) => {
       <Button variant='outline' size='icon' onClick={() => props.handleSetIdDetail(props.id)} disabled={!props.canEdit}>
         <PencilIcon />
       </Button>
-      <Link href={`/education-admin/digital-degree-management?tab=template-interface&id=${props.id}`} target='_blank'>
+      <Link
+        href={`/education-admin/digital-degree-management?tab=template-interface&id=${props.templateSampleId}`}
+        target='_blank'
+      >
         <Button size='icon'>
           <CodeXml />
         </Button>
@@ -67,12 +73,19 @@ const TableActionButton: React.FC<Props> = (props) => {
       <Button
         size='icon'
         variant={'secondary'}
-        onClick={() => {
+        onClick={async () => {
           if (signDegreeConfig?.signService === '') {
             showMessage('Vui lòng cấu hình số cho link server ký số')
             return
           }
-          mutateSignDegreeTemplateById.trigger()
+          // *@*
+          // const signature = await signDigitalSignature(props.hashTemplate)
+          // if (!signature) {
+          //   showMessage('Ký số không thành công')
+          //   return
+          // }
+
+          mutateSignDegreeTemplateById.trigger('ED25519_SIGNATURE_FROM_CLIENT')
         }}
         disabled={!props.canSign}
         isLoading={mutateSignDegreeTemplateById.isMutating}

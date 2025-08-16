@@ -175,6 +175,8 @@ const DegreeTemplate: React.FC = () => {
                 handleSetIdDetail={setIdDetail}
                 id={item.id}
                 refetch={handleRefetchQueryList}
+                hashTemplate={item.hash_template}
+                templateSampleId={item.template_sample_id}
               />
             )
           }

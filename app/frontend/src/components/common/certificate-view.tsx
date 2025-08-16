@@ -27,7 +27,7 @@ import { Separator } from '../ui/separator'
 import CertificateBlankButton from '../role/education-admin/certificate-management/certificate-blank-button'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { showNotification } from '@/lib/utils/common'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/common'
 import CertificateQrCode from './certificate-qr-code'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
 

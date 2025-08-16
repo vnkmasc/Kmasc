@@ -43,11 +43,13 @@ export const removeDataStorage = (key: string, type: 'local' | 'session' = 'loca
 export const getSignDegreeConfig = (): {
   signService: string
   pdfSignLocation: string
+  verifyService: string
 } => {
   return (
     getDataStorage('setting') ?? {
       signService: '',
-      pdfSignLocation: ''
+      pdfSignLocation: '',
+      verifyService: ''
     }
   )
 }
