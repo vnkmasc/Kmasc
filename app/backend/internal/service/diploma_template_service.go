@@ -18,6 +18,7 @@ var (
 )
 
 type TemplateService interface {
+	UpdateDiplomaTemplate(ctx context.Context, templateID primitive.ObjectID, req models.UpdateDiplomaTemplateRequest) error
 	SaveMinEduSignature(ctx context.Context, templateID primitive.ObjectID, signature string) (*models.DiplomaTemplate, error)
 	CreateTemplate(ctx context.Context, universityID, facultyID, templateSampleID primitive.ObjectID, name, description string) (*models.DiplomaTemplate, error)
 	SaveClientSignature(ctx context.Context, universityID, templateID primitive.ObjectID, signature string) (*models.DiplomaTemplate, error)
@@ -25,7 +26,6 @@ type TemplateService interface {
 	GetTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	SignTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) (int, error)
 	SignAllPendingTemplatesOfUniversity(ctx context.Context, universityID primitive.ObjectID) (int, error)
-	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
 	// UpdateTemplate(ctx context.Context, templateID, universityID primitive.ObjectID, name, description, htmlContent string) (*models.DiplomaTemplate, error)
 }
 
@@ -56,6 +56,29 @@ func NewTemplateService(
 	}
 }
 
+func (s *templateService) UpdateDiplomaTemplate(
+	ctx context.Context,
+	templateID primitive.ObjectID,
+	req models.UpdateDiplomaTemplateRequest,
+) error {
+	template, err := s.templateRepo.GetByID(ctx, templateID)
+	if err != nil {
+		return err
+	}
+
+	if template.IsLocked {
+		return fmt.Errorf("template is locked and cannot be edited")
+	}
+
+	template.Name = req.Name
+	template.Description = req.Description
+	template.TemplateSampleID = req.TemplateSampleID
+	template.FacultyID = req.FacultyID
+	template.UpdatedAt = time.Now()
+
+	return s.templateRepo.UpdateDiplomaTemplateByID(ctx, template)
+}
+
 func (s *templateService) GetTemplateByID(ctx context.Context, id string) (*models.DiplomaTemplate, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -64,9 +87,6 @@ func (s *templateService) GetTemplateByID(ctx context.Context, id string) (*mode
 	return s.templateRepo.GetByID(ctx, objID)
 }
 
-func (s *templateService) VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error {
-	return s.templateRepo.VerifyTemplatesByFaculty(ctx, universityID, facultyID)
-}
 func (s *templateService) CreateTemplate(
 	ctx context.Context,
 	universityID, facultyID, templateSampleID primitive.ObjectID,

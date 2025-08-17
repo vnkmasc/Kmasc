@@ -24,6 +24,13 @@ type DiplomaTemplate struct {
 	FacultyID         primitive.ObjectID `bson:"faculty_id" json:"facultyId"`
 }
 
+type UpdateDiplomaTemplateRequest struct {
+	Name             string             `json:"name" binding:"required"`
+	Description      string             `json:"description" binding:"required"`
+	TemplateSampleID primitive.ObjectID `json:"template_sample_id" binding:"required"`
+	FacultyID        primitive.ObjectID `json:"faculty_id" binding:"required"`
+}
+
 type TemplateEngine struct{}
 
 func NewTemplateEngine() *TemplateEngine {
