@@ -70,31 +70,42 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
       return
     }
 
-    const successVerify = await verifyDigitalSignature(
-      matchDegreeTemplate?.signatureOfUni,
-      matchDegreeTemplate?.hash_template
-    )
-    // *@*
-    if (!successVerify) {
-      showMessage('Xác minh chữ ký không thành công')
+    let dirHandle: any
+    try {
+      dirHandle = await (window as any).showDirectoryPicker()
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        return
+      }
+      showNotification('error', 'Không thể mở dialog chọn thư mục')
+      return
+    }
+
+    const granted = await ensurePermission(dirHandle, 'readwrite')
+    if (!granted) {
+      showMessage('Bạn đã từ chối quyền đọc thư mục')
       return
     }
 
     try {
       setIssueLoading(true)
-      const dirHandle = await (window as any).showDirectoryPicker()
+      const successVerify = await verifyDigitalSignature(
+        matchDegreeTemplate?.signatureOfUni,
+        matchDegreeTemplate?.hash_template
+      )
 
-      const granted = await ensurePermission(dirHandle, 'readwrite')
-      if (!granted) {
-        showMessage('Bạn đã từ chối quyền đọc thư mục')
+      if (!successVerify) {
+        showMessage('Xác minh chữ ký không thành công')
         return
       }
+
+      showMessage('Xác minh chữ ký thành công')
 
       const blob = await issueDownloadDegreeZip(props.facultyId, selectDegreeTemplateId)
 
       await unzipAndSaveClient(blob, dirHandle)
 
-      showNotification('success', 'Cấp bằng số thành công')
+      showNotification('success', 'Cấp bằng số thành công và tải thư mục thành công')
       setOpenSignDialog(false)
     } catch (err: any) {
       showNotification('error', err.message || 'Lỗi khi cấp bằng số')
@@ -176,7 +187,7 @@ const IssueDegreeDialog: React.FC<Props> = (props) => {
             type='submit'
             isLoading={issueLoading}
             onClick={handleIssueDegreeClick}
-            disabled={selectDegreeTemplateId === '' || signDegreeConfig.verifyService === ''}
+            disabled={selectDegreeTemplateId === '' || signDegreeConfig.verifyService === '' || props.facultyId === ''}
           >
             Cấp bằng
           </Button>
