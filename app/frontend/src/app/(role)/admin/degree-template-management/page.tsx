@@ -56,7 +56,7 @@ const DegreeTemplateManagementPage = () => {
 
   const mutateSignTemplate = useSWRMutation(
     'admin-sign-template',
-    (_, { arg }: { arg: string }) => signTemplateByMinedu(arg),
+    (_, { arg }: { arg: any }) => signTemplateByMinedu(arg.template_id, arg.signature),
     {
       onSuccess: () => {
         showNotification('success', 'Ký số mẫu thành công')
@@ -162,7 +162,7 @@ const DegreeTemplateManagementPage = () => {
                       return
                     }
 
-                    mutateSignTemplate.trigger(signature)
+                    mutateSignTemplate.trigger({ template_id: item.template_sample_id, signature })
                   }}
                   disabled={item.status === 'SIGNED_BY_MINEDU'}
                   isLoading={mutateSignTemplate.isMutating}

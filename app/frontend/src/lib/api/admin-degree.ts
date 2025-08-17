@@ -15,7 +15,7 @@ export const getTemplatesByUniAndFaculty = async (universityId: string, facultyI
   return res.data
 }
 
-export const signTemplateByMinedu = async (templateId: string) => {
-  const res = await apiService('POST', `templates/sign/minedu/${templateId}`)
+export const signTemplateByMinedu = async (templateId: string, signature: string) => {
+  const res = await apiService('POST', `templates/sign/minedu/${templateId}`, { signature })
   return res
 }
