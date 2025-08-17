@@ -1,5 +1,4 @@
 <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f0f0f0; padding: 2rem; box-sizing: border-box;">
-
   <div
     style="
       width: 100%;
@@ -94,7 +93,8 @@
       </p>
     </main>
 
-    <footer style="padding: 0 2.5rem 2rem 2.5rem; text-align: right;">
+    <!-- Footer chính (ký tên) -->
+    <footer style="padding: 0 2.5rem 1.5rem 2.5rem; text-align: right;">
       <div style="display: inline-block; text-align: center;">
         <p style="font-size: 1.1rem; margin: 0 0 3rem 0;">
           Cấp ngày {{ .NgayCap }}
@@ -107,6 +107,20 @@
         </p>
       </div>
     </footer>
-  </div>
 
+    <footer
+      style="
+        text-align: center;
+        font-size: 0.9rem;
+        color: #777;
+        padding: 1rem 2.5rem;
+        border-top: 1px solid #eee;
+        box-sizing: border-box;
+      "
+    >
+      <span>Số hiệu: {{ .SoHieu }}</span>
+      <span style="margin: 0 0.5rem;">|</span>
+      <span>Số vào sổ: {{ .SoVaoSo }}</span>
+    </footer>
+  </div>
 </div>
