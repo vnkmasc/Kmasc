@@ -8,8 +8,9 @@ import (
 
 type EDiploma struct {
 	ID              primitive.ObjectID `bson:"_id" json:"id"`
-	TemplateID      primitive.ObjectID `bson:"template_id" json:"template_id"` // Liên kết mẫu đã được Bộ duyệt
-	Name            string             `bson:"name" json:"name"`               // Tên văn bằng
+	CertificateID   primitive.ObjectID `bson:"certificate_id" json:"certificate_id"` // Liên kết đến văn bằng
+	TemplateID      primitive.ObjectID `bson:"template_id" json:"template_id"`       // Liên kết mẫu đã được Bộ duyệt
+	Name            string             `bson:"name" json:"name"`                     // Tên văn bằng
 	UniversityID    primitive.ObjectID `bson:"university_id" json:"university_id"`
 	FacultyID       primitive.ObjectID `bson:"faculty_id" json:"faculty_id"`
 	UserID          primitive.ObjectID `bson:"user_id" json:"user_id"`
@@ -53,6 +54,7 @@ type EDiploma struct {
 
 type EDiplomaResponse struct {
 	ID                 primitive.ObjectID `json:"id"`
+	CertificateID      primitive.ObjectID `json:"certificate_id"`
 	Name               string             `json:"name"`
 	TemplateName       string             `json:"template_name"`
 	UniversityCode     string             `json:"university_code"`

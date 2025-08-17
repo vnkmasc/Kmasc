@@ -54,6 +54,7 @@ func MapEDiplomaToDTO(
 ) *models.EDiplomaResponse {
 	return &models.EDiplomaResponse{
 		ID:             ed.ID,
+		CertificateID:  ed.CertificateID,
 		Name:           ed.Name,
 		FacultyID:      ed.FacultyID,
 		UniversityCode: getUniversityCode(university),

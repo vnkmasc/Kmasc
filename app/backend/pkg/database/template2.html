@@ -1,201 +1,39 @@
-<div
-  style="
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 2rem;
-    box-sizing: border-box;
-    background-color: #f0f0f0;
-  "
->
-  <div
-    style="
-      width: 100%;
-      max-width: 70rem;
-      aspect-ratio: 1.414 / 1;
-      background-color: #fffaf5;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      border: 1px solid #ddd;
-      font-family: 'Roboto Slab', serif;
-      color: #4a4a4a;
-    "
-  >
-    <div
-      style="
-        position: absolute;
-        top: 1.5rem;
-        left: 1.5rem;
-        right: 1.5rem;
-        bottom: 1.5rem;
-        border: 2px solid #e8a09d;
-        pointer-events: none;
-      "
-    >
-      <div
-        style="
-          position: absolute;
-          width: 50px;
-          height: 50px;
-          border-color: #d9534f;
-          border-style: solid;
-          top: -2px;
-          left: -2px;
-          border-width: 3px 0 0 3px;
-        "
-      ></div>
-      <div
-        style="
-          position: absolute;
-          width: 50px;
-          height: 50px;
-          border-color: #d9534f;
-          border-style: solid;
-          top: -2px;
-          right: -2px;
-          border-width: 3px 3px 0 0;
-        "
-      ></div>
-      <div
-        style="
-          position: absolute;
-          width: 50px;
-          height: 50px;
-          border-color: #d9534f;
-          border-style: solid;
-          bottom: -2px;
-          left: -2px;
-          border-width: 0 0 3px 3px;
-        "
-      ></div>
-      <div
-        style="
-          position: absolute;
-          width: 50px;
-          height: 50px;
-          border-color: #d9534f;
-          border-style: solid;
-          bottom: -2px;
-          right: -2px;
-          border-width: 0 3px 3px 0;
-        "
-      ></div>
+<div style="width: 100%; max-width: 800px; margin: 2rem auto; background-color: #ffffff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-family: 'Times New Roman', serif; color: #333333; padding: 2.5rem; box-sizing: border-box; border-top: 8px solid #A91D3A;">
+    
+    <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #A91D3A; padding-bottom: 1.5rem;">
+        <p style="font-size: 1rem; font-weight: bold; margin: 0; text-transform: uppercase;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+        <p style="font-size: 1.1rem; letter-spacing: 0.5px; margin: 0.25rem 0 1rem 0;">Độc lập - Tự do - Hạnh phúc</p>
+        <p style="font-size: 1.2rem; font-weight: bold; margin: 0; text-transform: uppercase; color: #A91D3A;">{{ .TenTruong }}</p>
     </div>
 
-    <header style="background-color: #d9534f; padding: 1rem 3.5rem; text-align: center;">
-      <h1
-        style="
-          font-family: 'Montserrat', sans-serif;
-          font-size: 2.5rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          color: white;
-          letter-spacing: 0.2em;
-          margin: 0;
-        "
-      >
-        {{ .LoaiVanBang }}
-      </h1>
-    </header>
-
-    <div
-      style="
-        flex-grow: 1;
-        padding: 1rem 3.5rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-      "
-    >
-      <div style="text-align: center; line-height: 1.5;">
-        <div style="font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 700;">
-          Cộng hòa Xã hội Chủ nghĩa Việt Nam
-        </div>
-        <div
-          style="
-            font-size: 1.1rem;
-            font-style: italic;
-            border-bottom: 1px solid #e8a09d;
-            display: inline-block;
-            padding-bottom: 0.25rem;
-            margin-bottom: 0.5rem;
-          "
-        >
-          Độc lập - Tự do - Hạnh phúc
-        </div>
-        <div
-          style="
-            font-family: 'Montserrat', sans-serif;
-            font-size: 1rem;
-            text-transform: uppercase;
-            font-weight: 500;
-            letter-spacing: 0.1em;
-          "
-        >
-          {{ .TenTruong }}
-        </div>
-      </div>
-
-      <main style="text-align: center; margin: 0.5rem 0;">
-        <p
-          style="
-            font-size: 1.2rem;
-            color: #c0392b;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-          "
-        >
-          Trân trọng chứng nhận
-        </p>
-        <h2
-          style="
-            font-family: 'Dancing Script', cursive;
-            font-size: 4.5rem;
-            font-weight: 700;
-            color: #d9534f;
-            margin: 0.5rem 0;
-          "
-        >
-          {{ .HoTen }}
+    <div style="text-align: center; padding: 1rem 0;">
+        <h1 style="font-size: 2.2rem; font-weight: bold; text-transform: uppercase; color: #A91D3A; margin: 0 0 1.5rem 0;">
+            {{ .LoaiVanBang }}
+        </h1>
+        
+        <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Chứng nhận</p>
+        
+        <h2 style="font-size: 2.8rem; font-weight: bold; color: #333333; margin: 0 0 1.5rem 0; font-family: 'Georgia', serif;">
+            {{ .HoTen }}
         </h2>
-        <p style="font-size: 1.15rem; line-height: 1.8; margin: 1rem auto 0; max-width: 90%;">
-          Sinh ngày <span style="font-weight: 700; color: #c0392b;">{{ .NgaySinh }}</span>, đã hoàn thành xuất sắc
-          chương trình đào tạo <span style="font-weight: 700; color: #c0392b;">{{ .HinhThucDaoTao }}</span> ngành
-          <span style="font-weight: 700; color: #c0392b;">{{ .Nganh }}</span>, khóa học
-          <span style="font-weight: 700; color: #c0392b;">{{ .Khoa }}</span> với xếp loại tốt nghiệp:
-          <span style="font-weight: 700; color: #c0392b;">{{ .XepLoai }}</span>.
+
+        <p style="font-size: 1.1rem; line-height: 1.8; max-width: 90%; margin: 0 auto 2.5rem auto;">
+            Sinh ngày <strong>{{ .NgaySinh }}</strong>. Đã hoàn thành xuất sắc chương trình đào tạo <strong>{{ .HinhThucDaoTao }}</strong>, ngành <strong>{{ .Nganh }}</strong>, thuộc khóa học <strong>{{ .Khoa }}</strong> với xếp loại tốt nghiệp: <strong>{{ .XepLoai }}</strong>.
         </p>
-      </main>
-
-      <div style="text-align: right; margin-top: 1rem;">
-        <div style="display: inline-block; text-align: center;">
-          <p style="font-size: 1.1rem; font-style: italic; margin: 0 0 2.5rem 0;">
-            Cấp ngày {{ .NgayCap }}
-          </p>
-          <p
-            style="
-              font-family: 'Montserrat', sans-serif;
-              font-weight: 700;
-              font-size: 1.1rem;
-              margin-bottom: 0.25rem;
-            "
-          >
-            HIỆU TRƯỞNG
-          </p>
-          <p style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.1rem; margin: 0;">
-            Phạm Văn Hưởng
-          </p>
-        </div>
-      </div>
-
-      <footer style="text-align: center; font-size: 0.9rem; color: #777; padding-top: 1rem; border-top: 1px solid #eee; margin-top: 1rem;">
-        <span>Số hiệu: {{ .SoHieu }}</span>
-        <span style="margin: 0 0.5rem;">|</span>
-        <span>Số vào sổ: {{ .SoVaoSo }}</span>
-      </footer>
     </div>
-  </div>
+
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 2rem; padding-right: 2rem;">
+        <div style="text-align: center;">
+            <p style="font-size: 1.1rem; margin: 0 0 4rem 0;">Cấp ngày {{ .NgayCap }}</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin: 0;">Phạm Văn Hưởng</p>
+            <p style="font-size: 1rem; border-top: 1px solid #555555; padding-top: 0.5rem; margin-top: 0.25rem;">HIỆU TRƯỞNG</p>
+        </div>
+    </div>
+    
+    <div style="text-align: center; font-size: 0.9rem; color: #777777; border-top: 1px solid #eeeeee; padding-top: 1rem; margin-top: 2rem;">
+        <span>Số hiệu: {{ .SoHieu }}</span>
+        <span style="margin: 0 0.75rem;">|</span>
+        <span>Số vào sổ: {{ .SoVaoSo }}</span>
+    </div>
+
 </div>
