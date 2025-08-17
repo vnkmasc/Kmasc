@@ -4,7 +4,7 @@ import PageHeader from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { PlusIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
-import Filter from '../../filter'
+import Filter from '../../../../common/filter'
 import { formatFacultyOptionsByID, formatTemplateInterfaceOptions } from '@/lib/utils/format-api'
 import { UseData } from '@/components/providers/data-provider'
 import useSWR from 'swr'
@@ -16,7 +16,7 @@ import {
   updateDegreeTemplate
 } from '@/lib/api/digital-degree'
 import { showNotification } from '@/lib/utils/common'
-import TableList from '../../table-list'
+import TableList from '../../../../common/table-list'
 import useSWRMutation from 'swr/mutation'
 import { OptionType } from '@/types/common'
 import TableActionButton from './table-action-button'
@@ -161,7 +161,7 @@ const DegreeTemplate: React.FC = () => {
                 }
                 title={`${DEGREE_TEMPLATE_STATUS[item.status as keyof typeof DEGREE_TEMPLATE_STATUS].label}`}
               >
-                {item.status}
+                {DEGREE_TEMPLATE_STATUS[item.status as keyof typeof DEGREE_TEMPLATE_STATUS].label}
               </Badge>
             )
           },

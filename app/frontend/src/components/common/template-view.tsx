@@ -1,5 +1,5 @@
-import CodeView from '@/components/role/education-admin/code-view'
-import HtmlView from '@/components/role/education-admin/html-view'
+import CodeView from '@/components/common/code-view'
+import HtmlView from '@/components/common/html-view'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatTemplateInterfaceHTML } from '@/lib/utils/format-api'
 

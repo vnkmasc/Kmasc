@@ -3,17 +3,21 @@
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'
-import Filter from '@/components/role/education-admin/filter'
-import TableList from '@/components/role/education-admin/table-list'
+import Filter from '@/components/common/filter'
+import TableList from '@/components/common/table-list'
 import { Badge } from '@/components/ui/badge'
 import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE } from '@/constants/common'
 import { formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { useState } from 'react'
 import useSWR from 'swr'
-import { searchDigitalDegreeList, uploadDigitalDegreesBlockchain } from '@/lib/api/digital-degree'
+import {
+  getDigitalDegreeFileById,
+  searchDigitalDegreeList,
+  uploadDigitalDegreesBlockchain
+} from '@/lib/api/digital-degree'
 import { formatDate } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { AlertCircleIcon, Blocks, CheckCircle2Icon } from 'lucide-react'
+import { AlertCircleIcon, Blocks, CheckCircle2Icon, Eye, FileText } from 'lucide-react'
 import IssueDegreeDialog from '@/components/role/education-admin/digital-degree-management/degree/issue-degree-dialog'
 import SignDegreeButton from './sign-degree-button'
 import { HashUploadButton } from './hash-upload-button'
@@ -31,16 +35,24 @@ import {
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import Link from 'next/link'
+import CertificateQrCode from '@/components/common/certificate-qr-code'
 
 const DegreeManagement = () => {
-  const [filter, setFilter] = useState<any>({})
+  const [filter, setFilter] = useState<any>({
+    faculty_id: '',
+    certificate_type: '',
+    course: '',
+    issued: 'true',
+    page: 1
+  })
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
   const queryCertificates = useSWR('digital-degree-list' + JSON.stringify(filter), () =>
     searchDigitalDegreeList({
       ...filter,
       page: filter.page || 1,
       page_size: PAGE_SIZE,
-      is_issued: filter.is_issued === 'true'
+      issued: filter.issued === 'true'
     })
   )
 
@@ -61,6 +73,22 @@ const DegreeManagement = () => {
       },
       onSuccess: () => {
         showNotification('success', 'Đẩy lên Blockchain thành công')
+      }
+    }
+  )
+  const mutateGetDigitalDegreeFile = useSWRMutation(
+    'get-digital-degree-file',
+    async (_key, { arg }: { arg: string }) => {
+      const res = await getDigitalDegreeFileById(arg)
+      return res
+    },
+    {
+      onError: (error) => {
+        showNotification('error', error.message || 'Lỗi khi lấy tệp văn bằng số')
+      },
+      onSuccess: (data) => {
+        const url = URL.createObjectURL(data)
+        window.open(url, '_blank')
       }
     }
   )
@@ -168,7 +196,7 @@ const DegreeManagement = () => {
           },
           {
             type: 'select',
-            name: 'is_issued',
+            name: 'issued',
             placeholder: 'Chọn trạng thái cấp',
             defaultValue: 'true',
             setting: {
@@ -194,10 +222,17 @@ const DegreeManagement = () => {
           { header: 'Họ và tên', value: 'student_name', className: 'min-w-[150px]' },
           { header: 'Chuyên ngành', value: 'faculty_name', className: 'min-w-[150px]' },
           { header: 'Tên văn bằng', value: 'full_name', className: 'min-w-[200px]' },
+          {
+            header: 'Phân loại',
+            value: 'isDegree',
+            render: (item) => (
+              <Badge className='bg-blue-500 text-white hover:bg-blue-400'> {item.certificate_type}</Badge>
+            )
+          },
           { header: 'Mẫu bằng', value: 'template_name', className: 'min-w-[150px]' },
           { header: 'Khóa', value: 'course' },
           {
-            header: 'Ngày cấp',
+            header: 'Ngày cấp bằng vật lý',
             value: 'issue_date',
             className: 'min-w-[100px]',
             render: (item) => {
@@ -230,6 +265,30 @@ const DegreeManagement = () => {
               <Badge variant={item.data_encrypted ? 'default' : 'outline'}>
                 {item.data_encrypted ? 'Đã mã hóa' : 'Chưa mã hóa'}
               </Badge>
+            )
+          },
+          {
+            header: 'Hành động',
+            className: 'min-w-[100px]',
+            value: 'action',
+            render: (item) => (
+              <div className='flex gap-2'>
+                {' '}
+                <Button size={'icon'} onClick={() => mutateGetDigitalDegreeFile.trigger(item.id)}>
+                  <FileText />
+                </Button>
+                <Link href={`/education-admin/certificate-management/${item.certificate_id}`}>
+                  <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
+                    <Eye />
+                  </Button>
+                </Link>
+                <Link href={`/education-admin/certificate-management/${item.certificate_id}/blockchain`}>
+                  <Button size={'icon'} title='Xem dữ liệu trên blockchain'>
+                    <Blocks />
+                  </Button>
+                </Link>
+                <CertificateQrCode id={item.id} isIcon={true} />
+              </div>
             )
           }
         ]}

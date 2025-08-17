@@ -1,4 +1,4 @@
-import HtmlView from '@/components/role/education-admin/html-view'
+import HtmlView from '@/components/common/html-view'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ReactNode } from 'react'
 

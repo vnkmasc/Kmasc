@@ -3,56 +3,56 @@
 import PageHeader from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import {
   getUniversities,
   getFacultiesByUniversity,
   getTemplatesByUniAndFaculty,
   signTemplateByMinedu
 } from '@/lib/api/admin-degree'
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
-import TableList from '@/components/role/education-admin/table-list'
+import TableList from '@/components/common/table-list'
 import { Badge } from '@/components/ui/badge'
-import { showNotification } from '@/lib/utils/common'
-import HtmlView from '@/components/role/education-admin/html-view'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { showMessage, showNotification } from '@/lib/utils/common'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CircleXIcon, CodeXml, KeyRound } from 'lucide-react'
+import CommonSelect from '@/components/role/education-admin/common-select'
+import { DEGREE_TEMPLATE_STATUS } from '@/constants/common'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { getTemplateInterfaceById } from '@/lib/api/digital-degree'
+import TemplateView from '@/components/common/template-view'
+import { getSignDegreeConfig } from '@/lib/utils/handle-storage'
+import { signDigitalSignature } from '@/lib/utils/handle-vgca'
 
 const DegreeTemplateManagementPage = () => {
-  const [selectedUniversityId, setSelectedUniversityId] = useState<string | undefined>()
-  const [selectedFacultyId, setSelectedFacultyId] = useState<string | undefined>()
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
+  const signDegreeConfig = getSignDegreeConfig()
+  const [selectedUniversityId, setSelectedUniversityId] = useState<string>('')
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>('')
 
-  const queryUniversities = useSWR('admin-universities', () => getUniversities())
+  const handleReset = () => {
+    setSelectedUniversityId('')
+    setSelectedFacultyId('')
+  }
 
-  const queryFaculties = useSWR(selectedUniversityId ? `admin-faculties-${selectedUniversityId}` : null, () =>
-    getFacultiesByUniversity(selectedUniversityId as string)
-  )
+  const queryUniversities = useSWR('admin-universities', async () => {
+    const res = await getUniversities()
 
-  const queryTemplates = useSWR(
+    return res.map((u: any) => ({ label: u.university_name, value: u.id }))
+  })
+
+  const queryFaculties = useSWR(selectedUniversityId ? `admin-faculties-${selectedUniversityId}` : null, async () => {
+    const res = await getFacultiesByUniversity(selectedUniversityId)
+    return res.map((u: any) => ({ label: u.faculty_name, value: u.id }))
+  })
+
+  const queryDigitalDegreeTemplate = useSWR(
     selectedUniversityId && selectedFacultyId ? `admin-templates-${selectedUniversityId}-${selectedFacultyId}` : null,
     () => getTemplatesByUniAndFaculty(selectedUniversityId as string, selectedFacultyId as string)
   )
 
-  useEffect(() => {
-    if (queryUniversities.data && queryUniversities.data.length > 0 && !selectedUniversityId) {
-      setSelectedUniversityId(queryUniversities.data[0].id)
-    }
-  }, [queryUniversities.data, selectedUniversityId])
-
-  useEffect(() => {
-    if (queryFaculties.data && queryFaculties.data.length > 0 && !selectedFacultyId) {
-      setSelectedFacultyId(queryFaculties.data[0].id)
-    }
-  }, [queryFaculties.data, selectedFacultyId])
+  const mutateTemplateInterface = useSWRMutation('admin-html-template', (_, { arg }: { arg: string }) =>
+    getTemplateInterfaceById(arg)
+  )
 
   const mutateSignTemplate = useSWRMutation(
     'admin-sign-template',
@@ -60,7 +60,7 @@ const DegreeTemplateManagementPage = () => {
     {
       onSuccess: () => {
         showNotification('success', 'Ký số mẫu thành công')
-        queryTemplates.mutate()
+        queryDigitalDegreeTemplate.mutate()
       },
       onError: (error) => {
         showNotification('error', error.message || 'Ký số mẫu thất bại')
@@ -68,64 +68,38 @@ const DegreeTemplateManagementPage = () => {
     }
   )
 
-  const universityOptions = useMemo(() => {
-    return (queryUniversities.data || []).map((u: any) => ({ label: u.university_name, value: u.id }))
-  }, [queryUniversities.data])
-
-  const facultyOptions = useMemo(() => {
-    return (queryFaculties.data || []).map((f: any) => ({ label: f.faculty_name, value: f.id }))
-  }, [queryFaculties.data])
-
   return (
     <>
-      <PageHeader title='Quản lý văn bằng số' />
-
-      <div className='flex flex-col gap-3 md:flex-row'>
-        <div className='w-full md:w-1/2'>
-          <label className='mb-1 block text-sm font-medium'>Trường</label>
-          <Select
+      <PageHeader title='Quản lý mẫu bằng số' />
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <div className='flex items-center justify-between'>
+              Tìm kiếm
+              <Button variant='destructive' onClick={handleReset}>
+                <CircleXIcon />
+                <span className='hidden md:block'>Xóa bộ lọc</span>
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5'>
+          <CommonSelect
             value={selectedUniversityId}
-            onValueChange={(val) => {
-              setSelectedUniversityId(val)
-              setSelectedFacultyId(undefined)
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder='Chọn trường' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Danh sách trường</SelectLabel>
-                {universityOptions.map((opt: { label: string; value: string }) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className='w-full md:w-1/2'>
-          <label className='mb-1 block text-sm font-medium'>Khoa</label>
-          <Select value={selectedFacultyId} onValueChange={setSelectedFacultyId}>
-            <SelectTrigger>
-              <SelectValue placeholder='Chọn khoa' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Danh sách khoa</SelectLabel>
-                {facultyOptions.map((opt: { label: string; value: string }) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
+            handleSelect={setSelectedUniversityId}
+            options={queryUniversities.data ?? []}
+            selectLabel='Trường đại học'
+            placeholder='Chọn trường'
+          />
+          <CommonSelect
+            value={selectedFacultyId}
+            handleSelect={setSelectedFacultyId}
+            options={queryFaculties.data ?? []}
+            selectLabel='Chuyên ngành'
+            placeholder='Chọn chuyên ngành'
+          />
+        </CardContent>
+      </Card>
       <TableList
         items={[
           { header: 'Tên mẫu', value: 'name', className: 'font-semibold text-blue-500 min-w-[200px]' },
@@ -134,12 +108,17 @@ const DegreeTemplateManagementPage = () => {
             header: 'Trạng thái',
             value: 'status',
             render: (item) => (
-              <Badge variant={item.status === 'SIGNED_BY_UNI' ? 'default' : 'outline'}>
-                {item.status === 'SIGNED_BY_UNI'
-                  ? 'Đã ký bởi Trường'
-                  : item.status === 'SIGNED_BY_MINEDU'
-                    ? 'Đã ký bởi Bộ'
-                    : item.status}
+              <Badge
+                variant={
+                  DEGREE_TEMPLATE_STATUS[item.status as keyof typeof DEGREE_TEMPLATE_STATUS].variant as
+                    | 'outline'
+                    | 'secondary'
+                    | 'default'
+                    | 'destructive'
+                }
+                title={`${DEGREE_TEMPLATE_STATUS[item.status as keyof typeof DEGREE_TEMPLATE_STATUS].label}`}
+              >
+                {DEGREE_TEMPLATE_STATUS[item.status as keyof typeof DEGREE_TEMPLATE_STATUS].label}
               </Badge>
             )
           },
@@ -148,29 +127,53 @@ const DegreeTemplateManagementPage = () => {
             value: 'action',
             render: (item) => (
               <div className='flex items-center gap-2'>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant={'secondary'} size={'sm'} onClick={() => setPreviewHtml(item.html_content)}>
-                      Xem mẫu
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant={'outline'}
+                      size={'icon'}
+                      onClick={() => mutateTemplateInterface.trigger(item.template_sample_id)}
+                    >
+                      <CodeXml />
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className='max-w-5xl'>
-                    <DialogHeader>
-                      <DialogTitle>Xem trước mẫu</DialogTitle>
-                    </DialogHeader>
-                    <div className='max-h-[80vh] overflow-y-auto'>
-                      <HtmlView html={previewHtml || item.html_content} />
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                <Button size={'sm'} onClick={() => mutateSignTemplate.trigger(item.id)}>
-                  Ký số
+                  </SheetTrigger>
+                  <SheetContent className='min-w-full md:min-w-[1200px]'>
+                    <SheetHeader>
+                      <SheetTitle>Giao diện mẫu</SheetTitle>
+                    </SheetHeader>
+                    <TemplateView
+                      baseHtml={mutateTemplateInterface.data?.data.HTMLContent}
+                      htmlLoading={mutateTemplateInterface.isMutating}
+                    />
+                  </SheetContent>
+                </Sheet>
+                <Button
+                  size='icon'
+                  onClick={async () => {
+                    if (signDegreeConfig?.signService === '') {
+                      showMessage('Vui lòng cấu hình số cho link server ký số')
+                      return
+                    }
+                    // *@*
+                    const signature = await signDigitalSignature(item.hash_template)
+
+                    if (!signature) {
+                      showMessage('Ký số không thành công')
+                      return
+                    }
+
+                    mutateSignTemplate.trigger(signature)
+                  }}
+                  disabled={item.status === 'SIGNED_BY_MINEDU'}
+                  isLoading={mutateSignTemplate.isMutating}
+                >
+                  <KeyRound />
                 </Button>
               </div>
             )
           }
         ]}
-        data={queryTemplates.data ?? []}
+        data={queryDigitalDegreeTemplate.data ?? []}
       />
     </>
   )

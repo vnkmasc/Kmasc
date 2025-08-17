@@ -3,7 +3,7 @@ import PageHeader from '@/components/common/page-header'
 import { UseData, UseRefetchFacultyList } from '@/components/providers/data-provider'
 import DetailDialog from '@/components/role/education-admin/detail-dialog'
 import TableActionButton from '@/components/role/education-admin/table-action-button'
-import TableList from '@/components/role/education-admin/table-list'
+import TableList from '@/components/common/table-list'
 import { Button } from '@/components/ui/button'
 
 import { createFaculty, deleteFaculty, getFacultyById, updateFaculty } from '@/lib/api/faculty'

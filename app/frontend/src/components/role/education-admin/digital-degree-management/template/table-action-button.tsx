@@ -80,12 +80,13 @@ const TableActionButton: React.FC<Props> = (props) => {
           }
           // *@*
           const signature = await signDigitalSignature(props.hashTemplate)
+
           if (!signature) {
             showMessage('Ký số không thành công')
             return
           }
 
-          mutateSignDegreeTemplateById.trigger('ED25519_SIGNATURE_FROM_CLIENT')
+          mutateSignDegreeTemplateById.trigger(signature)
         }}
         disabled={!props.canSign}
         isLoading={mutateSignDegreeTemplateById.isMutating}

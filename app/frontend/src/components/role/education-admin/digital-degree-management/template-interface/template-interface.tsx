@@ -1,7 +1,7 @@
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import TemplateView from '@/components/role/education-admin/digital-degree-management/template-view'
+import TemplateView from '@/components/common/template-view'
 import PageHeader from '@/components/common/page-header'
 import useSWR from 'swr'
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/lib/api/digital-degree'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ChevronsLeftRightEllipsis, Edit2, Plus, Save } from 'lucide-react'
+import { ChevronsLeftRightEllipsis, CircleX, Edit2, Plus, Save } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import TinyTextEdit, { TinyTextEditRef } from '../tiny-text-edit'
 import useSWRMutation from 'swr/mutation'
@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import HtmlEditView from '../template/html-edit-view'
 import { Textarea } from '@/components/ui/textarea'
+import CommonSelect from '../../common-select'
 
 const TemplateInterface: React.FC = () => {
   const searchParams = useSearchParams()
@@ -32,6 +33,19 @@ const TemplateInterface: React.FC = () => {
   const [tinyValue, setTinyValue] = useState<string>('')
   const [templateName, setTemplateName] = useState<string>('')
   const [tinyMode, setTinyMode] = useState<boolean>(true)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+
+  useEffect(() => {
+    const fetchTemplateInterface = async () => {
+      const res = await getTemplateInterfaceById(selectedTemplateId)
+      if (res) {
+        setTinyValue(res.data.HTMLContent)
+      }
+    }
+    if (selectedTemplateId !== '') {
+      fetchTemplateInterface()
+    }
+  }, [selectedTemplateId])
 
   const queryTemplateInterfaces = useSWR('sample-templates', getTemplateInterfaces)
   const queryTemplateInterfaceById = useSWR(
@@ -52,6 +66,7 @@ const TemplateInterface: React.FC = () => {
       onSuccess: () => {
         queryTemplateInterfaceById.mutate()
         showNotification('success', 'Cập nhật giao diện mẫu thành công')
+        setMode('view')
       },
       onError: (error: any) => {
         showNotification('error', error.message || 'Cập nhật giao diện mẫu thất bại')
@@ -66,6 +81,8 @@ const TemplateInterface: React.FC = () => {
       onSuccess: () => {
         queryTemplateInterfaces.mutate()
         showNotification('success', 'Tạo giao diện mẫu thành công')
+        setMode('view')
+        setSelectedTemplateId('')
       },
       onError: (error: any) => {
         showNotification('error', error.message || 'Tạo giao diện mẫu thất bại')
@@ -146,7 +163,8 @@ const TemplateInterface: React.FC = () => {
                     </div>
                     <div className='flex items-center gap-2'>
                       <Button variant={'destructive'} onClick={() => setMode('view')}>
-                        Hủy bỏ
+                        <CircleX />
+                        <span className='hidden md:block'>Hủy bỏ</span>
                       </Button>
                       <Button variant={'secondary'} onClick={handleSubmit}>
                         <Save />
@@ -155,15 +173,34 @@ const TemplateInterface: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Label htmlFor='template-name'>Tên giao diện mẫu</Label>
-                    <Input
-                      id='template-name'
-                      placeholder='Nhập tên giao diện mẫu'
-                      value={templateName}
-                      onChange={(e) => setTemplateName(e.target.value)}
-                      className='mb-2 max-w-56'
-                    />
-                    <div className='mt-2 flex items-center gap-2'>
+                    <div className='flex flex-col gap-4 md:flex-row'>
+                      {mode === 'create' && (
+                        <div className='min-w-56'>
+                          <Label htmlFor='template-html'>Chọn mẫu có sẵn</Label>
+                          <CommonSelect
+                            value={selectedTemplateId}
+                            handleSelect={setSelectedTemplateId}
+                            placeholder='Chọn mẫu'
+                            options={queryTemplateInterfaces.data?.data?.map((item: any) => ({
+                              label: item.name,
+                              value: item.id
+                            }))}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        {' '}
+                        <Label htmlFor='template-name'>Tên giao diện mẫu</Label>
+                        <Input
+                          id='template-name'
+                          placeholder='Nhập tên giao diện mẫu'
+                          value={templateName}
+                          onChange={(e) => setTemplateName(e.target.value)}
+                          className='min-w-56'
+                        />
+                      </div>
+                    </div>
+                    <div className='mt-4 flex items-center gap-2'>
                       <Label>Mẫu bằng số</Label>
                       <ChevronsLeftRightEllipsis />
                       <span className='text-sm font-semibold'>Chế độ soạn thảo</span>

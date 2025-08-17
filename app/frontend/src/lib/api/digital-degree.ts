@@ -94,3 +94,8 @@ export const createTemplateInterface = async (data: any) => {
   const res = await apiService('POST', 'template-samples', data)
   return res
 }
+
+export const getDigitalDegreeFileById = async (id: string) => {
+  const res = await apiService('GET', `ediplomas/file/${id}`, undefined, true, {}, true)
+  return res
+}
