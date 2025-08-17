@@ -18,13 +18,13 @@ var (
 )
 
 type TemplateService interface {
+	SaveMinEduSignature(ctx context.Context, templateID primitive.ObjectID, signature string) (*models.DiplomaTemplate, error)
 	CreateTemplate(ctx context.Context, universityID, facultyID, templateSampleID primitive.ObjectID, name, description string) (*models.DiplomaTemplate, error)
 	SaveClientSignature(ctx context.Context, universityID, templateID primitive.ObjectID, signature string) (*models.DiplomaTemplate, error)
 	GetTemplateByID(ctx context.Context, id string) (*models.DiplomaTemplate, error)
 	GetTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	SignTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) (int, error)
 	SignAllPendingTemplatesOfUniversity(ctx context.Context, universityID primitive.ObjectID) (int, error)
-	SignAllTemplatesByMinEdu(ctx context.Context, universityID primitive.ObjectID) (int, error)
 	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
 	// UpdateTemplate(ctx context.Context, templateID, universityID primitive.ObjectID, name, description, htmlContent string) (*models.DiplomaTemplate, error)
 }
@@ -192,22 +192,32 @@ func (s *templateService) SaveClientSignature(ctx context.Context, universityID,
 	return template, nil
 }
 
-func (s *templateService) SignAllTemplatesByMinEdu(ctx context.Context, universityID primitive.ObjectID) (int, error) {
-	templates, err := s.templateRepo.FindSignedByUniversity(ctx, universityID)
+func (s *templateService) SaveMinEduSignature(
+	ctx context.Context,
+	templateID primitive.ObjectID,
+	signature string,
+) (*models.DiplomaTemplate, error) {
+	template, err := s.templateRepo.GetByID(ctx, templateID)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	count := 0
-	for _, t := range templates {
-		signature := "SIMULATED_SIGNATURE_MINEDU_" + t.ID.Hex()
-		status := "SIGNED_BY_MINEDU"
-
-		err := s.templateRepo.UpdateStatusAndMinEduSignatureByID(ctx, t.ID, status, signature)
-		if err != nil {
-			continue
-		}
-		count++
+	if template.Status != "SIGNED_BY_UNI" {
+		return nil, fmt.Errorf("template must be signed by university first")
 	}
-	return count, nil
+
+	template.SignatureOfMinEdu = signature
+	template.Status = "SIGNED_BY_MINEDU"
+	template.UpdatedAt = time.Now()
+
+	if err := s.templateRepo.UpdateStatusAndMinEduSignatureByID(
+		ctx,
+		template.ID,
+		template.Status,
+		signature,
+	); err != nil {
+		return nil, err
+	}
+
+	return template, nil
 }

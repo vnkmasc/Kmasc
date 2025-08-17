@@ -320,22 +320,47 @@ func (h *TemplateHandler) SignAllPendingTemplatesOfUniversity(c *gin.Context) {
 	})
 }
 
-func (h *TemplateHandler) SignTemplatesByMinEdu(c *gin.Context) {
-	universityIDStr := c.Param("university_id")
-	universityID, err := primitive.ObjectIDFromHex(universityIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+func (h *TemplateHandler) SignTemplateByMinEdu(c *gin.Context) {
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
 		return
 	}
 
-	count, err := h.templateService.SignAllTemplatesByMinEdu(c.Request.Context(), universityID)
+	if claims.Role != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
+		return
+	}
+
+	templateIDHex := c.Param("template_id")
+	templateID, err := primitive.ObjectIDFromHex(templateIDHex)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign templates by Ministry of Education"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	var req SignTemplateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Signature is required"})
+		return
+	}
+
+	template, err := h.templateService.SaveMinEduSignature(
+		c.Request.Context(),
+		templateID,
+		req.Signature,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":          fmt.Sprintf("Successfully signed %d templates by Ministry of Education", count),
-		"signed_templates": count,
+		"message": fmt.Sprintf("Đã lưu chữ ký Bộ Giáo dục cho mẫu %s", template.Name),
 	})
 }

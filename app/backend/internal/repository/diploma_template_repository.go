@@ -13,6 +13,7 @@ import (
 )
 
 type TemplateRepository interface {
+	UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, newStatus string, signatureOfMinEdu string) error
 	FindByIDAndUniversity(ctx context.Context, templateID, universityID primitive.ObjectID) (*models.DiplomaTemplate, error)
 	Create(ctx context.Context, template *models.DiplomaTemplate) error
 	UpdateIfNotLocked(ctx context.Context, id primitive.ObjectID, updated *models.DiplomaTemplate) error
@@ -22,8 +23,6 @@ type TemplateRepository interface {
 	FindPendingByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	FindPendingByUniversityAndFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	UpdateStatusAndSignatureByID(ctx context.Context, id primitive.ObjectID, newStatus string, signatureOfUni string) error
-	UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, status, signature string) error
-	FindSignedByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	VerifyTemplatesByFaculty(ctx context.Context, universityID, facultyID primitive.ObjectID) error
 	Update(ctx context.Context, template *models.DiplomaTemplate) error
 	LockTemplate(ctx context.Context, templateID primitive.ObjectID) error
@@ -68,6 +67,23 @@ func (r *templateRepository) LockTemplate(ctx context.Context, templateID primit
 			"updated_at": time.Now(),
 		},
 	}
+	_, err := r.collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+func (r *templateRepository) UpdateStatusAndMinEduSignatureByID(
+	ctx context.Context,
+	id primitive.ObjectID,
+	newStatus string,
+	signatureOfMinEdu string,
+) error {
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": bson.M{
+		"status":              newStatus,
+		"signature_of_minedu": signatureOfMinEdu,
+		"updated_at":          time.Now(),
+	}}
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -243,37 +259,7 @@ func (r *templateRepository) FindPendingByUniversity(ctx context.Context, univer
 
 	return result, nil
 }
-func (r *templateRepository) UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, status, signature string) error {
-	filter := bson.M{"_id": id}
-	update := bson.M{
-		"$set": bson.M{
-			"status":              status,
-			"signature_of_minedu": signature,
-			"updated_at":          time.Now(),
-		},
-	}
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
-}
-func (r *templateRepository) FindSignedByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
-	filter := bson.M{
-		"university_id":    universityID,
-		"status":           "SIGNED_BY_UNI",
-		"signature_of_uni": bson.M{"$ne": nil},
-	}
 
-	cursor, err := r.collection.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var templates []*models.DiplomaTemplate
-	if err := cursor.All(ctx, &templates); err != nil {
-		return nil, err
-	}
-	return templates, nil
-}
 func (r *templateRepository) FindByTemplateSampleID(ctx context.Context, sampleID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
 	filter := bson.M{
 		"template_sample_id": sampleID,

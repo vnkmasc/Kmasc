@@ -138,7 +138,7 @@ func SetupRouter(
 	templateGroup.GET("/university/:university_id/faculty/:faculty_id", templateHandler.GetTemplatesByFacultyAndUniversity)
 	templateGroup.POST("/sign/faculty/:faculty_id", templateHandler.SignTemplatesByFaculty)
 	templateGroup.POST("/sign/university", templateHandler.SignAllPendingTemplatesOfUniversity)
-	templateGroup.POST("/sign/minedu/:university_id", templateHandler.SignTemplatesByMinEdu)
+	templateGroup.POST("/sign/minedu/:template_id", templateHandler.SignTemplateByMinEdu)
 	templateGroup.POST("/verify/faculty/:faculty_id", templateHandler.VerifyTemplatesByFaculty)
 	templateGroup.GET("/:id", templateHandler.GetTemplateByID)
 	templateGroup.POST("/:template_id/sign", templateHandler.SignTemplateByID)
