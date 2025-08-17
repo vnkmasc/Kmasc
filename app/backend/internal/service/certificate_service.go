@@ -125,6 +125,7 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 func mapCertificateToEDiploma(cert *models.Certificate, user *models.User) *models.EDiploma {
 	return &models.EDiploma{
 		ID:                 primitive.NewObjectID(),
+		CertificateID:      cert.ID,
 		Name:               cert.Name,
 		UniversityID:       cert.UniversityID,
 		FacultyID:          cert.FacultyID,
