@@ -162,7 +162,7 @@ const DegreeTemplateManagementPage = () => {
                       return
                     }
 
-                    mutateSignTemplate.trigger({ template_id: item.template_sample_id, signature })
+                    mutateSignTemplate.trigger({ template_id: item.id, signature })
                   }}
                   disabled={item.status === 'SIGNED_BY_MINEDU'}
                   isLoading={mutateSignTemplate.isMutating}

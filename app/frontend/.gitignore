@@ -48,3 +48,4 @@ next-env.d.ts
 
 # tinymce
 /public/assets/libs
+/public/tinymce
