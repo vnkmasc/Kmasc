@@ -137,10 +137,10 @@ func (h *BlockchainHandler) VerifyCertificateFile(c *gin.Context) {
 
 func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 	var req struct {
-		FacultyID       string `form:"faculty_id"`       // optional
-		CertificateType string `form:"certificate_type"` // optional
-		Course          string `form:"course"`           // optional
-		Issued          *bool  `form:"issued"`           // optional
+		FacultyID       string `form:"faculty_id"`
+		CertificateType string `form:"certificate_type"`
+		Course          string `form:"course"`
+		Issued          *bool  `form:"issued"`
 	}
 
 	// Bind form-data
@@ -152,21 +152,31 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 		return
 	}
 
-	// Gọi service, bỏ qua giá trị count
-	_, err := h.BlockchainSvc.PushToBlockchain(
+	count, err := h.BlockchainSvc.PushToBlockchain(
 		c.Request.Context(),
 		req.FacultyID,
 		req.CertificateType,
 		req.Course,
 		req.Issued,
 	)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Phân loại lỗi dựa theo message
+		switch {
+		case strings.Contains(err.Error(), "invalid faculty_id"):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case strings.Contains(err.Error(), "no eDiplomas found"):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case strings.Contains(err.Error(), "no valid eDiplomas to push"):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
-	// Response chỉ trả về message
 	c.JSON(http.StatusOK, gin.H{
-		"message": "đã đẩy lên chuỗi khối",
+		"message":         "Đã đẩy lên chuỗi khối",
+		"updated_records": count,
 	})
 }
