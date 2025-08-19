@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useImperativeHandle, forwardRef } from 'react'
+import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { Editor } from '@tinymce/tinymce-react'
 
 interface TinyTextEditProps {
@@ -17,40 +17,37 @@ const TinyTextEdit = forwardRef<TinyTextEditRef, TinyTextEditProps>(({ value, on
   const editorRef = useRef<any>(null)
 
   useImperativeHandle(ref, () => ({
-    getContent: () => {
-      if (editorRef.current) {
-        return editorRef.current.getContent()
-      }
-      return ''
-    }
+    getContent: () => editorRef.current?.getContent?.() ?? ''
   }))
 
   return (
     <Editor
-      apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-      onInit={(_evt, editor) => (editorRef.current = editor)}
+      tinymceScriptSrc='/assets/libs/tinymce/tinymce.min.js'
+      licenseKey='gpl'
+      onInit={(_, editor) => (editorRef.current = editor)}
       value={value}
-      onEditorChange={(content) => {
-        if (onChange) {
-          onChange(content)
-        }
-      }}
+      onEditorChange={(content) => onChange?.(content)}
       init={{
+        base_url: '/assets/libs/tinymce',
+
         height: 700,
         menubar: false,
         plugins: [
           'advlist',
           'autolink',
           'lists',
+          'link',
+          'image',
           'charmap',
           'preview',
           'anchor',
           'searchreplace',
           'visualblocks',
+          'code',
           'fullscreen',
           'insertdatetime',
           'media',
-          'code',
+          'table',
           'help',
           'wordcount'
         ],
@@ -59,14 +56,11 @@ const TinyTextEdit = forwardRef<TinyTextEditRef, TinyTextEditProps>(({ value, on
           'bold italic forecolor | alignleft aligncenter ' +
           'alignright alignjustify | bullist numlist outdent indent | ' +
           'removeformat | help',
-        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-        skin_url: '/assets/libs/tinymce/skins/ui/oxide',
-        content_css: '/assets/libs/tinymce/skins/content/default/content.min.css'
+        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
       }}
     />
   )
 })
 
 TinyTextEdit.displayName = 'TinyTextEdit'
-
 export default TinyTextEdit
