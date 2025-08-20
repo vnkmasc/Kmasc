@@ -13,6 +13,7 @@ import (
 )
 
 type TemplateRepository interface {
+	FindByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	UpdateDiplomaTemplateByID(ctx context.Context, template *models.DiplomaTemplate) error
 	UpdateStatusAndMinEduSignatureByID(ctx context.Context, id primitive.ObjectID, newStatus string, signatureOfMinEdu string) error
 	FindByIDAndUniversity(ctx context.Context, templateID, universityID primitive.ObjectID) (*models.DiplomaTemplate, error)
@@ -38,6 +39,21 @@ func NewTemplateRepository(db *mongo.Database) TemplateRepository {
 	return &templateRepository{
 		collection: db.Collection("diploma_templates"),
 	}
+}
+
+func (r *templateRepository) FindByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
+	filter := bson.M{"university_id": universityID}
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var templates []*models.DiplomaTemplate
+	if err := cursor.All(ctx, &templates); err != nil {
+		return nil, err
+	}
+	return templates, nil
 }
 
 func (r *templateRepository) UpdateDiplomaTemplateByID(

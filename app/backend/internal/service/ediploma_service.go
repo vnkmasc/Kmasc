@@ -349,7 +349,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			EducationType:      cert.EducationType,
 			GPA:                cert.GPA,
 			GraduationRank:     cert.GraduationRank,
-			IssueDate:          cert.IssueDate,
+			IssueDate:          time.Now(),
 			SerialNumber:       cert.SerialNumber,
 			RegistrationNumber: cert.RegNo,
 			EDiplomaFileLink:   pdfPath,

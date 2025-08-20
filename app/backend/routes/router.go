@@ -135,7 +135,7 @@ func SetupRouter(
 	templateGroup.Use(middleware.JWTAuthMiddleware())
 	templateGroup.POST("", templateHandler.CreateTemplate)
 	templateGroup.PUT("/:template_id", templateHandler.UpdateDiplomaTemplate)
-	templateGroup.GET("/faculty/:faculty_id", templateHandler.GetTemplatesByFaculty)
+	templateGroup.GET("/", templateHandler.GetTemplates)
 	templateGroup.GET("/university/:university_id/faculty/:faculty_id", templateHandler.GetTemplatesByFacultyAndUniversity)
 	templateGroup.POST("/sign/faculty/:faculty_id", templateHandler.SignTemplatesByFaculty)
 	templateGroup.POST("/sign/university", templateHandler.SignAllPendingTemplatesOfUniversity)

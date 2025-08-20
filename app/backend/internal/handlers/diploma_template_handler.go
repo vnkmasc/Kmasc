@@ -45,10 +45,11 @@ func (h *TemplateHandler) GetTemplateByID(c *gin.Context) {
 	})
 }
 
-// POST /templates
-func (h *TemplateHandler) GetTemplatesByFaculty(c *gin.Context) {
-	facultyIDStr := c.Param("faculty_id")
+func (h *TemplateHandler) GetTemplates(c *gin.Context) {
+	// Lấy faculty_id từ query param (optional)
+	facultyIDStr := c.Query("faculty_id")
 
+	// Lấy thông tin claims từ token
 	claimsRaw, exists := c.Get("claims")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -61,28 +62,41 @@ func (h *TemplateHandler) GetTemplatesByFaculty(c *gin.Context) {
 		return
 	}
 
+	// Chuyển universityID từ token sang ObjectID
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university_id in token"})
 		return
 	}
 
-	facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
-		return
-	}
+	var templates []*models.DiplomaTemplate
 
-	templates, err := h.templateService.GetTemplatesByFaculty(c.Request.Context(), universityID, facultyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	// Nếu có faculty_id -> lấy template theo khoa
+	if facultyIDStr != "" {
+		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid faculty_id"})
+			return
+		}
+
+		templates, err = h.templateService.GetTemplatesByFaculty(c.Request.Context(), universityID, facultyID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		templates, err = h.templateService.GetTemplatesByUniversity(c.Request.Context(), universityID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": templates,
 	})
 }
+
 func (h *TemplateHandler) GetTemplatesByFacultyAndUniversity(c *gin.Context) {
 	universityIDStr := c.Param("university_id")
 	facultyIDStr := c.Param("faculty_id")

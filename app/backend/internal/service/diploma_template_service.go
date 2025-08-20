@@ -18,6 +18,7 @@ var (
 )
 
 type TemplateService interface {
+	GetTemplatesByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error)
 	UpdateDiplomaTemplate(ctx context.Context, templateID primitive.ObjectID, req models.UpdateDiplomaTemplateRequest) error
 	SaveMinEduSignature(ctx context.Context, templateID primitive.ObjectID, signature string) (*models.DiplomaTemplate, error)
 	CreateTemplate(ctx context.Context, universityID, facultyID, templateSampleID primitive.ObjectID, name, description string) (*models.DiplomaTemplate, error)
@@ -54,6 +55,10 @@ func NewTemplateService(
 		templateSampleService: templateSampleService,
 		minioClient:           minioClient,
 	}
+}
+
+func (s *templateService) GetTemplatesByUniversity(ctx context.Context, universityID primitive.ObjectID) ([]*models.DiplomaTemplate, error) {
+	return s.templateRepo.FindByUniversity(ctx, universityID)
 }
 
 func (s *templateService) UpdateDiplomaTemplate(

@@ -24,11 +24,7 @@ import (
 )
 
 type CertificateService interface {
-	GetDegreeCertificateByStudentCodeAndUniversity(
-		ctx context.Context,
-		studentCode string,
-		universityID primitive.ObjectID,
-	) (*models.Certificate, error)
+	GetDegreeCertificateByStudentCodeAndUniversity(ctx context.Context, studentCode string, universityID primitive.ObjectID) (*models.Certificate, error)
 	GetCertificateByStudentCodeAndTypeAndUniversity(ctx context.Context, studentCode string, certificateType string, universityID primitive.ObjectID) (*models.Certificate, error)
 	GetAllCertificates(ctx context.Context) ([]*models.CertificateResponse, error)
 	GetCertificateByStudentCodeAndNameAndUniversity(ctx context.Context, studentCode, name string, universityID primitive.ObjectID) (*models.Certificate, error)
@@ -137,7 +133,6 @@ func mapCertificateToEDiploma(cert *models.Certificate, user *models.User) *mode
 		EducationType:      cert.EducationType,
 		GPA:                cert.GPA,
 		GraduationRank:     cert.GraduationRank,
-		IssueDate:          cert.IssueDate,
 		SerialNumber:       cert.SerialNumber,
 		RegistrationNumber: cert.RegNo,
 		Issued:             false,
