@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
@@ -232,19 +233,86 @@ func (s *blockchainService) PushToBlockchain(
 		filter["issued"] = *issued
 	}
 
-	// Lấy danh sách EDiploma thỏa filter
+	// Lấy danh sách EDiploma
 	ediplomas, err := s.ediplomaRepo.FindByDynamicFilter(ctx, filter)
 	if err != nil {
 		return 0, fmt.Errorf("failed to load eDiplomas: %w", err)
 	}
+	if len(ediplomas) == 0 {
+		return 0, fmt.Errorf("no eDiplomas found")
+	}
 
+	// Gom hash
+	infoHashes := []string{}
+	fileHashes := []string{}
+
+	for _, ed := range ediplomas {
+		if ed.DataEncrypted && ed.Issued && !ed.OnBlockchain {
+			hInfo, err := hashEDiplomaInfo(ed)
+			if err != nil {
+				log.Printf("hash failed for %s: %v", ed.StudentCode, err)
+				continue
+			}
+			infoHashes = append(infoHashes, hInfo)
+
+			if ed.EDiplomaFileHash != "" {
+				fileHashes = append(fileHashes, ed.EDiplomaFileHash)
+			}
+		}
+	}
+
+	if len(infoHashes) == 0 {
+		return 0, fmt.Errorf("no valid eDiplomas to push")
+	}
+
+	aggregateInfoHash, _ := aggregateHashes(infoHashes)
+	aggregateFileHash, _ := aggregateHashes(fileHashes)
+	if aggregateFileHash == "" {
+		aggregateFileHash = "NO_FILE_HASH"
+	}
+
+	// Sinh BatchID duy nhất
+	batchID := uuid.NewString()
+
+	// Object đưa lên blockchain
+	batchOnChain := struct {
+		BatchID           string `json:"batch_id"`
+		FacultyID         string `json:"faculty_id"`
+		CertificateType   string `json:"certificate_type"`
+		Course            string `json:"course"`
+		AggregateInfoHash string `json:"aggregate_info_hash"`
+		AggregateFileHash string `json:"aggregate_file_hash"`
+		Count             int    `json:"count"`
+	}{
+		BatchID:           batchID,
+		FacultyID:         facultyIDStr,
+		CertificateType:   certificateType,
+		Course:            course,
+		AggregateInfoHash: aggregateInfoHash,
+		AggregateFileHash: aggregateFileHash,
+		Count:             len(infoHashes),
+	}
+
+	// Ghi lên blockchain
+	txID, err := s.fabricClient.IssueEDiplomaBatch(batchOnChain) // gọi chaincode mới
+	if err != nil {
+		return 0, fmt.Errorf("push blockchain failed: %w", err)
+	}
+
+	// Update DB
 	updatedCount := 0
 	for _, ed := range ediplomas {
 		if ed.DataEncrypted && ed.Issued && !ed.OnBlockchain {
-			ed.OnBlockchain = true
-			ed.UpdatedAt = time.Now()
-			if err := s.ediplomaRepo.Update(ctx, ed.ID, ed); err != nil {
-				log.Printf("Failed to update OnBlockchain for %s: %v", ed.StudentCode, err)
+			update := bson.M{
+				"$set": bson.M{
+					"on_blockchain":  true,
+					"transaction_id": txID,
+					"batch_id":       batchID,
+					"updated_at":     time.Now(),
+				},
+			}
+			if err := s.ediplomaRepo.UpdateByID(ctx, ed.ID, update); err != nil {
+				log.Printf("Failed to update %s: %v", ed.StudentCode, err)
 				continue
 			}
 			updatedCount++
@@ -252,4 +320,37 @@ func (s *blockchainService) PushToBlockchain(
 	}
 
 	return updatedCount, nil
+}
+
+func hashEDiplomaInfo(ed *models.EDiploma) (string, error) {
+	data := ed.StudentCode +
+		ed.FullName +
+		ed.CertificateType +
+		ed.Course +
+		ed.EducationType +
+		fmt.Sprintf("%.2f", ed.GPA) +
+		ed.GraduationRank +
+		ed.IssueDate.Format("2006-01-02") +
+		ed.SerialNumber +
+		ed.RegistrationNumber
+
+	h := sha256.New()
+	_, err := h.Write([]byte(data))
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func aggregateHashes(hashes []string) (string, error) {
+	if len(hashes) == 0 {
+		return "", nil
+	}
+	combined := strings.Join(hashes, "")
+	h := sha256.New()
+	_, err := h.Write([]byte(combined))
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

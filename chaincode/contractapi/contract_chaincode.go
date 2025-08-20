@@ -20,6 +20,17 @@ type CertificateOnChain struct {
 	UpdatedDate         string `json:"updated_date"`
 }
 
+type EDiplomaBatchOnChain struct {
+	BatchID           string `json:"batch_id"`
+	FacultyID         string `json:"faculty_id"`
+	CertificateType   string `json:"certificate_type"`
+	Course            string `json:"course"`
+	AggregateInfoHash string `json:"aggregate_info_hash"`
+	AggregateFileHash string `json:"aggregate_file_hash"`
+	Count             int    `json:"count"`
+	TxID              string `json:"tx_id"`
+}
+
 type CertificateTransactionContext struct {
 	contractapi.TransactionContext
 }
@@ -43,6 +54,56 @@ func (c *CertificateContract) GetTransactionContextHandler() contractapi.Settabl
 
 func (c *CertificateContract) GetEvaluateTransactions() []string {
 	return []string{"ReadCertificate", "CertificateExists"}
+}
+
+func (c *CertificateContract) IssueEDiplomaBatch(ctx contractapi.TransactionContextInterface, batchJSON string) (string, error) {
+	var batch EDiplomaBatchOnChain
+	if err := json.Unmarshal([]byte(batchJSON), &batch); err != nil {
+		return "", fmt.Errorf("failed to unmarshal batch JSON: %v", err)
+	}
+
+	// Generate BatchID nếu chưa có (dựa trên faculty + type + course)
+	if batch.BatchID == "" {
+		batch.BatchID = fmt.Sprintf("%s-%s-%s", batch.FacultyID, batch.CertificateType, batch.Course)
+	}
+
+	// Check tồn tại chưa
+	exists, err := c.EDiplomaBatchExists(ctx, batch.BatchID)
+	if err != nil {
+		return "", err
+	}
+	if exists {
+		return "", fmt.Errorf("batch %s already exists", batch.BatchID)
+	}
+
+	// Lưu xuống world state
+	batch.TxID = ctx.GetStub().GetTxID()
+	bytes, err := json.Marshal(batch)
+	if err != nil {
+		return "", err
+	}
+	if err := ctx.GetStub().PutState(batch.BatchID, bytes); err != nil {
+		return "", err
+	}
+
+	// Emit event
+	eventPayload := map[string]string{
+		"batch_id": batch.BatchID,
+		"tx_id":    batch.TxID,
+	}
+	eventBytes, _ := json.Marshal(eventPayload)
+	ctx.GetStub().SetEvent("EDiplomaBatchIssued", eventBytes)
+
+	return batch.TxID, nil
+}
+
+// EDiplomaBatchExists check batchID đã tồn tại chưa
+func (c *CertificateContract) EDiplomaBatchExists(ctx contractapi.TransactionContextInterface, batchID string) (bool, error) {
+	data, err := ctx.GetStub().GetState(batchID)
+	if err != nil {
+		return false, fmt.Errorf("failed to read from world state: %v", err)
+	}
+	return data != nil, nil
 }
 
 func (c *CertificateContract) IssueCertificate(ctx *CertificateTransactionContext, certificateJSON string) (string, error) {

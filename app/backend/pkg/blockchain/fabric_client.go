@@ -121,6 +121,20 @@ func (fc *FabricClient) IssueCertificate(cert any) (string, error) {
 	return string(result), nil
 }
 
+func (fc *FabricClient) IssueEDiplomaBatch(batch any) (string, error) {
+	batchBytes, err := json.Marshal(batch)
+	if err != nil {
+		return "", fmt.Errorf("marshal batch lỗi: %v", err)
+	}
+
+	result, err := fc.contract.SubmitTransaction("IssueEDiplomaBatch", string(batchBytes))
+	if err != nil {
+		return "", fmt.Errorf("invoke IssueEDiplomaBatch lỗi: %v", err)
+	}
+
+	return string(result), nil
+}
+
 func (fc *FabricClient) GetCertificateByID(certID string) (*models.CertificateOnChain, error) {
 	result, err := fc.contract.EvaluateTransaction("ReadCertificate", certID)
 	if err != nil {

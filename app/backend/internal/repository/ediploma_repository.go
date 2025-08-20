@@ -13,6 +13,7 @@ import (
 )
 
 type EDiplomaRepository interface {
+	UpdateByID(ctx context.Context, id primitive.ObjectID, update bson.M) error
 	UpdateFields(ctx context.Context, id primitive.ObjectID, updates bson.M) error
 	FindByStudentCode(ctx context.Context, studentCode string) (*models.EDiploma, error)
 	FindByDynamicFilter(ctx context.Context, filter bson.M) ([]*models.EDiploma, error)
@@ -35,6 +36,16 @@ func NewEDiplomaRepository(db *mongo.Database, facultyRepo FacultyRepository) ED
 		facultyRepo: facultyRepo,
 	}
 }
+
+func (r *eDiplomaRepository) UpdateByID(ctx context.Context, id primitive.ObjectID, update bson.M) error {
+	_, err := r.db.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		update,
+	)
+	return err
+}
+
 func (r *eDiplomaRepository) SearchByFilters(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiploma, int64, error) {
 	bsonFilter := bson.M{}
 

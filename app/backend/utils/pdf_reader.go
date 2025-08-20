@@ -17,10 +17,18 @@ func (pg *PDFGenerator) ConvertHTMLToPDF(html string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	pdfg.AddPage(wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html))))
+
+	// Tạo page với UTF-8 encoding
+	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
+	page.Encoding.Set("utf-8")
+
+	pdfg.AddPage(page)
+
+	// Tạo PDF
 	err = pdfg.Create()
 	if err != nil {
 		return nil, err
 	}
+
 	return pdfg.Bytes(), nil
 }
