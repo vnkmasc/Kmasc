@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vnkmasc/Kmasc/app/backend/internal/aeslib"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
@@ -38,7 +37,7 @@ type CertificateService interface {
 	GetSimpleCertificatesByUserID(ctx context.Context, userID primitive.ObjectID) ([]*models.CertificateSimpleResponse, error)
 	SearchCertificates(ctx context.Context, params models.SearchCertificateParams) ([]*models.CertificateResponse, int64, error)
 	GetRawCertificateByID(ctx context.Context, id primitive.ObjectID) (*models.Certificate, error)
-	UploadCertificateFile(ctx context.Context, certificateID primitive.ObjectID, fileData []byte, filename string, isDegree bool, certificateName string) (string, error)
+	UploadCertificateFileDirect(ctx context.Context, certificateID primitive.ObjectID, fileData []byte, origFileName string, isDegree bool) (string, error)
 }
 
 type certificateService struct {
@@ -365,14 +364,7 @@ func (s *certificateService) GetDegreeCertificateByStudentCodeAndUniversity(
 	})
 }
 
-func (s *certificateService) UploadCertificateFile(
-	ctx context.Context,
-	certificateID primitive.ObjectID,
-	fileData []byte,
-	origFileName string,
-	isDegree bool,
-	password string,
-) (string, error) {
+func (s *certificateService) UploadCertificateFileDirect(ctx context.Context, certificateID primitive.ObjectID, fileData []byte, origFileName string, isDegree bool) (string, error) {
 	certificate, err := s.certificateRepo.GetCertificateByID(ctx, certificateID)
 	if err != nil {
 		return "", fmt.Errorf("không tìm thấy certificate: %w", err)
@@ -383,27 +375,6 @@ func (s *certificateService) UploadCertificateFile(
 		return "", fmt.Errorf("không tìm thấy trường đại học: %w", err)
 	}
 
-	// Mã hóa bằng module C
-	encryptedData, err := aeslib.EncryptPBKDF2(fileData, password)
-	if err != nil {
-		return "", fmt.Errorf("mã hóa file thất bại: %w", err)
-	}
-	fmt.Printf("[DEBUG] Đã mã hóa bằng module C: kích thước sau mã hóa: %d bytes\n", len(encryptedData))
-
-	// --- Log thông tin mã hóa ---
-	if len(encryptedData) < 8 {
-		return "", fmt.Errorf("dữ liệu mã hóa không hợp lệ (dưới 8 byte)")
-	}
-	salt := encryptedData[:8]
-	cipherOnly := encryptedData[8:]
-	fmt.Printf("[DEBUG] Salt (hex): %x\n", salt)
-
-	head := 16
-	if len(cipherOnly) < 16 {
-		head = len(cipherOnly)
-	}
-	fmt.Printf("[DEBUG] Ciphertext (first %d bytes): %x\n", head, cipherOnly[:head])
-
 	// Tên file lưu trên MinIO
 	ext := filepath.Ext(origFileName)
 	slug := "van-bang"
@@ -413,18 +384,16 @@ func (s *certificateService) UploadCertificateFile(
 	filename := fmt.Sprintf("%s/%s%s", certificate.StudentCode, slug, ext)
 	objectKey := fmt.Sprintf("certificates/%s/%s", university.UniversityCode, filename)
 
-	// Upload file mã hóa lên MinIO
-	contentType := http.DetectContentType(encryptedData)
-	err = s.minioClient.UploadFile(ctx, objectKey, encryptedData, contentType)
+	// Upload file trực tiếp
+	contentType := http.DetectContentType(fileData)
+	err = s.minioClient.UploadFile(ctx, objectKey, fileData, contentType)
 	if err != nil {
 		return "", fmt.Errorf("lỗi upload file lên MinIO: %w", err)
 	}
-	fmt.Printf("[DEBUG] Upload thành công lên MinIO: %s (content-type: %s)\n", objectKey, contentType)
 
-	// Tính SHA256 của file mã hóa
-	hash := sha256.Sum256(encryptedData)
+	// Tính SHA256 file gốc
+	hash := sha256.Sum256(fileData)
 	certHash := hex.EncodeToString(hash[:])
-	fmt.Printf("[DEBUG] SHA256 của file mã hóa: %s\n", certHash)
 
 	// Cập nhật thông tin file trong MongoDB
 	update := bson.M{
