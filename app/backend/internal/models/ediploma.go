@@ -86,3 +86,14 @@ type EDiplomaSearchFilter struct {
 	Page            int    `json:"page"`
 	PageSize        int    `json:"page_size"`
 }
+
+type EDiplomaBatchOnChain struct {
+	BatchID           string `json:"batch_id"`
+	UniversityID      string `json:"university_id"`
+	FacultyID         string `json:"faculty_id"`
+	CertificateType   string `json:"certificate_type"`
+	Course            string `json:"course"`
+	AggregateInfoHash string `json:"aggregate_info_hash"`
+	AggregateFileHash string `json:"aggregate_file_hash"`
+	Count             int    `json:"count"`
+}

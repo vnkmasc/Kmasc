@@ -118,11 +118,13 @@ func SetupRouter(
 
 	//blockchain
 	blockchainGroup := api.Group("/blockchain")
+	blockchainGroup.Use(middleware.JWTAuthMiddleware())
 	blockchainGroup.POST("/push-chain/:id", blockchainHandler.PushCertificateToChain)
 	blockchainGroup.GET("/certificate-on-chain/:id", blockchainHandler.GetCertificateByID)
 	blockchainGroup.GET("/verify/:id", blockchainHandler.VerifyCertificateIntegrity)
 	blockchainGroup.GET("/verify-file/:id", blockchainHandler.VerifyCertificateFile)
 	blockchainGroup.POST("/push-ediploma", blockchainHandler.PushEDiplomasToBlockchain)
+	blockchainGroup.POST("/verify-batch", blockchainHandler.VerifyBatch)
 
 	// ===== Major routes =====
 	majorGroup := api.Group("/majors")

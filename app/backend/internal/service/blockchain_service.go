@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
@@ -22,11 +21,12 @@ import (
 )
 
 type BlockchainService interface {
+	VerifyBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course string) (bool, string, error)
 	PushCertificateToChain(ctx context.Context, certificateID primitive.ObjectID) (string, error)
 	GetCertificateFromChain(ctx context.Context, certificateID string) (*models.CertificateOnChain, error)
 	VerifyFileByID(ctx context.Context, certID primitive.ObjectID) (io.ReadCloser, string, error)
 	VerifyCertificateIntegrity(ctx context.Context, certID string) (bool, string, *models.CertificateOnChain, *models.Certificate, *models.User, *models.Faculty, *models.University, error)
-	PushToBlockchain(ctx context.Context, facultyIDStr, certificateType, course string, issued *bool) (int, error)
+	PushToBlockchain(ctx context.Context, universityID, facultyIDStr, certificateType, course string, issued *bool) (int, error)
 }
 
 type blockchainService struct {
@@ -210,7 +210,7 @@ func (s *blockchainService) VerifyFileByID(ctx context.Context, certID primitive
 
 func (s *blockchainService) PushToBlockchain(
 	ctx context.Context,
-	facultyIDStr, certificateType, course string,
+	universityID, facultyIDStr, certificateType, course string,
 	issued *bool,
 ) (int, error) {
 
@@ -271,20 +271,12 @@ func (s *blockchainService) PushToBlockchain(
 		aggregateFileHash = "NO_FILE_HASH"
 	}
 
-	// Sinh BatchID duy nhất
-	batchID := uuid.NewString()
+	// Sinh BatchID dựa trên university_id + faculty_id + course
+	batchID := fmt.Sprintf("%s-%s-%s", universityID, facultyIDStr, course)
 
-	// Object đưa lên blockchain
-	batchOnChain := struct {
-		BatchID           string `json:"batch_id"`
-		FacultyID         string `json:"faculty_id"`
-		CertificateType   string `json:"certificate_type"`
-		Course            string `json:"course"`
-		AggregateInfoHash string `json:"aggregate_info_hash"`
-		AggregateFileHash string `json:"aggregate_file_hash"`
-		Count             int    `json:"count"`
-	}{
+	batchOnChain := models.EDiplomaBatchOnChain{
 		BatchID:           batchID,
+		UniversityID:      universityID,
 		FacultyID:         facultyIDStr,
 		CertificateType:   certificateType,
 		Course:            course,
@@ -293,8 +285,8 @@ func (s *blockchainService) PushToBlockchain(
 		Count:             len(infoHashes),
 	}
 
-	// Ghi lên blockchain
-	txID, err := s.fabricClient.IssueEDiplomaBatch(batchOnChain) // gọi chaincode mới
+	txID, err := s.fabricClient.IssueEDiplomaBatch(batchOnChain)
+
 	if err != nil {
 		return 0, fmt.Errorf("push blockchain failed: %w", err)
 	}
@@ -308,6 +300,7 @@ func (s *blockchainService) PushToBlockchain(
 					"on_blockchain":  true,
 					"transaction_id": txID,
 					"batch_id":       batchID,
+					"university_id":  universityID,
 					"updated_at":     time.Now(),
 				},
 			}
@@ -353,4 +346,102 @@ func aggregateHashes(hashes []string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func (s *blockchainService) VerifyBatch(
+	ctx context.Context,
+	universityID, facultyIDStr, certificateType, course string,
+) (bool, string, error) {
+
+	// Build filter giống PushToBlockchain
+	filter := bson.M{}
+	if facultyIDStr != "" {
+		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+		if err != nil {
+			return false, "", fmt.Errorf("invalid faculty_id")
+		}
+		filter["faculty_id"] = facultyID
+	}
+	if certificateType != "" {
+		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+	}
+	if course != "" {
+		filter["course"] = bson.M{"$regex": course, "$options": "i"}
+	}
+	log.Printf("[VerifyBatch] Query filter: %+v", filter)
+
+	// Lấy danh sách EDiploma từ DB
+	ediplomas, err := s.ediplomaRepo.FindByDynamicFilter(ctx, filter)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to load eDiplomas: %w", err)
+	}
+	log.Printf("[VerifyBatch] Loaded %d eDiplomas from DB", len(ediplomas))
+
+	if len(ediplomas) == 0 {
+		return false, "", fmt.Errorf("no eDiplomas found")
+	}
+
+	var notOnChain []string
+	for _, ed := range ediplomas {
+		if !ed.OnBlockchain {
+			notOnChain = append(notOnChain, ed.StudentCode)
+		}
+	}
+
+	if len(notOnChain) > 0 {
+		msg := fmt.Sprintf("Có %d eDiplomas chưa được đẩy lên blockchain: %v", len(notOnChain), notOnChain)
+		return false, msg, nil
+	}
+
+	// Hash từ DB
+	infoHashes := []string{}
+	fileHashes := []string{}
+	for _, ed := range ediplomas {
+		hInfo, err := hashEDiplomaInfo(ed)
+		if err != nil {
+			log.Printf("[VerifyBatch] hash failed for %s: %v", ed.StudentCode, err)
+			continue
+		}
+		infoHashes = append(infoHashes, hInfo)
+		if ed.EDiplomaFileHash != "" {
+			fileHashes = append(fileHashes, ed.EDiplomaFileHash)
+		}
+	}
+
+	aggregateInfoHash, _ := aggregateHashes(infoHashes)
+	aggregateFileHash, _ := aggregateHashes(fileHashes)
+	if aggregateFileHash == "" {
+		aggregateFileHash = "NO_FILE_HASH"
+	}
+	log.Printf("[VerifyBatch] Local AggregateInfoHash=%s", aggregateInfoHash)
+	log.Printf("[VerifyBatch] Local AggregateFileHash=%s", aggregateFileHash)
+	log.Printf("[VerifyBatch] Local Count=%d", len(infoHashes))
+
+	// BatchID
+	batchID := fmt.Sprintf("%s-%s-%s", universityID, facultyIDStr, course)
+
+	// Lấy từ Blockchain
+	batchOnChain, err := s.fabricClient.GetEDiplomaBatch(batchID)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to get batch from blockchain: %w", err)
+	}
+
+	// So sánh
+	if batchOnChain.AggregateInfoHash != aggregateInfoHash {
+		return false, fmt.Sprintf("Mismatch AggregateInfoHash: onChain=%s, local=%s", batchOnChain.AggregateInfoHash, aggregateInfoHash), nil
+	}
+	if batchOnChain.AggregateFileHash != aggregateFileHash {
+		return false, fmt.Sprintf("Mismatch AggregateFileHash: onChain=%s, local=%s", batchOnChain.AggregateFileHash, aggregateFileHash), nil
+	}
+	if batchOnChain.Count != len(infoHashes) {
+		return false, fmt.Sprintf("Mismatch Count: onChain=%d, local=%d", batchOnChain.Count, len(infoHashes)), nil
+	}
+
+	log.Printf("[VerifyBatch] Compare DB vs OnChain => InfoHash(DB=%s, onChain=%s), FileHash(db=%s, onChain=%s), Count(db=%d, onChain=%d)",
+		aggregateInfoHash, batchOnChain.AggregateInfoHash,
+		aggregateFileHash, batchOnChain.AggregateFileHash,
+		len(infoHashes), batchOnChain.Count,
+	)
+
+	return true, "Dữ liệu khớp hoàn toàn trên chuỗi khối", nil
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
+	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -152,14 +153,35 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 		return
 	}
 
+	// Lấy claims từ context
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	// Parse university_id
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+		return
+	}
+
+	// Gọi service
 	count, err := h.BlockchainSvc.PushToBlockchain(
 		c.Request.Context(),
+		universityID.Hex(), // truyền lại string vào service
 		req.FacultyID,
 		req.CertificateType,
 		req.Course,
 		req.Issued,
 	)
-
 	if err != nil {
 		// Phân loại lỗi dựa theo message
 		switch {
@@ -178,5 +200,62 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":         "Đã đẩy lên chuỗi khối",
 		"updated_records": count,
+	})
+}
+
+type VerifyBatchRequest struct {
+	FacultyID       string `form:"faculty_id" json:"faculty_id" binding:"required"`
+	CertificateType string `form:"certificate_type" json:"certificate_type"`
+	Course          string `form:"course" json:"course"`
+}
+
+type VerifyBatchResponse struct {
+	Verified bool   `json:"verified"`
+	Message  string `json:"message"`
+}
+
+func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	// Parse university_id
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+		return
+	}
+	var req VerifyBatchRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Gọi service để verify
+	verified, msg, err := h.BlockchainSvc.VerifyBatch(
+		c.Request.Context(),
+		universityID.Hex(),
+		req.FacultyID,
+		req.CertificateType,
+		req.Course,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Trả response chuẩn
+	c.JSON(http.StatusOK, VerifyBatchResponse{
+		Verified: verified,
+		Message:  msg,
 	})
 }
