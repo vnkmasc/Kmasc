@@ -314,30 +314,7 @@ const CertificateManagementPage = () => {
           {
             type: 'input',
             name: 'course',
-            placeholder: 'Nhập năm nhập học',
-            setting: {
-              input: {
-                type: 'number'
-              }
-            }
-          },
-          {
-            type: 'select',
-            name: 'signed',
-            placeholder: 'Chọn trạng thái ký',
-            setting: {
-              select: {
-                groups: [
-                  {
-                    label: undefined,
-                    options: [
-                      { value: 'true', label: 'Đã ký' },
-                      { value: 'false', label: 'Chưa ký' }
-                    ]
-                  }
-                ]
-              }
-            }
+            placeholder: 'Nhập khóa'
           }
         ]}
         handleSetFilter={setFilter}

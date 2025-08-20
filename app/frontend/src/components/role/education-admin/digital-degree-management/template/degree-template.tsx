@@ -37,7 +37,7 @@ const DegreeTemplate: React.FC = () => {
   }, [])
 
   const queryDegreeTemplatesByFaculty = useSWR(
-    filter.faculty === '' ? undefined : 'degree-templates' + filter.faculty,
+    'degree-templates' + filter.faculty,
     () => searchDegreeTemplateByFaculty(filter.faculty),
     {
       onError: (error) => {
