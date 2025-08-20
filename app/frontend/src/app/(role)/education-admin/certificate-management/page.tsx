@@ -38,7 +38,7 @@ import {
   uploadDegree
 } from '@/lib/api/certificate'
 import { formatResponseImportExcel, showNotification } from '@/lib/utils/common'
-import { formatCertificate, formatFacultyOptions } from '@/lib/utils/format-api'
+import { formatFacultyOptions } from '@/lib/utils/format-api'
 import { validateNoEmpty } from '@/lib/utils/validators'
 import { FileUpIcon, PlusIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
@@ -59,11 +59,12 @@ const CertificateManagementPage = () => {
 
   const queryCertificates = useSWR('certificates-list' + JSON.stringify(filter), () =>
     getCertificateList({
-      ...formatCertificate(filter, true),
+      student_code: filter.studentCode || undefined,
+      certificate_type: filter.certificateType || undefined,
       page: filter.page || 1,
       page_size: PAGE_SIZE,
       faculty_code: filter.faculty || undefined,
-      signed: filter.signed || undefined,
+      // signed: filter.signed || undefined,
       course: filter.course || undefined
     })
   )

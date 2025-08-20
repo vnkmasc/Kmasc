@@ -37,8 +37,8 @@ const DegreeTemplate: React.FC = () => {
   }, [])
 
   const queryDegreeTemplatesByFaculty = useSWR(
-    'degree-templates' + filter.faculty,
-    () => searchDegreeTemplateByFaculty(filter.faculty),
+    'degree-templates' + filter.faculty_id,
+    () => searchDegreeTemplateByFaculty(filter.faculty_id ?? ''),
     {
       onError: (error) => {
         showNotification('error', error.message || 'Lỗi khi lấy danh sách mẫu bằng số')
