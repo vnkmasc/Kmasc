@@ -76,16 +76,33 @@ export const formatDegreeTemplateOptions = (data: any) => {
   }))
 }
 
-export const formatCertificate = (data: any, isSendToServer: boolean = false) => {
+export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: boolean = false) => {
   return isSendToServer
-    ? {
-        student_code: data.studentCode,
-        name: data.name,
-        certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
-        serial_number: data.serialNumber,
-        reg_no: data.regNo,
-        issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined
-      }
+    ? isDegree
+      ? {
+          student_code: data.studentCode,
+          name: data.name,
+          certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
+          serial_number: data.serialNumber,
+          reg_no: data.regNo,
+          issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined,
+          major: data.major,
+          graduation_rank: data.graduationRank,
+          gpa: data.gpa,
+          description: data.description,
+          is_degree: true,
+          course: data.course,
+          education_type: data.educationType
+        }
+      : {
+          student_code: data.studentCode,
+          name: data.name,
+          certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
+          serial_number: data.serialNumber,
+          reg_no: data.regNo,
+          issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined,
+          is_degree: false
+        }
     : {
         id: data.id,
         studentCode: data.student_code,
@@ -222,4 +239,25 @@ export const formatTemplateInterfaceOptions = (data: any): OptionType[] => {
     value: item.id,
     label: item.name
   }))
+}
+
+export const formatTinyTextEdit = (html: string) => {
+  return html.includes('<html lang="vi">')
+    ? html
+    : `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Văn bằng</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+<body> ${html} </body>
+</html>`
 }

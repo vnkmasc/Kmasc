@@ -1,9 +1,17 @@
 import { Button } from '@/components/ui/button'
+import { showMessage } from '@/lib/utils/common'
+import { getSignDegreeConfig } from '@/lib/utils/handle-storage'
 import { KeyRound } from 'lucide-react'
 
-export default function SignButton() {
+const SignButton = () => {
+  const signDegreeConfig = getSignDegreeConfig()
   const handleClick = () => {
-    const url = `sign-pdf://test?ts=${Date.now()}`
+    if (!signDegreeConfig.pdfSignLocation) {
+      showMessage('Vui lòng cấu hình đường dẫn ứng dụng ký PDF')
+      return
+    }
+
+    const url = `${signDegreeConfig.pdfSignLocation}?ts=${Date.now()}`
     window.location.href = url
   }
 
@@ -14,3 +22,5 @@ export default function SignButton() {
     </Button>
   )
 }
+
+export default SignButton

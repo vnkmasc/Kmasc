@@ -82,6 +82,13 @@ export const DEGREE_TEMPLATE_STATUS = {
   },
   SIGNED_BY_MINEDU: {
     variant: 'default',
-    label: 'Đã ký bởi trường đại học và bộ giáo dục'
+    label: 'Đã ký bởi TĐF và Bộ GD'
   }
 }
+
+export const GRADUATION_RANK_OPTIONS = [
+  { value: 'Giỏi', label: 'Giỏi' },
+  { value: 'Khá', label: 'Khá' },
+  { value: 'Trung bình', label: 'Trung bình' },
+  { value: 'Yếu', label: 'Yếu' }
+]

@@ -22,10 +22,16 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE, STUDENT_CODE_SEARCH_SETTING } from '@/constants/common'
+import {
+  CERTIFICATE_TYPE_OPTIONS,
+  GRADUATION_RANK_OPTIONS,
+  PAGE_SIZE,
+  STUDENT_CODE_SEARCH_SETTING
+} from '@/constants/common'
 
 import {
   createCertificate,
+  createDegree,
   getCertificateList,
   importCertificateExcel,
   uploadCertificate,
@@ -73,16 +79,16 @@ const CertificateManagementPage = () => {
     }
   })
 
-  // const mutateCreateDegree = useSWRMutation('create-degree', (_, { arg }: any) => createDegree(arg), {
-  //   onSuccess: () => {
-  //     showNotification('success', 'Cấp văn bằng thành công')
-  //     queryCertificates.mutate()
-  //     setOpenCreateDegreeDialog(false)
-  //   },
-  //   onError: (error) => {
-  //     showNotification('error', error.message || 'Cấp văn bằng thất bại')
-  //   }
-  // })
+  const mutateCreateDegree = useSWRMutation('create-degree', (_, { arg }: any) => createDegree(arg), {
+    onSuccess: () => {
+      showNotification('success', 'Cấp văn bằng thành công')
+      queryCertificates.mutate()
+      setOpenCreateDegreeDialog(false)
+    },
+    onError: (error) => {
+      showNotification('error', error.message || 'Cấp văn bằng thất bại')
+    }
+  })
 
   const mutateUploadFile = useSWRMutation('upload-certificate', (_, { arg }: { arg: FormData }) => uploadDegree(arg), {
     onSuccess: () => {
@@ -179,6 +185,13 @@ const CertificateManagementPage = () => {
     [mutateCreateCertificate]
   )
 
+  const handleCreateDegree = useCallback(
+    (data: any) => {
+      mutateCreateDegree.trigger(data)
+    },
+    [mutateCreateDegree]
+  )
+
   return (
     <>
       <PageHeader
@@ -188,7 +201,7 @@ const CertificateManagementPage = () => {
             key='upload-excel'
             handleUpload={handleImportCertificateExcel}
             loading={mutateImportCertificateExcel.isMutating}
-            title={'Tải tệp (Excel)'}
+            title={'Tải Excel'}
             icon={<FileUpIcon />}
           />,
           <Button key='create-new-degree' onClick={() => setOpenCreateDegreeDialog(true)}>
@@ -207,7 +220,7 @@ const CertificateManagementPage = () => {
             <DialogTrigger asChild>
               <Button variant={'outline'} title='Có hỗ trợ tải nhiều tệp cùng lúc'>
                 <FileUpIcon />
-                <span className='hidden md:block'>Tải tệp (PDF)</span>
+                <span className='hidden md:block'>Tải PDF</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -348,16 +361,8 @@ const CertificateManagementPage = () => {
               )
             }
           },
-          { header: 'Tên tài liệu', value: 'name', className: 'min-w-[100px]' },
+          { header: 'Tên văn bằng/chứng chỉ', value: 'name', className: 'min-w-[100px]' },
           { header: 'Ngày cấp', value: 'date', className: 'min-w-[100px]' },
-          {
-            header: 'Trạng thái ký',
-            value: 'signed',
-            className: 'min-w-[100px]',
-            render: (item) => (
-              <Badge variant={item.signed ? 'default' : 'outline'}>{item.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
-            )
-          },
           {
             header: 'Blockchain',
             value: 'onBlockchain',
@@ -398,6 +403,13 @@ const CertificateManagementPage = () => {
             validator: validateNoEmpty('Mã sinh viên')
           },
           {
+            type: 'input',
+            placeholder: 'Nhập chuyên ngành',
+            name: 'major',
+            label: 'Chuyên ngành',
+            validator: validateNoEmpty('Chuyên ngành')
+          },
+          {
             type: 'select',
             placeholder: 'Chọn loại bằng',
             name: 'certificateType',
@@ -420,6 +432,24 @@ const CertificateManagementPage = () => {
             name: 'name',
             label: 'Tên bằng',
             validator: validateNoEmpty('Tên bằng')
+          },
+          {
+            type: 'select',
+            placeholder: 'Chọn xếp loại',
+            name: 'graduationRank',
+            label: 'Xếp loại',
+            setting: {
+              select: {
+                groups: [{ label: undefined, options: GRADUATION_RANK_OPTIONS }]
+              }
+            }
+          },
+          {
+            type: 'input',
+            placeholder: 'Nhập khóa',
+            name: 'course',
+            label: 'Khóa',
+            validator: validateNoEmpty('Khóa')
           },
           {
             type: 'input',
@@ -446,11 +476,29 @@ const CertificateManagementPage = () => {
                 type: 'date'
               }
             }
+          },
+          {
+            type: 'input',
+            name: 'gpa',
+            placeholder: 'Nhập điểm GPA',
+            label: 'Điểm GPA',
+            validator: validateNoEmpty('Điểm GPA'),
+            setting: {
+              input: {
+                type: 'number'
+              }
+            }
+          },
+          {
+            type: 'textarea',
+            name: 'description',
+            label: 'Mô tả',
+            placeholder: 'Nhập mô tả'
           }
         ]}
         data={[]}
         mode={openCreateDegreeDialog ? 'create' : undefined}
-        handleSubmit={handleCreateCertificate}
+        handleSubmit={handleCreateDegree}
         handleClose={() => setOpenCreateDegreeDialog(false)}
       />
       <DetailDialog

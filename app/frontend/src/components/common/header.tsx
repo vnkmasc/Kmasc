@@ -44,10 +44,10 @@ const Header: React.FC<Props> = (props) => {
       title: md && !lg ? 'SV' : 'Sinh viên',
       href: '/education-admin/student-management'
     },
-    {
-      title: md && !lg ? 'KT&KL' : 'Khen thưởng & Kỷ luật',
-      href: '/education-admin/reward-discipline-management'
-    },
+    // {
+    //   title: md && !lg ? 'KT&KL' : 'Khen thưởng & Kỷ luật',
+    //   href: '/education-admin/reward-discipline-management'
+    // },
     {
       title: md && !lg ? 'VB&CC' : 'Văn bằng & Chứng chỉ',
       href: '/education-admin/certificate-management'
