@@ -6,13 +6,19 @@ export const getCertificateList = async (params: any) => {
   const res = await apiService('GET', queryString(['certificates', 'search'], params))
   return {
     ...res,
-    data: res.data.map((item: any) => formatCertificate(item))
+    data: res.data.map((item: any) => formatCertificate(item, false))
   }
 }
 
 export const createCertificate = async (data: any) => {
-  const formattedData = formatCertificate(data, true) as Record<string, string | number | null | undefined>
+  const formattedData = formatCertificate(data, false, true)
   const res = await apiService('POST', 'certificates', formattedData)
+  return res
+}
+
+export const createDegree = async (data: any) => {
+  const formattedData = formatCertificate(data, true, true)
+  const res = await apiService('POST', 'certificates/degree', formattedData)
   return res
 }
 

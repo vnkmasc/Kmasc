@@ -65,6 +65,8 @@ const DegreeManagement = () => {
       if (filter.certificate_type !== '') formData.append('certificate_type', arg.certificate_type)
 
       const res = await uploadDigitalDegreesBlockchain(formData)
+      queryCertificates.mutate()
+
       return res
     },
     {
@@ -232,7 +234,7 @@ const DegreeManagement = () => {
           { header: 'Mẫu bằng', value: 'template_name', className: 'min-w-[150px]' },
           { header: 'Khóa', value: 'course' },
           {
-            header: 'Ngày cấp bằng vật lý',
+            header: 'Ngày cấp bằng',
             value: 'issue_date',
             className: 'min-w-[100px]',
             render: (item) => {
@@ -240,11 +242,13 @@ const DegreeManagement = () => {
             }
           },
           {
-            header: 'Trạng thái ký',
-            value: 'signed',
-            className: 'min-w-[100px]',
+            header: 'Trạng thái ký & mã',
+            value: 'data_encrypted',
+            className: 'min-w-[150px]',
             render: (item) => (
-              <Badge variant={item.signed ? 'default' : 'outline'}>{item.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
+              <Badge variant={item.data_encrypted ? 'default' : 'outline'}>
+                {item.data_encrypted ? 'Đã ký & mã' : 'Chưa ký & mã '}
+              </Badge>
             )
           },
           {
@@ -257,16 +261,7 @@ const DegreeManagement = () => {
               </Badge>
             )
           },
-          {
-            header: 'Trạng thái mã',
-            value: 'data_encrypted',
 
-            render: (item) => (
-              <Badge variant={item.data_encrypted ? 'default' : 'outline'}>
-                {item.data_encrypted ? 'Đã mã hóa' : 'Chưa mã hóa'}
-              </Badge>
-            )
-          },
           {
             header: 'Hành động',
             className: 'min-w-[100px]',

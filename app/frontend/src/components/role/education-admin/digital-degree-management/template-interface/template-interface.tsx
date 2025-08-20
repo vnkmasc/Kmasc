@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch'
 import HtmlEditView from '../template/html-edit-view'
 import { Textarea } from '@/components/ui/textarea'
 import CommonSelect from '../../common-select'
+import { formatTinyTextEdit } from '@/lib/utils/format-api'
 
 const TemplateInterface: React.FC = () => {
   const searchParams = useSearchParams()
@@ -94,12 +95,12 @@ const TemplateInterface: React.FC = () => {
     if (mode === 'edit') {
       mutateUpdateTemplateInterface.trigger({
         name: templateName,
-        html_content: tinyValue
+        html_content: formatTinyTextEdit(tinyValue)
       })
     } else {
       mutateCreateTemplateInterface.trigger({
         name: templateName,
-        html_content: tinyValue
+        html_content: formatTinyTextEdit(tinyValue)
       })
     }
   }
