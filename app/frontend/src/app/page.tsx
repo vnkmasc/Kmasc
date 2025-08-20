@@ -20,8 +20,12 @@ const HomePage = async () => {
           Giải pháp <span className='text-main'>quản lý văn bằng chứng chỉ </span> ứng dụng{' '}
           <span className='text-main'>Blockchain</span>
         </h1>
+        <p className='mt-3 text-center text-sm sm:text-lg'>
+          Dự án sử dụng mô hình Web3, MongoDB, mã hóa CSDL, mã file và lưu trữ S3 MinIO được xây dựng trên nền tảng
+          Blockchain.
+        </p>
         <p className='mt-3 text-center text-sm text-muted-foreground sm:text-lg'>
-          Dự án Web3 được xây dựng trên nền tảng Blockchain đảm bảo tính minh bạch cho văn bằng & chứng chỉ
+          Dữ án đã tích hợp mật mã Việt Nam – Ban Cơ yếu để đảm bảo tính minh bạch và an toàn, bảo mật.
         </p>
         <SearchVerifyCode />
       </section>

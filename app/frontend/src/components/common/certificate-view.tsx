@@ -193,12 +193,12 @@ const CertificateView: React.FC<Props> = (props) => {
         icon: <Text className='h-5 w-5 text-gray-500' />,
         title: 'Mô tả',
         value: data?.description
-      },
-      {
-        icon: <Key className='h-5 w-5 text-gray-500' />,
-        title: 'Trạng thái ký',
-        value: <Badge variant={data?.signed ? 'default' : 'outline'}>{data?.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
       }
+      // {
+      //   icon: <Key className='h-5 w-5 text-gray-500' />,
+      //   title: 'Trạng thái ký',
+      //   value: <Badge variant={data?.signed ? 'default' : 'outline'}>{data?.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
+      // }
     ]
   }
 
@@ -244,7 +244,7 @@ const CertificateView: React.FC<Props> = (props) => {
                     <DialogTrigger asChild>
                       <Button variant='outline'>
                         <Eye />
-                        Xem trước
+                        <span className='hidden md:block'>Xem trước</span>
                       </Button>
                     </DialogTrigger>
                     <DialogContent className='md:min-w-[600px]'>
