@@ -82,7 +82,7 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
           variant={props.isIcon ? 'outline' : undefined}
           title='Hiển thị mã QR'
         >
-          <QrCode /> {!props.isIcon && md ? 'Hiển thị mã QR' : ''}
+          <QrCode /> {!props.isIcon && md ? 'Mã QR' : ''}
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-md'>

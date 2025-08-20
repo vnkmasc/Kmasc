@@ -45,19 +45,12 @@ const StudentManagementPage: React.FC = () => {
     [filter]
   )
 
-  const queryStudents = useSWR(
-    'students' + JSON.stringify(filter),
-    () =>
-      searchStudent({
-        ...formatStudent(filter, true),
-        page: filter.page || 1,
-        page_size: PAGE_SIZE
-      }),
-    {
-      onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi lấy danh sách sinh viên')
-      }
-    }
+  const queryStudents = useSWR('students' + JSON.stringify(filter), () =>
+    searchStudent({
+      ...formatStudent(filter, true),
+      page: filter.page || 1,
+      page_size: PAGE_SIZE
+    })
   )
 
   const queryStudentDetail = useSWR(idDetail, () => getStudentById(idDetail as string), {
@@ -384,16 +377,7 @@ const StudentManagementPage: React.FC = () => {
                 type: 'number'
               }
             },
-            validator: z
-              .number({
-                message: 'Năm không hợp lệ (VD: 2025)'
-              })
-              .min(1900, {
-                message: 'Năm đào tạo không thể nhỏ hơn 1900'
-              })
-              .max(new Date().getFullYear() + 1, {
-                message: 'Năm đào tạo không thể quá hiện tại'
-              }),
+            placeholder: 'VD: 2025',
             defaultValue: new Date().getFullYear()
           },
           {

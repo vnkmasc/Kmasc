@@ -30,14 +30,14 @@ const DegreeTemplate: React.FC = () => {
   const facultyOptions = formatFacultyOptionsByID(UseData().facultyList)
 
   const [filter, setFilter] = useState<any>({
-    faculty: ''
+    faculty_id: ''
   })
   const handleCloseDetailDialog = useCallback(() => {
     setIdDetail(undefined)
   }, [])
 
   const queryDegreeTemplatesByFaculty = useSWR(
-    filter.faculty === '' ? undefined : 'degree-templates' + filter.faculty,
+    'degree-templates' + filter.faculty,
     () => searchDegreeTemplateByFaculty(filter.faculty),
     {
       onError: (error) => {
@@ -114,7 +114,7 @@ const DegreeTemplate: React.FC = () => {
         items={[
           {
             type: 'select',
-            name: 'faculty',
+            name: 'faculty_id',
             placeholder: 'Chọn chuyên ngành',
             setting: {
               select: {
@@ -126,11 +126,6 @@ const DegreeTemplate: React.FC = () => {
                 ]
               }
             }
-          },
-          {
-            type: 'input',
-            name: 'course',
-            placeholder: 'Nhập khóa'
           }
         ]}
         handleSetFilter={setFilter}

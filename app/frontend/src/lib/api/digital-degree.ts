@@ -20,7 +20,7 @@ export const updateDegreeTemplate = async (id: string, data: any) => {
   return res
 }
 export const searchDegreeTemplateByFaculty = async (facultyId: string) => {
-  const res = await apiService('GET', `templates/faculty/${facultyId}`)
+  const res = await apiService('GET', `templates/faculty?faculty_id=${facultyId}`)
   return res
 }
 
