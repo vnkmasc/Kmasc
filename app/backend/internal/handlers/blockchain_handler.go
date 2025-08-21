@@ -204,6 +204,7 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 }
 
 type VerifyBatchRequest struct {
+	UniversityID    string `json:"university_id" binding:"required"`
 	FacultyID       string `form:"faculty_id" json:"faculty_id" binding:"required"`
 	CertificateType string `form:"certificate_type" json:"certificate_type"`
 	Course          string `form:"course" json:"course"`
@@ -215,27 +216,16 @@ type VerifyBatchResponse struct {
 }
 
 func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	claims, ok := claimsRaw.(*utils.CustomClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
-		return
-	}
-
-	// Parse university_id
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
-		return
-	}
 	var req VerifyBatchRequest
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Parse university_id từ request
+	universityID, err := primitive.ObjectIDFromHex(req.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
 		return
 	}
 
@@ -247,7 +237,6 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		req.CertificateType,
 		req.Course,
 	)
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
