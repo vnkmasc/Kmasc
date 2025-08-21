@@ -13,7 +13,6 @@ import {
   CircleX,
   Eye,
   FileTextIcon,
-  Key,
   Library,
   School,
   TagsIcon,
@@ -127,12 +126,12 @@ const CertificateView: React.FC<Props> = (props) => {
         icon: <Text className='h-5 w-5 text-gray-500' />,
         title: 'Mô tả',
         value: data?.description
-      },
-      {
-        icon: <Key className='h-5 w-5 text-gray-500' />,
-        title: 'Trạng thái ký',
-        value: <Badge variant={data?.signed ? 'default' : 'outline'}>{data?.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
       }
+      // {
+      //   icon: <Key className='h-5 w-5 text-gray-500' />,
+      //   title: 'Trạng thái ký',
+      //   value: <Badge variant={data?.signed ? 'default' : 'outline'}>{data?.signed ? 'Đã ký' : 'Chưa ký'}</Badge>
+      // }
     ]
   }
 

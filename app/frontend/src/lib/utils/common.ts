@@ -97,3 +97,10 @@ export const formatBytes = (bytes: number) => {
 export const findLabel = (id: string, options: OptionType[]) => {
   return options?.find((o: OptionType) => o.value === id)?.label
 }
+
+export const extractBodyInnerHTML = (html: string) => {
+  const match = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+  return match ? match[1] : html
+}
+
+export const isFullDocument = (html: string) => /<\s*html[\s>]/i.test(html)

@@ -1,3 +1,4 @@
+// app/education-admin/digital-degree-management/template-interface.tsx
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -16,7 +17,7 @@ import { ChevronsLeftRightEllipsis, CircleX, Edit2, Plus, Save } from 'lucide-re
 import { useEffect, useRef, useState } from 'react'
 import TinyTextEdit, { TinyTextEditRef } from './tiny-text-edit'
 import useSWRMutation from 'swr/mutation'
-import { cn, showNotification } from '@/lib/utils/common'
+import { cn, extractBodyInnerHTML, isFullDocument, showNotification } from '@/lib/utils/common'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,16 +32,19 @@ const TemplateInterface: React.FC = () => {
   const router = useRouter()
   const [mode, setMode] = useState<'view' | 'edit' | 'create'>('view')
   const tinyEditorRef = useRef<TinyTextEditRef>(null)
-  const [tinyValue, setTinyValue] = useState<string>('')
   const [templateName, setTemplateName] = useState<string>('')
   const [tinyMode, setTinyMode] = useState<boolean>(true)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [fullHtml, setFullHtml] = useState<string>('')
+  const [bodyHtml, setBodyHtml] = useState<string>('')
 
   useEffect(() => {
     const fetchTemplateInterface = async () => {
       const res = await getTemplateInterfaceById(selectedTemplateId)
       if (res) {
-        setTinyValue(res.data.HTMLContent)
+        const html = res.data.HTMLContent ?? ''
+        setFullHtml(html)
+        setBodyHtml(isFullDocument(html) ? extractBodyInnerHTML(html) : html)
       }
     }
     if (selectedTemplateId !== '') {
@@ -53,7 +57,9 @@ const TemplateInterface: React.FC = () => {
     queryTemplateInterfaces.data ? 'sample-templates-id' + searchParams.get('id') : undefined,
     async () => {
       const res = await getTemplateInterfaceById(searchParams.get('id') ?? queryTemplateInterfaces.data?.data[0].id)
-      setTinyValue(res.data.HTMLContent)
+      const html = res.data.HTMLContent ?? ''
+      setFullHtml(html)
+      setBodyHtml(isFullDocument(html) ? extractBodyInnerHTML(html) : html)
       setTemplateName(res.data.Name)
       return res
     }
@@ -92,22 +98,24 @@ const TemplateInterface: React.FC = () => {
   )
 
   const handleSubmit = () => {
+    const htmlToSave = tinyMode ? formatTinyTextEdit(bodyHtml) : fullHtml
     if (mode === 'edit') {
       mutateUpdateTemplateInterface.trigger({
         name: templateName,
-        html_content: formatTinyTextEdit(tinyValue)
+        html_content: htmlToSave
       })
     } else {
       mutateCreateTemplateInterface.trigger({
         name: templateName,
-        html_content: formatTinyTextEdit(tinyValue)
+        html_content: htmlToSave
       })
     }
   }
 
   useEffect(() => {
     if (mode === 'create') {
-      setTinyValue('')
+      setFullHtml('')
+      setBodyHtml('')
       setTemplateName('')
     }
     setTinyMode(true)
@@ -153,7 +161,6 @@ const TemplateInterface: React.FC = () => {
                 <Card>
                   <CardHeader className='flex flex-row items-center justify-between'>
                     <div>
-                      {' '}
                       <CardTitle className='mb-1'>
                         {mode === 'edit' ? 'Chỉnh sửa giao diện mẫu' : 'Tạo giao diện mẫu'}
                       </CardTitle>
@@ -190,7 +197,6 @@ const TemplateInterface: React.FC = () => {
                         </div>
                       )}
                       <div>
-                        {' '}
                         <Label htmlFor='template-name'>Tên giao diện mẫu</Label>
                         <Input
                           id='template-name'
@@ -205,16 +211,24 @@ const TemplateInterface: React.FC = () => {
                       <Label>Mẫu bằng số</Label>
                       <ChevronsLeftRightEllipsis />
                       <span className='text-sm font-semibold'>Chế độ soạn thảo</span>
-                      <Switch onCheckedChange={setTinyMode} checked={tinyMode} />
+                      <Switch
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setBodyHtml(extractBodyInnerHTML(fullHtml))
+                          } else {
+                            setFullHtml(formatTinyTextEdit(bodyHtml))
+                          }
+                          setTinyMode(checked)
+                        }}
+                        checked={tinyMode}
+                      />
                     </div>
                     {tinyMode ? (
-                      <TinyTextEdit ref={tinyEditorRef} value={tinyValue} onChange={setTinyValue} />
+                      <TinyTextEdit ref={tinyEditorRef} value={bodyHtml} onChange={setBodyHtml} />
                     ) : (
                       <HtmlEditView
-                        textarea={
-                          <Textarea rows={25} value={tinyValue} onChange={(e) => setTinyValue(e.target.value)} />
-                        }
-                        html={tinyValue}
+                        textarea={<Textarea rows={25} value={fullHtml} onChange={(e) => setFullHtml(e.target.value)} />}
+                        html={fullHtml}
                       />
                     )}
                   </CardContent>

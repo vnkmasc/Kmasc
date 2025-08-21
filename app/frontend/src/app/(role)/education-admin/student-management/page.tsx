@@ -370,15 +370,13 @@ const StudentManagementPage: React.FC = () => {
           },
           {
             type: 'input',
-            label: 'Năm nhập học',
-            name: 'year',
-            setting: {
-              input: {
-                type: 'number'
-              }
-            },
-            placeholder: 'VD: 2025',
-            defaultValue: new Date().getFullYear()
+            label: 'Khóa học',
+            name: 'year'
+            // setting: {
+            //   input: {
+            //     type: 'number'
+            //   }
+            // },
           },
           {
             type: 'textarea',

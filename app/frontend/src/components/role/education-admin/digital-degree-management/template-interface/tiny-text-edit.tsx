@@ -1,3 +1,4 @@
+// components/tiny-text-edit.tsx
 'use client'
 
 import { forwardRef, useImperativeHandle, useRef } from 'react'
@@ -29,7 +30,6 @@ const TinyTextEdit = forwardRef<TinyTextEditRef, TinyTextEditProps>(({ value, on
       onEditorChange={(content) => onChange?.(content)}
       init={{
         base_url: '/assets/libs/tinymce',
-
         height: 700,
         menubar: false,
         plugins: [
@@ -52,10 +52,8 @@ const TinyTextEdit = forwardRef<TinyTextEditRef, TinyTextEditProps>(({ value, on
           'wordcount'
         ],
         toolbar:
-          'undo redo | blocks | ' +
-          'bold italic forecolor | alignleft aligncenter ' +
-          'alignright alignjustify | bullist numlist outdent indent | ' +
-          'removeformat | help',
+          'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | ' +
+          'bullist numlist outdent indent | removeformat | code preview fullscreen | help',
         content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
       }}
     />
