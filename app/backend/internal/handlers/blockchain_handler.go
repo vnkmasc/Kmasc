@@ -16,12 +16,15 @@ import (
 
 type BlockchainHandler struct {
 	BlockchainSvc service.BlockchainService
+	EDiplomaSvc   service.EDiplomaService
 }
 
-func NewBlockchainHandler(blockchainSvc service.BlockchainService) *BlockchainHandler {
-	return &BlockchainHandler{BlockchainSvc: blockchainSvc}
+func NewBlockchainHandler(blockchainSvc service.BlockchainService, ediplomaSvc service.EDiplomaService) *BlockchainHandler {
+	return &BlockchainHandler{
+		BlockchainSvc: blockchainSvc,
+		EDiplomaSvc:   ediplomaSvc,
+	}
 }
-
 func (h *BlockchainHandler) PushCertificateToChain(c *gin.Context) {
 	certIDStr := c.Param("id")
 	certID, err := primitive.ObjectIDFromHex(certIDStr)
@@ -204,7 +207,6 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 		FacultyID       string `form:"faculty_id"`
 		CertificateType string `form:"certificate_type"`
 		Course          string `form:"course"`
-		Issued          *bool  `form:"issued"`
 	}
 
 	// Bind form-data
@@ -229,7 +231,6 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 		return
 	}
 
-	// Parse university_id
 	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
@@ -239,20 +240,19 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 	// Gọi service
 	count, err := h.BlockchainSvc.PushToBlockchain1(
 		c.Request.Context(),
-		universityID.Hex(), // truyền lại string vào service
+		universityID.Hex(),
 		req.FacultyID,
 		req.CertificateType,
 		req.Course,
-		req.Issued,
 	)
+
 	if err != nil {
-		// Phân loại lỗi dựa theo message
-		switch {
-		case strings.Contains(err.Error(), "invalid faculty_id"):
+		switch err {
+		case common.ErrInvalidFaculty:
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		case strings.Contains(err.Error(), "no eDiplomas found"):
+		case common.ErrNoDiplomas:
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case strings.Contains(err.Error(), "no valid eDiplomas to push"):
+		case common.ErrNoValidDiplomas, common.ErrAlreadyOnChain:
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -266,21 +266,22 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 	})
 }
 
-type VerifyBatchRequest struct {
-	FacultyID       string `form:"faculty_id" json:"faculty_id" binding:"required"`
-	CertificateType string `form:"certificate_type" json:"certificate_type"`
-	Course          string `form:"course" json:"course"`
-}
-
 type VerifyBatchResponse struct {
-	Verified bool   `json:"verified"`
-	Message  string `json:"message"`
+	Verified  bool        `json:"verified"`
+	Message   string      `json:"message"`
+	EDiplomas interface{} `json:"ediploma_data,omitempty"`
 }
 
 func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
-	var req VerifyBatchRequest
+	var req struct {
+		FacultyID       string `form:"faculty_id"`
+		CertificateType string `form:"certificate_type"`
+		Course          string `form:"course"`
+		EdiplomaID      string `form:"ediploma_id"`
+	}
+
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
@@ -289,37 +290,29 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-
 	claims, ok := claimsRaw.(*utils.CustomClaims)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
 		return
 	}
 
-	// Parse university_id
-	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
-		return
-	}
-
-	// Gọi service để verify
-	verified, msg, err := h.BlockchainSvc.VerifyBatch(
+	okVerify, msg, ediploma, err := h.BlockchainSvc.VerifyBatch(
 		c.Request.Context(),
-		universityID.Hex(),
+		claims.UniversityID,
 		req.FacultyID,
 		req.CertificateType,
 		req.Course,
+		req.EdiplomaID,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Trả response chuẩn
-	c.JSON(http.StatusOK, VerifyBatchResponse{
-		Verified: verified,
-		Message:  msg,
+	c.JSON(http.StatusOK, gin.H{
+		"verified": okVerify,
+		"message":  msg,
+		"data":     ediploma,
 	})
 }
 

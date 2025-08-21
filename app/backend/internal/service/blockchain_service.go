@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/repository"
 	"github.com/vnkmasc/Kmasc/app/backend/pkg/blockchain"
@@ -21,17 +23,18 @@ import (
 )
 
 type BlockchainService interface {
+	VerifyBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course, ediplomaID string) (bool, string, *models.EDiplomaResponse, error)
 	VerifyEDiploma(ctx context.Context, universityID, facultyIDStr, course, studentCode string) (*VerifyResult, error)
-	VerifyBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course string) (bool, string, error)
 	PushCertificateToChain(ctx context.Context, certificateID primitive.ObjectID) (string, error)
 	GetCertificateFromChain(ctx context.Context, certificateID string) (*models.CertificateOnChain, error)
 	VerifyFileByID(ctx context.Context, certID primitive.ObjectID) (io.ReadCloser, string, error)
 	VerifyCertificateIntegrity(ctx context.Context, certID string) (bool, string, *models.CertificateOnChain, *models.Certificate, *models.User, *models.Faculty, *models.University, error)
 	PushToBlockchain(ctx context.Context, universityID, facultyIDStr, certificateType, course string, issued *bool) (int, error)
-	PushToBlockchain1(ctx context.Context, universityID, facultyIDStr, certificateType, course string, issued *bool) (int, error)
+	PushToBlockchain1(ctx context.Context, universityID, facultyIDStr, certificateType, course string) (int, error)
 }
 
 type blockchainService struct {
+	templateRepo   repository.TemplateRepository
 	ediplomaRepo   repository.EDiplomaRepository
 	certRepo       repository.CertificateRepository
 	userRepo       repository.UserRepository
@@ -42,6 +45,7 @@ type blockchainService struct {
 }
 
 func NewBlockchainService(
+	templateRepo repository.TemplateRepository,
 	ediplomaRepo repository.EDiplomaRepository,
 	certRepo repository.CertificateRepository,
 	userRepo repository.UserRepository,
@@ -58,6 +62,7 @@ func NewBlockchainService(
 		universityRepo: universityRepo,
 		fabricClient:   fabricClient,
 		minioClient:    minioClient,
+		templateRepo:   templateRepo,
 	}
 }
 
@@ -209,30 +214,32 @@ func (s *blockchainService) VerifyFileByID(ctx context.Context, certID primitive
 	newReader := io.NopCloser(bytes.NewReader(buf.Bytes()))
 	return newReader, contentType, nil
 }
-
 func (s *blockchainService) PushToBlockchain1(
 	ctx context.Context,
 	universityID, facultyIDStr, certificateType, course string,
-	issued *bool,
 ) (int, error) {
 
 	// Build dynamic filter
 	filter := bson.M{}
+	parts := []string{universityID} // dùng để tạo BatchID linh hoạt
+
 	if facultyIDStr != "" {
 		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
 		if err != nil {
-			return 0, fmt.Errorf("invalid faculty_id")
+			return 0, common.ErrInvalidFaculty
 		}
 		filter["faculty_id"] = facultyID
+		parts = append(parts, facultyIDStr) // thêm vào BatchID
 	}
+
 	if certificateType != "" {
 		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+		parts = append(parts, certificateType) // thêm vào BatchID
 	}
+
 	if course != "" {
 		filter["course"] = bson.M{"$regex": course, "$options": "i"}
-	}
-	if issued != nil {
-		filter["issued"] = *issued
+		parts = append(parts, course) // thêm vào BatchID
 	}
 
 	// Lấy danh sách EDiploma
@@ -241,13 +248,12 @@ func (s *blockchainService) PushToBlockchain1(
 		return 0, fmt.Errorf("failed to load eDiplomas: %w", err)
 	}
 	if len(ediplomas) == 0 {
-		return 0, fmt.Errorf("no eDiplomas found")
+		return 0, common.ErrNoDiplomas
 	}
 
 	// Gom hash
 	infoHashes := []string{}
 	fileHashes := []string{}
-
 	for _, ed := range ediplomas {
 		if ed.DataEncrypted && ed.Issued && !ed.OnBlockchain {
 			hInfo, err := hashEDiplomaInfo(ed)
@@ -264,7 +270,7 @@ func (s *blockchainService) PushToBlockchain1(
 	}
 
 	if len(infoHashes) == 0 {
-		return 0, fmt.Errorf("no valid eDiplomas to push")
+		return 0, common.ErrNoValidDiplomas
 	}
 
 	aggregateInfoHash, _ := aggregateHashes(infoHashes)
@@ -273,8 +279,8 @@ func (s *blockchainService) PushToBlockchain1(
 		aggregateFileHash = "NO_FILE_HASH"
 	}
 
-	// Sinh BatchID dựa trên university_id + faculty_id + course
-	batchID := fmt.Sprintf("%s-%s-%s", universityID, facultyIDStr, course)
+	// Tạo BatchID linh động
+	batchID := strings.Join(parts, "-")
 
 	batchOnChain := models.EDiplomaBatchOnChain{
 		BatchID:           batchID,
@@ -287,9 +293,12 @@ func (s *blockchainService) PushToBlockchain1(
 		Count:             len(infoHashes),
 	}
 
+	// Đẩy lên blockchain
 	txID, err := s.fabricClient.IssueEDiplomaBatch(batchOnChain)
-
 	if err != nil {
+		if errors.Is(err, common.ErrAlreadyOnChain) {
+			return 0, common.ErrAlreadyOnChain
+		}
 		return 0, fmt.Errorf("push blockchain failed: %w", err)
 	}
 
@@ -481,44 +490,74 @@ func aggregateHashes(hashes []string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func (s *blockchainService) VerifyBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course string) (bool, string, error) {
-	filter := bson.M{}
-	if facultyIDStr != "" {
-		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
-		if err != nil {
-			return false, "", fmt.Errorf("invalid faculty_id")
-		}
-		filter["faculty_id"] = facultyID
-	}
-	if certificateType != "" {
-		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
-	}
-	if course != "" {
-		filter["course"] = bson.M{"$regex": course, "$options": "i"}
-	}
-	log.Printf("[VerifyBatch] Query filter: %+v", filter)
+func (s *blockchainService) VerifyBatch(
+	ctx context.Context,
+	universityID, facultyIDStr, certificateType, course, ediplomaID string,
+) (bool, string, *models.EDiplomaResponse, error) {
 
-	// Lấy danh sách EDiploma từ DB
+	filter := bson.M{}
+
+	if ediplomaID != "" {
+		edID, err := primitive.ObjectIDFromHex(ediplomaID)
+		if err != nil {
+			return false, "", nil, fmt.Errorf("invalid ediploma_id")
+		}
+		filter["_id"] = edID
+	} else {
+		if facultyIDStr != "" {
+			facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+			if err != nil {
+				return false, "", nil, fmt.Errorf("invalid faculty_id")
+			}
+			filter["faculty_id"] = facultyID
+		}
+		if certificateType != "" {
+			filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+		}
+		if course != "" {
+			filter["course"] = bson.M{"$regex": course, "$options": "i"}
+		}
+	}
+
 	ediplomas, err := s.ediplomaRepo.FindByDynamicFilter(ctx, filter)
 	if err != nil {
-		return false, "", fmt.Errorf("failed to load eDiplomas: %w", err)
+		return false, "", nil, fmt.Errorf("failed to load eDiplomas: %w", err)
 	}
-	log.Printf("[VerifyBatch] Loaded %d eDiplomas from DB", len(ediplomas))
-
 	if len(ediplomas) == 0 {
-		return false, "", fmt.Errorf("no eDiplomas found")
+		return false, "", nil, fmt.Errorf("no eDiplomas found")
 	}
 
+	// Chỉ lấy DTO nếu ediplomaID được truyền
+	var targetDTO *models.EDiplomaResponse
+	if ediplomaID != "" {
+		id, _ := primitive.ObjectIDFromHex(ediplomaID)
+
+		// Lấy trực tiếp eDiploma
+		ediploma, err := s.ediplomaRepo.FindByID(ctx, id)
+		if err != nil || ediploma == nil {
+			return false, "", nil, fmt.Errorf("ediploma not found")
+		}
+
+		// Lấy các đối tượng liên quan từ repository
+		university, _ := s.universityRepo.FindByID(ctx, ediploma.UniversityID)
+		faculty, _ := s.facultyRepo.FindByID(ctx, ediploma.FacultyID)
+		template, _ := s.templateRepo.GetByID(ctx, ediploma.TemplateID)
+		user, _ := s.userRepo.GetUserByID(ctx, ediploma.UserID)
+
+		// Map sang DTO
+		targetDTO = mapper.MapEDiplomaToDTO(ediploma, university, faculty, template, user)
+	}
+
+	// Kiểm tra OnBlockchain
 	var notOnChain []string
 	for _, ed := range ediplomas {
 		if !ed.OnBlockchain {
 			notOnChain = append(notOnChain, ed.StudentCode)
 		}
 	}
-
 	if len(notOnChain) > 0 {
 		msg := fmt.Sprintf("Có %d eDiplomas chưa được đẩy lên blockchain: %v", len(notOnChain), notOnChain)
-		return false, msg, nil
+		return false, msg, targetDTO, nil
 	}
 
 	// Hash từ DB
@@ -541,37 +580,35 @@ func (s *blockchainService) VerifyBatch(ctx context.Context, universityID, facul
 	if aggregateFileHash == "" {
 		aggregateFileHash = "NO_FILE_HASH"
 	}
-	log.Printf("[VerifyBatch] Local AggregateInfoHash=%s", aggregateInfoHash)
-	log.Printf("[VerifyBatch] Local AggregateFileHash=%s", aggregateFileHash)
-	log.Printf("[VerifyBatch] Local Count=%d", len(infoHashes))
 
-	// BatchID
-	batchID := fmt.Sprintf("%s-%s-%s", universityID, facultyIDStr, course)
-
-	// Lấy từ Blockchain
+	parts := []string{universityID}
+	if facultyIDStr != "" {
+		parts = append(parts, facultyIDStr)
+	}
+	if certificateType != "" {
+		parts = append(parts, certificateType)
+	}
+	if course != "" {
+		parts = append(parts, course)
+	}
+	batchID := strings.Join(parts, "-")
 	batchOnChain, err := s.fabricClient.GetEDiplomaBatch(batchID)
 	if err != nil {
-		return false, "", fmt.Errorf("failed to get batch from blockchain: %w", err)
+		return false, "", targetDTO, fmt.Errorf("failed to get batch from blockchain: %w", err)
 	}
 
 	// So sánh
 	if batchOnChain.AggregateInfoHash != aggregateInfoHash {
-		return false, fmt.Sprintf("Mismatch AggregateInfoHash: onChain=%s, local=%s", batchOnChain.AggregateInfoHash, aggregateInfoHash), nil
+		return false, fmt.Sprintf("Mismatch AggregateInfoHash: onChain=%s, local=%s", batchOnChain.AggregateInfoHash, aggregateInfoHash), targetDTO, nil
 	}
 	if batchOnChain.AggregateFileHash != aggregateFileHash {
-		return false, fmt.Sprintf("Mismatch AggregateFileHash: onChain=%s, local=%s", batchOnChain.AggregateFileHash, aggregateFileHash), nil
+		return false, fmt.Sprintf("Mismatch AggregateFileHash: onChain=%s, local=%s", batchOnChain.AggregateFileHash, aggregateFileHash), targetDTO, nil
 	}
 	if batchOnChain.Count != len(infoHashes) {
-		return false, fmt.Sprintf("Mismatch Count: onChain=%d, local=%d", batchOnChain.Count, len(infoHashes)), nil
+		return false, fmt.Sprintf("Mismatch Count: onChain=%d, local=%d", batchOnChain.Count, len(infoHashes)), targetDTO, nil
 	}
 
-	log.Printf("[VerifyBatch] Compare DB vs OnChain => InfoHash(DB=%s, onChain=%s), FileHash(db=%s, onChain=%s), Count(db=%d, onChain=%d)",
-		aggregateInfoHash, batchOnChain.AggregateInfoHash,
-		aggregateFileHash, batchOnChain.AggregateFileHash,
-		len(infoHashes), batchOnChain.Count,
-	)
-
-	return true, "Dữ liệu khớp hoàn toàn trên chuỗi khối", nil
+	return true, "Dữ liệu khớp hoàn toàn trên chuỗi khối", targetDTO, nil
 }
 
 type VerifyResult struct {

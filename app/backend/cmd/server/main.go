@@ -100,7 +100,7 @@ func main() {
 	facultyService := service.NewFacultyService(universityRepo, facultyRepo)
 	verificationService := service.NewVerificationService(verificationRepo, certificateService)
 	rewardDisciplineService := service.NewRewardDisciplineService(rewardDisciplineRepo, userRepo)
-	blockchainSvc := service.NewBlockchainService(ediplomaRepo, certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient)
+	blockchainSvc := service.NewBlockchainService(templateRepo, ediplomaRepo, certificateRepo, userRepo, facultyRepo, universityRepo, fabricClient, minioClient)
 	majorService := service.NewMajorService(majorRepo, facultyRepo)
 	templateSampleService := service.NewTemplateSampleService(templateSampleRepo, templateRepo)
 
@@ -136,7 +136,7 @@ func main() {
 	ediplomaHandler := handlers.NewEDiplomaHandler(ediplomaService)
 
 	fileHandler := handlers.NewFileHandler(minioClient)
-	blockchainHandler := handlers.NewBlockchainHandler(blockchainSvc)
+	blockchainHandler := handlers.NewBlockchainHandler(blockchainSvc, ediplomaService)
 	templateSampleHandler := handlers.NewTemplateSampleHandler(templateSampleService)
 
 	// Setup router

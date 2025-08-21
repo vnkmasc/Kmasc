@@ -80,6 +80,7 @@ type EDiplomaResponse struct {
 	OnBlockchain       bool               `json:"on_blockchain"`
 }
 type EDiplomaSearchFilter struct {
+	UniversityID    string `json:"university_id"`
 	FacultyID       string `json:"faculty_id"`
 	CertificateType string `json:"certificate_type"`
 	Course          string `json:"course"`

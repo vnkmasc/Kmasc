@@ -22,6 +22,7 @@ import (
 )
 
 type EDiplomaService interface {
+	GetEDiplomaFileByUniversityCode(ctx context.Context, ediplomaID primitive.ObjectID, universityCode string) (io.ReadCloser, string, error)
 	GetEDiplomaFile(ctx context.Context, ediplomaID, universityID primitive.ObjectID) (io.ReadCloser, string, error)
 	GetEDiplomaDTOByID(ctx context.Context, id primitive.ObjectID) (*models.EDiplomaResponse, error)
 	GetByID(ctx context.Context, id string) (*models.EDiploma, error)
@@ -675,6 +676,31 @@ func (s *eDiplomaService) GetEDiplomaFile(ctx context.Context, ediplomaID, unive
 	minioPath := fmt.Sprintf("ediplomas/%s/%s_signed.pdf", university.UniversityCode, ediploma.StudentCode)
 
 	// Lấy stream và content type từ MinIO
+	stream, contentType, err := s.minioClient.DownloadFileStream(ctx, minioPath)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get file from MinIO: %w", err)
+	}
+
+	return stream, contentType, nil
+}
+
+func (s *eDiplomaService) GetEDiplomaFileByUniversityCode(ctx context.Context, ediplomaID primitive.ObjectID, universityCode string) (io.ReadCloser, string, error) {
+	ediploma, err := s.repo.FindByID(ctx, ediplomaID)
+	if err != nil || ediploma == nil {
+		return nil, "", fmt.Errorf("EDiploma not found")
+	}
+
+	university, err := s.universityRepo.FindByCode(ctx, universityCode)
+	if err != nil || university == nil {
+		return nil, "", fmt.Errorf("university not found")
+	}
+
+	if ediploma.UniversityID != university.ID {
+		return nil, "", fmt.Errorf("EDiploma does not belong to university")
+	}
+
+	minioPath := fmt.Sprintf("ediplomas/%s/%s_signed.pdf", university.UniversityCode, ediploma.StudentCode)
+
 	stream, contentType, err := s.minioClient.DownloadFileStream(ctx, minioPath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get file from MinIO: %w", err)

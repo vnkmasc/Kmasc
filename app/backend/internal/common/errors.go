@@ -50,9 +50,14 @@ var (
 	//General
 	ErrNotFound = errors.New("not_found")
 
-	ErrInvalidFaculty  = errors.New("invalid faculty_id")
+	ErrInvalidFaculty = errors.New("invalid faculty_id")
+)
+
+var (
 	ErrNoDiplomas      = errors.New("no eDiplomas found")
 	ErrNoValidDiplomas = errors.New("no valid eDiplomas to push")
+	ErrAlreadyOnChain  = errors.New("ediploma đã được ghi lên blockchain")
+	ErrMissingHash     = errors.New("ediploma chưa có hash")
 )
 
 type ValidationError struct {

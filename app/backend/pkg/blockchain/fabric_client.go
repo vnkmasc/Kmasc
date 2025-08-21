@@ -6,9 +6,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
 	"github.com/hyperledger/fabric-sdk-go/pkg/gateway"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 )
 
@@ -121,15 +123,22 @@ func (fc *FabricClient) IssueCertificate(cert any) (string, error) {
 	return string(result), nil
 }
 
-func (fc *FabricClient) IssueEDiplomaBatch(batch any) (string, error) {
+func (fc *FabricClient) IssueEDiplomaBatch(batch models.EDiplomaBatchOnChain) (string, error) {
 	batchBytes, err := json.Marshal(batch)
 	if err != nil {
 		return "", fmt.Errorf("marshal batch lỗi: %v", err)
 	}
-
 	result, err := fc.contract.SubmitTransaction("IssueEDiplomaBatch", string(batchBytes))
 	if err != nil {
-		return "", fmt.Errorf("invoke IssueEDiplomaBatch lỗi: %v", err)
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "already exists") {
+			return "", common.ErrAlreadyOnChain
+		}
+		if strings.Contains(errMsg, "endorser") {
+			return "", fmt.Errorf("blockchain endorsement error: %v", errMsg)
+		}
+
+		return "", fmt.Errorf("invoke IssueEDiplomaBatch lỗi: %v", errMsg)
 	}
 
 	return string(result), nil

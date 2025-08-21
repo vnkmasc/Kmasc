@@ -42,6 +42,7 @@ func SetupRouter(
 	authPublic.POST("/verify-otp", authHandler.VerifyOTP)
 	authPublic.POST("/register", authHandler.Register)
 	authPublic.POST("/verification", verificationHandler.VerifyCode)
+	authPublic.GET("/ediploma/file", ediplomaHandler.PublicViewEDiplomaFile)
 
 	authPrivate := api.Group("/auth")
 	authPrivate.Use(middleware.JWTAuthMiddleware())

@@ -282,3 +282,42 @@ func (h *EDiplomaHandler) ViewEDiplomaFile(c *gin.Context) {
 	// Trả file về client
 	c.DataFromReader(http.StatusOK, -1, contentType, stream, nil)
 }
+
+func (h *EDiplomaHandler) PublicViewEDiplomaFile(c *gin.Context) {
+	// Lấy params từ URL hoặc query
+	universityCode := c.Query("university_code")
+	if universityCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing university_code"})
+		return
+	}
+
+	ediplomaIDHex := c.Query("ediploma_id")
+	if ediplomaIDHex == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing ediploma_id"})
+		return
+	}
+	ediplomaID, err := primitive.ObjectIDFromHex(ediplomaIDHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ediploma_id"})
+		return
+	}
+
+	// Lấy stream và content type từ service
+	stream, contentType, err := h.ediplomaService.GetEDiplomaFileByUniversityCode(c.Request.Context(), ediplomaID, universityCode)
+	if err != nil {
+		if err.Error() == "EDiploma not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "university not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer stream.Close()
+
+	// Trả file về client
+	c.DataFromReader(http.StatusOK, -1, contentType, stream, nil)
+}

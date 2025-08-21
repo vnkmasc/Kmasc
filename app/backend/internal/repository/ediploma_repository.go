@@ -48,7 +48,13 @@ func (r *eDiplomaRepository) UpdateByID(ctx context.Context, id primitive.Object
 
 func (r *eDiplomaRepository) SearchByFilters(ctx context.Context, filter models.EDiplomaSearchFilter) ([]*models.EDiploma, int64, error) {
 	bsonFilter := bson.M{}
-
+	if filter.UniversityID != "" {
+		universityID, err := primitive.ObjectIDFromHex(filter.UniversityID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("invalid university_id: %w", err)
+		}
+		bsonFilter["university_id"] = universityID
+	}
 	// filter theo FacultyID nếu có
 	if filter.FacultyID != "" {
 		facultyID, err := primitive.ObjectIDFromHex(filter.FacultyID)
