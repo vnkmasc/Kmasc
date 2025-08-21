@@ -71,7 +71,7 @@ func MapEDiplomaToDTO(
 		EducationType:      ed.EducationType,
 		GPA:                ed.GPA,
 		GraduationRank:     ed.GraduationRank,
-		IssueDate:          ed.IssueDate,
+		IssueDate:          ed.IssueDate.Format("02/01/2006"),
 		SerialNumber:       ed.SerialNumber,
 		RegistrationNumber: ed.RegistrationNumber,
 		Issued:             ed.Issued,

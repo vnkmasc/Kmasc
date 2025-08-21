@@ -49,6 +49,10 @@ var (
 
 	//General
 	ErrNotFound = errors.New("not_found")
+
+	ErrInvalidFaculty  = errors.New("invalid faculty_id")
+	ErrNoDiplomas      = errors.New("no eDiplomas found")
+	ErrNoValidDiplomas = errors.New("no valid eDiplomas to push")
 )
 
 type ValidationError struct {

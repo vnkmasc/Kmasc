@@ -275,6 +275,8 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 	}
 
 	for _, cert := range certificates {
+		now := time.Now()
+		fmt.Println("GenerateBulkEDiplomas now:", now)
 		// Load university
 		university, err := s.universityRepo.FindByID(ctx, cert.UniversityID)
 		if err != nil {
@@ -307,7 +309,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			"XepLoai":        cert.GraduationRank,
 			"HinhThucDaoTao": cert.EducationType,
 			"Khoa":           cert.Course,
-			"NgayCap":        time.Now().Format("02/01/2006"),
+			"NgayCap":        now.Format("02/01/2006"),
 		}
 
 		// Render HTML từ TemplateSample
@@ -334,7 +336,6 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			continue
 		}
 
-		now := time.Now()
 		ediploma := &models.EDiploma{
 			ID:                 primitive.NewObjectID(),
 			TemplateID:         templateID,
@@ -349,7 +350,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			EducationType:      cert.EducationType,
 			GPA:                cert.GPA,
 			GraduationRank:     cert.GraduationRank,
-			IssueDate:          time.Now(),
+			IssueDate:          now,
 			SerialNumber:       cert.SerialNumber,
 			RegistrationNumber: cert.RegNo,
 			EDiplomaFileLink:   pdfPath,
@@ -601,7 +602,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 			"XepLoai":        ed.GraduationRank,
 			"HinhThucDaoTao": ed.EducationType,
 			"Khoa":           ed.Course,
-			"NgayCap":        ed.IssueDate.Format("02/01/2006"),
+			"NgayCap":        time.Now().Format("02/01/2006"),
 		}
 
 		// Render HTML từ TemplateSample
@@ -627,6 +628,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 		ed.SignatureOfMinEdu = template.SignatureOfMinEdu
 		ed.EDiplomaFileLink = filePath
 		ed.EDiplomaFileHash = utils.ComputeSHA256(pdfBytes)
+		ed.IssueDate = time.Now()
 		ed.Issued = true
 		ed.UpdatedAt = time.Now()
 		_ = s.repo.Update(ctx, ed.ID, ed)
@@ -670,7 +672,7 @@ func (s *eDiplomaService) GetEDiplomaFile(ctx context.Context, ediplomaID, unive
 	}
 
 	// Tạo object key trong MinIO
-	minioPath := fmt.Sprintf("ediplomas/%s/%s.pdf", university.UniversityCode, ediploma.StudentCode)
+	minioPath := fmt.Sprintf("ediplomas/%s/%s_signed.pdf", university.UniversityCode, ediploma.StudentCode)
 
 	// Lấy stream và content type từ MinIO
 	stream, contentType, err := s.minioClient.DownloadFileStream(ctx, minioPath)

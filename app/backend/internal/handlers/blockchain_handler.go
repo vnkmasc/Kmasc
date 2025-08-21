@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/common"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/mapper"
+	"github.com/vnkmasc/Kmasc/app/backend/internal/models"
 	"github.com/vnkmasc/Kmasc/app/backend/internal/service"
 	"github.com/vnkmasc/Kmasc/app/backend/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -138,6 +139,68 @@ func (h *BlockchainHandler) VerifyCertificateFile(c *gin.Context) {
 
 func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 	var req struct {
+		FacultyID       string `form:"faculty_id" json:"faculty_id"`
+		CertificateType string `form:"certificate_type" json:"certificate_type"`
+		Course          string `form:"course" json:"course"`
+		Issued          *bool  `form:"issued" json:"issued"`
+	}
+
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	// Lấy claims
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	// Parse university_id
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+		return
+	}
+
+	// Gọi service
+	count, err := h.BlockchainSvc.PushToBlockchain(
+		c.Request.Context(),
+		universityID.Hex(),
+		req.FacultyID,
+		req.CertificateType,
+		req.Course,
+		req.Issued,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, common.ErrInvalidFaculty):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, common.ErrNoDiplomas):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, common.ErrNoValidDiplomas):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "Đã đẩy lên chuỗi khối",
+		"updated_records": count,
+	})
+}
+
+func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
+	var req struct {
 		FacultyID       string `form:"faculty_id"`
 		CertificateType string `form:"certificate_type"`
 		Course          string `form:"course"`
@@ -174,7 +237,7 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 	}
 
 	// Gọi service
-	count, err := h.BlockchainSvc.PushToBlockchain(
+	count, err := h.BlockchainSvc.PushToBlockchain1(
 		c.Request.Context(),
 		universityID.Hex(), // truyền lại string vào service
 		req.FacultyID,
@@ -204,7 +267,6 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 }
 
 type VerifyBatchRequest struct {
-	UniversityID    string `form:"university_id" binding:"required"`
 	FacultyID       string `form:"faculty_id" json:"faculty_id" binding:"required"`
 	CertificateType string `form:"certificate_type" json:"certificate_type"`
 	Course          string `form:"course" json:"course"`
@@ -222,8 +284,20 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		return
 	}
 
-	// Parse university_id từ request
-	universityID, err := primitive.ObjectIDFromHex(req.UniversityID)
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	// Parse university_id
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
 		return
@@ -247,4 +321,46 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		Verified: verified,
 		Message:  msg,
 	})
+}
+
+type VerifyEDiplomaRequest struct {
+	UniversityID string `json:"university_id" binding:"required"`
+	FacultyID    string `json:"faculty_id" binding:"required"`
+	Course       string `json:"course" binding:"required"`
+	StudentCode  string `json:"student_code" binding:"required"`
+}
+
+type VerifyResult struct {
+	StudentCode    string             `json:"student_code"`
+	Valid          bool               `json:"valid"`
+	BlockchainRoot string             `json:"blockchain_root"`
+	ComputedHash   string             `json:"computed_hash"`
+	Proof          []models.ProofNode `json:"proof"`
+}
+
+// Handler
+func (h *BlockchainHandler) VerifyEDiploma(c *gin.Context) {
+	var req VerifyEDiplomaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "details": err.Error()})
+		return
+	}
+
+	result, err := h.BlockchainSvc.VerifyEDiploma(
+		c.Request.Context(),
+		req.UniversityID,
+		req.FacultyID,
+		req.Course,
+		req.StudentCode,
+	)
+	if err != nil {
+		if errors.Is(err, common.ErrNoDiplomas) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }

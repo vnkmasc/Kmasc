@@ -40,8 +40,9 @@ type EDiploma struct {
 	SignedAt      time.Time `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
 
 	// Blockchain & trạng thái
-	OnBlockchain   bool   `bson:"on_blockchain" json:"on_blockchain"`
-	BlockchainTxID string `bson:"blockchain_tx_id,omitempty" json:"blockchain_tx_id,omitempty"`
+	OnBlockchain   bool        `bson:"on_blockchain" json:"on_blockchain"`
+	MerkleProof    []ProofNode `bson:"merkle_proof,omitempty" json:"merkle_proof,omitempty"`
+	BlockchainTxID string      `bson:"blockchain_tx_id,omitempty" json:"blockchain_tx_id,omitempty"`
 
 	SignatureOfUni    string `bson:"signature_of_uni,omitempty" json:"signatureOfUni,omitempty"`
 	SignatureOfMinEdu string `bson:"signature_of_minedu,omitempty" json:"signatureOfMinEdu,omitempty"`
@@ -70,7 +71,7 @@ type EDiplomaResponse struct {
 	EducationType      string             `json:"education_type"`
 	GPA                float64            `json:"gpa"`
 	GraduationRank     string             `json:"graduation_rank"`
-	IssueDate          time.Time          `json:"issue_date"`
+	IssueDate          string             `json:"issue_date"`
 	SerialNumber       string             `json:"serial_number"`
 	RegistrationNumber string             `json:"registration_number"`
 	Issued             bool               `json:"issued"`

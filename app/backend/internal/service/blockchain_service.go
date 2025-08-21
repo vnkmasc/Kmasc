@@ -21,12 +21,14 @@ import (
 )
 
 type BlockchainService interface {
+	VerifyEDiploma(ctx context.Context, universityID, facultyIDStr, course, studentCode string) (*VerifyResult, error)
 	VerifyBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course string) (bool, string, error)
 	PushCertificateToChain(ctx context.Context, certificateID primitive.ObjectID) (string, error)
 	GetCertificateFromChain(ctx context.Context, certificateID string) (*models.CertificateOnChain, error)
 	VerifyFileByID(ctx context.Context, certID primitive.ObjectID) (io.ReadCloser, string, error)
 	VerifyCertificateIntegrity(ctx context.Context, certID string) (bool, string, *models.CertificateOnChain, *models.Certificate, *models.User, *models.Faculty, *models.University, error)
 	PushToBlockchain(ctx context.Context, universityID, facultyIDStr, certificateType, course string, issued *bool) (int, error)
+	PushToBlockchain1(ctx context.Context, universityID, facultyIDStr, certificateType, course string, issued *bool) (int, error)
 }
 
 type blockchainService struct {
@@ -208,7 +210,7 @@ func (s *blockchainService) VerifyFileByID(ctx context.Context, certID primitive
 	return newReader, contentType, nil
 }
 
-func (s *blockchainService) PushToBlockchain(
+func (s *blockchainService) PushToBlockchain1(
 	ctx context.Context,
 	universityID, facultyIDStr, certificateType, course string,
 	issued *bool,
@@ -312,6 +314,137 @@ func (s *blockchainService) PushToBlockchain(
 		}
 	}
 
+	return updatedCount, nil
+}
+
+func (s *blockchainService) PushToBlockchain(
+	ctx context.Context,
+	universityID, facultyIDStr, certificateType, course string,
+	issued *bool,
+) (int, error) {
+
+	// Build dynamic filter
+	filter := bson.M{}
+	if facultyIDStr != "" {
+		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+		if err != nil {
+			return 0, common.ErrInvalidFaculty
+		}
+		filter["faculty_id"] = facultyID
+	}
+	if certificateType != "" {
+		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+	}
+	if course != "" {
+		filter["course"] = bson.M{"$regex": course, "$options": "i"}
+	}
+	if issued != nil {
+		filter["issued"] = *issued
+	}
+
+	// Lấy danh sách EDiploma
+	ediplomas, err := s.ediplomaRepo.FindByDynamicFilter(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("failed to load eDiplomas: %w", err)
+	}
+	if len(ediplomas) == 0 {
+		return 0, common.ErrNoDiplomas
+	}
+	log.Printf("[BlockchainService] Found %d eDiplomas", len(ediplomas))
+
+	// Gom hash
+	infoHashes := []string{}
+	fileHashes := []string{}
+	hashMap := map[string]*models.EDiploma{} // map hash -> EDiploma để sinh proof sau
+
+	for _, ed := range ediplomas {
+		if ed.DataEncrypted && ed.Issued && !ed.OnBlockchain {
+			hInfo, err := hashEDiplomaInfo(ed)
+			if err != nil {
+				log.Printf("[BlockchainService] hash failed for %s: %v", ed.StudentCode, err)
+				continue
+			}
+			infoHashes = append(infoHashes, hInfo)
+			hashMap[hInfo] = ed
+
+			if ed.EDiplomaFileHash != "" {
+				fileHashes = append(fileHashes, ed.EDiplomaFileHash)
+			}
+		}
+	}
+
+	if len(infoHashes) == 0 {
+		return 0, common.ErrNoValidDiplomas
+	}
+	log.Printf("[BlockchainService] Info hashes: %+v", infoHashes)
+	log.Printf("[BlockchainService] File hashes: %+v", fileHashes)
+
+	// Tạo Merkle root
+	merkleInfoTree := models.NewMerkleTreeFromStrings(infoHashes)
+	merkleInfoRoot := merkleInfoTree.RootHash()
+	log.Printf("[BlockchainService] Merkle Info Root: %s", merkleInfoRoot)
+
+	merkleFileRoot := "NO_FILE_HASH"
+	if len(fileHashes) > 0 {
+		merkleFileTree := models.NewMerkleTreeFromStrings(fileHashes)
+		merkleFileRoot = merkleFileTree.RootHash()
+		log.Printf("[BlockchainService] Merkle File Root: %s", merkleFileRoot)
+	}
+
+	// Sinh BatchID
+	batchID := fmt.Sprintf("%s-%s-%s", universityID, facultyIDStr, course)
+	log.Printf("[BlockchainService] BatchID = %s", batchID)
+
+	batchOnChain := models.EDiplomaBatchOnChain{
+		BatchID:           batchID,
+		UniversityID:      universityID,
+		FacultyID:         facultyIDStr,
+		CertificateType:   certificateType,
+		Course:            course,
+		AggregateInfoHash: merkleInfoRoot,
+		AggregateFileHash: merkleFileRoot,
+		Count:             len(infoHashes),
+	}
+
+	// Push lên blockchain
+	txID, err := s.fabricClient.IssueEDiplomaBatch(batchOnChain)
+	if err != nil {
+		return 0, fmt.Errorf("push blockchain failed: %w", err)
+	}
+	log.Printf("[BlockchainService] TxID = %s", txID)
+
+	// Update DB với log chi tiết
+	updatedCount := 0
+	for hInfo, ed := range hashMap {
+		proof := merkleInfoTree.GetProof(hInfo)
+		if len(proof) == 0 {
+			log.Printf("[⚠️ BlockchainService] Proof is EMPTY for %s (hash=%s)", ed.StudentCode, hInfo)
+		} else {
+			log.Printf("[✅ BlockchainService] Proof for %s (%s): %+v", ed.StudentCode, hInfo, proof)
+		}
+
+		update := bson.M{
+			"$set": bson.M{
+				"on_blockchain":  true,
+				"transaction_id": txID,
+				"batch_id":       batchID,
+				"university_id":  universityID,
+				"merkle_proof":   proof,
+				"updated_at":     time.Now(),
+			},
+		}
+
+		err := s.ediplomaRepo.UpdateByID(ctx, ed.ID, update)
+		if err != nil {
+			log.Printf("[❌ BlockchainService] Failed to update %s: %v", ed.StudentCode, err)
+			continue
+		}
+		log.Printf("[🟢 BlockchainService] Updated %s successfully", ed.StudentCode)
+		updatedCount++
+
+	}
+
+	log.Printf("[BlockchainService] Total updated records: %d", updatedCount)
 	return updatedCount, nil
 }
 
@@ -439,4 +572,66 @@ func (s *blockchainService) VerifyBatch(ctx context.Context, universityID, facul
 	)
 
 	return true, "Dữ liệu khớp hoàn toàn trên chuỗi khối", nil
+}
+
+type VerifyResult struct {
+	StudentCode    string             `json:"student_code"`
+	Valid          bool               `json:"valid"`
+	BlockchainRoot string             `json:"blockchain_root"`
+	ComputedHash   string             `json:"computed_hash"`
+	Proof          []models.ProofNode `json:"proof"`
+}
+
+func (s *blockchainService) VerifyEDiploma(
+	ctx context.Context,
+	universityID, facultyIDStr, course, studentCode string,
+) (*VerifyResult, error) {
+
+	// 1. Lấy eDiploma từ DB
+	ed, err := s.ediplomaRepo.FindByStudentCode(ctx, studentCode)
+	if err != nil {
+		return nil, err
+	}
+	if ed == nil {
+		return nil, common.ErrNoDiplomas
+	}
+
+	// 2. Hash lại thông tin eDiploma
+	hInfo, err := hashEDiplomaInfo(ed)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash diploma: %w", err)
+	}
+
+	// 3. Lấy proof đã lưu từ DB
+	proof := ed.MerkleProof
+	if len(proof) == 0 {
+		return nil, fmt.Errorf("no merkle proof stored for this diploma")
+	}
+
+	// 4. Tạo batchID dựa trên cùng công thức push
+	batchID := fmt.Sprintf("%s-%s-%s", universityID, facultyIDStr, course)
+
+	// 5. Lấy batch từ blockchain
+	batchOnChain, err := s.fabricClient.GetEDiplomaBatch(batchID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get batch from blockchain: %w", err)
+	}
+
+	// 6. Lấy Merkle root từ batch
+	root := batchOnChain.AggregateInfoHash
+	if root == "" {
+		return nil, fmt.Errorf("no merkle root stored on blockchain for batch %s", batchID)
+	}
+
+	// 7. Verify proof
+	isValid := models.VerifyProof(hInfo, proof, root)
+
+	// 8. Trả kết quả
+	return &VerifyResult{
+		StudentCode:    studentCode,
+		Valid:          isValid,
+		BlockchainRoot: root,
+		ComputedHash:   hInfo,
+		Proof:          proof,
+	}, nil
 }
