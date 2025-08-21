@@ -307,7 +307,7 @@ func (s *eDiplomaService) GenerateBulkEDiplomas(ctx context.Context, facultyIDSt
 			"XepLoai":        cert.GraduationRank,
 			"HinhThucDaoTao": cert.EducationType,
 			"Khoa":           cert.Course,
-			"NgayCap":        cert.IssueDate.Format("02/01/2006"),
+			"NgayCap":        time.Now().Format("02/01/2006"),
 		}
 
 		// Render HTML từ TemplateSample

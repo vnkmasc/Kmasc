@@ -348,12 +348,7 @@ func aggregateHashes(hashes []string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func (s *blockchainService) VerifyBatch(
-	ctx context.Context,
-	universityID, facultyIDStr, certificateType, course string,
-) (bool, string, error) {
-
-	// Build filter giống PushToBlockchain
+func (s *blockchainService) VerifyBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course string) (bool, string, error) {
 	filter := bson.M{}
 	if facultyIDStr != "" {
 		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
