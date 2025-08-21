@@ -212,3 +212,19 @@ func main() {
 		panic(err)
 	}
 }
+
+func (c *CertificateContract) ReadEDiplomaBatch(ctx contractapi.TransactionContextInterface, batchID string) (*EDiplomaBatchOnChain, error) {
+	bytes, err := ctx.GetStub().GetState(batchID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read batch from world state: %v", err)
+	}
+	if bytes == nil {
+		return nil, fmt.Errorf("batch %s does not exist", batchID)
+	}
+
+	var batch EDiplomaBatchOnChain
+	if err := json.Unmarshal(bytes, &batch); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal batch: %v", err)
+	}
+	return &batch, nil
+}

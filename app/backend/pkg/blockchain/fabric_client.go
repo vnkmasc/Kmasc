@@ -158,3 +158,21 @@ func (fc *FabricClient) UpdateCertificate(cert any) error {
 	}
 	return nil
 }
+
+func (fc *FabricClient) GetEDiplomaBatch(batchID string) (*models.EDiplomaBatchOnChain, error) {
+	result, err := fc.contract.EvaluateTransaction("ReadEDiplomaBatch", batchID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate transaction: %v", err)
+	}
+
+	log.Printf("[GetEDiplomaBatch] Raw result from chain for batchID=%s: %s", batchID, string(result))
+
+	var batch models.EDiplomaBatchOnChain
+	if err := json.Unmarshal(result, &batch); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal batch: %v", err)
+	}
+
+	log.Printf("[GetEDiplomaBatch] Parsed batch from chain: %+v", batch)
+
+	return &batch, nil
+}

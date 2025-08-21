@@ -489,7 +489,8 @@ func (s *eDiplomaService) ProcessZip(ctx context.Context, zipPath string, univer
 			continue
 		}
 
-		studentCode := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+		filename := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+		studentCode := strings.TrimSuffix(filename, "_signed")
 
 		ediploma, err := s.repo.FindByStudentCode(ctx, studentCode)
 		if err != nil || ediploma == nil {
