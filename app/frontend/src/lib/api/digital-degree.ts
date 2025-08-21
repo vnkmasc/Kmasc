@@ -99,3 +99,8 @@ export const getDigitalDegreeFileById = async (id: string) => {
   const res = await apiService('GET', `ediplomas/file/${id}`, undefined, true, {}, true)
   return res
 }
+
+export const getDigitalDegreeById = async (id: string) => {
+  const res = await apiService('GET', `ediplomas/${id}`)
+  return res
+}

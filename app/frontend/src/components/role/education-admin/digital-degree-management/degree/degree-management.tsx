@@ -10,14 +10,10 @@ import { CERTIFICATE_TYPE_OPTIONS, PAGE_SIZE } from '@/constants/common'
 import { formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { useState } from 'react'
 import useSWR from 'swr'
-import {
-  getDigitalDegreeFileById,
-  searchDigitalDegreeList,
-  uploadDigitalDegreesBlockchain
-} from '@/lib/api/digital-degree'
+import { searchDigitalDegreeList, uploadDigitalDegreesBlockchain } from '@/lib/api/digital-degree'
 import { formatDate } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { AlertCircleIcon, Blocks, CheckCircle2Icon, Eye, FileText } from 'lucide-react'
+import { AlertCircleIcon, Blocks, CheckCircle2Icon, Eye } from 'lucide-react'
 import IssueDegreeDialog from '@/components/role/education-admin/digital-degree-management/degree/issue-degree-dialog'
 import SignDegreeButton from './sign-degree-button'
 import { HashUploadButton } from './hash-upload-button'
@@ -75,22 +71,6 @@ const DegreeManagement = () => {
       },
       onSuccess: () => {
         showNotification('success', 'Đẩy lên Blockchain thành công')
-      }
-    }
-  )
-  const mutateGetDigitalDegreeFile = useSWRMutation(
-    'get-digital-degree-file',
-    async (_key, { arg }: { arg: string }) => {
-      const res = await getDigitalDegreeFileById(arg)
-      return res
-    },
-    {
-      onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi lấy tệp văn bằng số')
-      },
-      onSuccess: (data) => {
-        const url = URL.createObjectURL(data)
-        window.open(url, '_blank')
       }
     }
   )
@@ -268,16 +248,12 @@ const DegreeManagement = () => {
             value: 'action',
             render: (item) => (
               <div className='flex gap-2'>
-                {' '}
-                <Button size={'icon'} onClick={() => mutateGetDigitalDegreeFile.trigger(item.id)}>
-                  <FileText />
-                </Button>
-                <Link href={`/education-admin/certificate-management/${item.certificate_id}`}>
+                <Link href={`/education-admin/digital-degree-management/${item.id}`}>
                   <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
                     <Eye />
                   </Button>
                 </Link>
-                <Link href={`/education-admin/certificate-management/${item.certificate_id}/blockchain`}>
+                <Link href={`/education-admin/certificate-management/${item.id}/blockchain`}>
                   <Button size={'icon'} title='Xem dữ liệu trên blockchain'>
                     <Blocks />
                   </Button>
