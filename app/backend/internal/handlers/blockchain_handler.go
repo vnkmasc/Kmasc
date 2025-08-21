@@ -204,7 +204,7 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 }
 
 type VerifyBatchRequest struct {
-	UniversityID    string `json:"university_id" binding:"required"`
+	UniversityID    string `form:"university_id" binding:"required"`
 	FacultyID       string `form:"faculty_id" json:"faculty_id" binding:"required"`
 	CertificateType string `form:"certificate_type" json:"certificate_type"`
 	Course          string `form:"course" json:"course"`
