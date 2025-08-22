@@ -104,7 +104,7 @@ const AuthPage = () => {
                 }}
               >
                 <Image src={logoKMA} alt='kmasc' width={50} height={50} />
-                <span className='text-xl font-semibold text-main md:text-2xl'>Kmasc</span>
+                <span className='text-xl font-semibold text-main md:text-2xl'>KMAsc</span>
               </span>
             </DialogTitle>
             <span className='text-xl font-semibold md:text-2xl'>Đăng ký</span>

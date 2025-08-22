@@ -110,6 +110,7 @@ export const pushCertificateIntoBlockchain = async (id: string) => {
 
 export const getBlockchainData = async (id: string) => {
   const res = await apiService('GET', `blockchain/verify/${id}`, undefined, true, {}, true)
+  console.log('🚀 ~ getBlockchainData ~ res:', res)
 
   return {
     ...res,

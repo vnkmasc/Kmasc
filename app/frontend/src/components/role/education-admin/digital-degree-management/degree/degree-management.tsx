@@ -11,13 +11,13 @@ import { formatFacultyOptionsByID } from '@/lib/utils/format-api'
 import { useState } from 'react'
 import useSWR from 'swr'
 import {
-  getDigitalDegreeFileById,
   searchDigitalDegreeList,
-  uploadDigitalDegreesBlockchain
+  uploadDigitalDegreesBlockchain,
+  verifyDigitalDegreeDataBlockchain
 } from '@/lib/api/digital-degree'
 import { formatDate } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { AlertCircleIcon, Blocks, CheckCircle2Icon, Eye, FileText } from 'lucide-react'
+import { AlertCircleIcon, Blocks, CheckCircle2Icon, Eye, Grid2X2Check } from 'lucide-react'
 import IssueDegreeDialog from '@/components/role/education-admin/digital-degree-management/degree/issue-degree-dialog'
 import SignDegreeButton from './sign-degree-button'
 import { HashUploadButton } from './hash-upload-button'
@@ -78,19 +78,27 @@ const DegreeManagement = () => {
       }
     }
   )
-  const mutateGetDigitalDegreeFile = useSWRMutation(
-    'get-digital-degree-file',
-    async (_key, { arg }: { arg: string }) => {
-      const res = await getDigitalDegreeFileById(arg)
-      return res
-    },
+
+  const mutateVerifyDigitalDegreeDataBlockchain = useSWRMutation(
+    'verify-digital-degree-data-blockchain',
+    async (_key, { arg }: { arg: any }) =>
+      verifyDigitalDegreeDataBlockchain(
+        arg.university_id,
+        filter.faculty_id,
+        filter.certificate_type,
+        filter.course,
+        arg.ediplosma_id
+      ),
     {
       onError: (error) => {
-        showNotification('error', error.message || 'Lỗi khi lấy tệp văn bằng số')
+        showNotification('error', error.message || 'Lỗi khi xác minh dữ liệu trên blockchain')
       },
       onSuccess: (data) => {
-        const url = URL.createObjectURL(data)
-        window.open(url, '_blank')
+        if (!data.verified) {
+          showNotification('error', data.message || 'Dữ liệu không hợp lệ')
+        } else {
+          showNotification('success', 'Xác minh dữ liệu trên blockchain thành công')
+        }
       }
     }
   )
@@ -268,20 +276,52 @@ const DegreeManagement = () => {
             value: 'action',
             render: (item) => (
               <div className='flex gap-2'>
-                {' '}
-                <Button size={'icon'} onClick={() => mutateGetDigitalDegreeFile.trigger(item.id)}>
-                  <FileText />
-                </Button>
-                <Link href={`/education-admin/certificate-management/${item.certificate_id}`}>
+                <Link href={`/education-admin/digital-degree-management/${item.id}`} target='_blank'>
                   <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
                     <Eye />
                   </Button>
                 </Link>
-                <Link href={`/education-admin/certificate-management/${item.certificate_id}/blockchain`}>
-                  <Button size={'icon'} title='Xem dữ liệu trên blockchain'>
-                    <Blocks />
-                  </Button>
-                </Link>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size={'icon'} title='Xác minh dữ liệu trên blockchain' disabled={!item.on_blockchain}>
+                      <Grid2X2Check />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Xác minh dữ liệu trên blockchain</AlertDialogTitle>
+                    </AlertDialogHeader>
+                    {filter.faculty_id ? (
+                      <Alert variant={'success'}>
+                        <CheckCircle2Icon />
+                        <AlertTitle>Sẵn sàng</AlertTitle>
+                        <AlertDescription>
+                          <ul className='list-inside list-disc'>
+                            <li>ID Trường: {item.university_id}</li>
+                            <li>ID Chuyên ngành: {filter.faculty_id}</li>
+                            {filter.certificate_type && <li>Loại bằng: {filter.certificate_type}</li>}
+                            {filter.course && <li>Khóa học: {filter.course}</li>}
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <Alert variant={'warning'}>
+                        <AlertCircleIcon />
+                        <AlertTitle>Cảnh báo</AlertTitle>
+                        <AlertDescription>
+                          Vui lòng chọn chuyên ngành trong <strong>phần tìm kiếm</strong> để tiến hành xác minh trên
+                          blockchain.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => mutateVerifyDigitalDegreeDataBlockchain.trigger(item.id)}>
+                        Xác minh
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <CertificateQrCode id={item.id} isIcon={true} />
               </div>
             )

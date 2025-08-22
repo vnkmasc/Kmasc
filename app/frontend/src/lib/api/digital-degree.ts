@@ -99,3 +99,26 @@ export const getDigitalDegreeFileById = async (id: string) => {
   const res = await apiService('GET', `ediplomas/file/${id}`, undefined, true, {}, true)
   return res
 }
+
+export const getDigitalDegreeById = async (id: string) => {
+  const res = await apiService('GET', `ediplomas/${id}`)
+  return res
+}
+
+export const verifyDigitalDegreeDataBlockchain = async (
+  universityId: string,
+  facultyId: string,
+  certificateType: string,
+  course: string,
+  ediplosmaId: string
+) => {
+  const formData = new FormData()
+  formData.append('university_id', universityId)
+  if (facultyId !== '') formData.append('faculty_id', facultyId)
+  if (certificateType !== '') formData.append('certificate_type', certificateType)
+  if (course !== '') formData.append('course', course)
+  if (ediplosmaId !== '') formData.append('ediplosma_id', ediplosmaId)
+
+  const res = await apiService('POST', 'blockchain/verify-batch', formData, false)
+  return res
+}

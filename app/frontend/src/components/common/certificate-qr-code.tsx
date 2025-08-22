@@ -101,7 +101,7 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
               <Download />
               Tải xuống
             </Button>
-            <Link href={certificateUrl}>
+            <Link href={certificateUrl} target='_blank'>
               <Button variant='outline'>
                 <ArrowRight />
                 Chuyển hướng
