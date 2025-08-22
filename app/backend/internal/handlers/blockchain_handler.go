@@ -274,6 +274,7 @@ type VerifyBatchResponse struct {
 
 func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 	var req struct {
+		UniversityID    string `form:"university_id"`
 		FacultyID       string `form:"faculty_id"`
 		CertificateType string `form:"certificate_type"`
 		Course          string `form:"course"`
@@ -285,20 +286,14 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		return
 	}
 
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-	claims, ok := claimsRaw.(*utils.CustomClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+	if req.UniversityID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "UniversityID is required"})
 		return
 	}
 
 	okVerify, msg, ediploma, err := h.BlockchainSvc.VerifyBatch(
 		c.Request.Context(),
-		claims.UniversityID,
+		req.UniversityID,
 		req.FacultyID,
 		req.CertificateType,
 		req.Course,

@@ -126,7 +126,7 @@ func SetupRouter(
 	blockchainGroup.POST("/push-ediploma-merkle-tree", middleware.JWTAuthMiddleware(), blockchainHandler.PushEDiplomasToBlockchain)
 	blockchainGroup.POST("/verify-ediploma-merkle-tree", blockchainHandler.VerifyEDiploma)
 	blockchainGroup.POST("/push-ediploma", middleware.JWTAuthMiddleware(), blockchainHandler.PushEDiplomasToBlockchain1)
-	blockchainGroup.POST("/verify-batch", middleware.JWTAuthMiddleware(), blockchainHandler.VerifyBatch)
+	blockchainGroup.POST("/verify-batch", blockchainHandler.VerifyBatch)
 
 	// ===== Major routes =====
 	majorGroup := api.Group("/majors")
