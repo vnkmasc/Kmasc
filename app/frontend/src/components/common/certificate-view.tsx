@@ -34,7 +34,7 @@ interface Props {
 
 const CertificateView: React.FC<Props> = (props) => {
   const queryData = useSWR(
-    props.isBlockchain ? undefined : `certificate-view-${props.id}`,
+    !props.isBlockchain && props.id ? `certificate-view-${props.id}` : undefined,
     () => getCertificateDataById(props.id),
     {
       onError: (error) => {
@@ -44,7 +44,7 @@ const CertificateView: React.FC<Props> = (props) => {
   )
   const isDegree = queryData.data?.certificate?.certificateType !== undefined
   const queryFile = useSWR(
-    props.isBlockchain ? undefined : `certificate-file-${props.id}`,
+    !props.isBlockchain && props.id ? `certificate-file-${props.id}` : undefined,
     () => getCertificateFile(props.id),
     {
       revalidateOnFocus: false,
@@ -56,7 +56,7 @@ const CertificateView: React.FC<Props> = (props) => {
   )
 
   const queryBlockchainData = useSWR(
-    props.isBlockchain ? `blockchain-data-${props.id}` : undefined,
+    props.isBlockchain && props.id ? `blockchain-data-${props.id}` : undefined,
     () => getBlockchainData(props.id),
     {
       revalidateOnFocus: false,
@@ -67,7 +67,7 @@ const CertificateView: React.FC<Props> = (props) => {
     }
   )
   const queryBlockchainFile = useSWR(
-    props.isBlockchain ? `blockchain-file-${props.id}` : undefined,
+    props.isBlockchain && props.id ? `blockchain-file-${props.id}` : undefined,
     () => getBlockchainFile(props.id),
     {
       revalidateOnFocus: false,

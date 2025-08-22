@@ -8,7 +8,6 @@ import {
   Calendar,
   ChartAreaIcon,
   CheckCircleIcon,
-  CircleX,
   FileTextIcon,
   Library,
   School,
@@ -22,18 +21,31 @@ import CertificateBlankButton from '../role/education-admin/certificate-manageme
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils/common'
-import CertificateQrCode from './certificate-qr-code'
-import { getDigitalDegreeById, getDigitalDegreeFileById } from '@/lib/api/digital-degree'
+import {
+  getDigitalDegreeById,
+  getDigitalDegreeFileById,
+  verifyDigitalDegreeDataBlockchain,
+  verifyDigitalDegreeFileBlockchain
+} from '@/lib/api/digital-degree'
 import { Badge } from '../ui/badge'
+import useSWRMutation from 'swr/mutation'
+import { useEffect } from 'react'
+import CertificateQrCode from './certificate-qr-code'
+import { encodeJSON } from '@/lib/utils/lz-string'
 
 interface Props {
   isBlockchain: boolean
   id: string
+  universityCode?: string
+  universityId?: string
+  facultyId?: string
+  certificateType?: string
+  course?: string
 }
 
 const DigitalDegreeView: React.FC<Props> = (props) => {
   const queryData = useSWR(
-    props.isBlockchain ? undefined : `digital-degree-view-${props.id}`,
+    !props.isBlockchain && props.id ? `digital-degree-view-${props.id}` : undefined,
     () => getDigitalDegreeById(props.id),
     {
       onError: (error) => {
@@ -43,7 +55,7 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
   )
 
   const queryFile = useSWR(
-    props.isBlockchain ? undefined : `digital-degree-file-${props.id}`,
+    !props.isBlockchain && props.id ? `digital-degree-file-${props.id}` : undefined,
     () => getDigitalDegreeFileById(props.id),
     {
       revalidateOnFocus: false,
@@ -54,31 +66,61 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
     }
   )
 
-  //   const queryBlockchainData = useSWR(
-  //     props.isBlockchain ? `blockchain-data-${props.id}` : undefined,
-  //     () => getBlockchainData(props.id),
-  //     {
-  //       revalidateOnFocus: false,
-  //       shouldRetryOnError: false,
-  //       onError: (error) => {
-  //         showNotification('error', error.message || 'Không tải được dữ liệu')
-  //       }
-  //     }
-  //   )
-  //   const queryBlockchainFile = useSWR(
-  //     props.isBlockchain ? `blockchain-file-${props.id}` : undefined,
-  //     () => getBlockchainFile(props.id),
-  //     {
-  //       revalidateOnFocus: false,
-  //       shouldRetryOnError: false,
-  //       onError: () => {
-  //         showNotification('error', 'Không tải được tệp PDF')
-  //       }
-  //     }
-  //   )
+  const mutateVerifyDigitalDegreeDataBlockchain = useSWRMutation(
+    'verify-digital-degree-data-blockchain',
+    () =>
+      verifyDigitalDegreeDataBlockchain(
+        props?.universityId || '',
+        props?.facultyId || '',
+        props?.certificateType || '',
+        props?.course || '',
+        props.id
+      ),
+    {
+      onError: (error: any) => {
+        showNotification('error', error.message || 'Lỗi khi xác minh dữ liệu trên blockchain')
+      },
+      onSuccess: (data) => {
+        if (!data.verified) {
+          showNotification('error', data.message || 'Dữ liệu không hợp lệ')
+        } else {
+          showNotification('success', 'Xác minh dữ liệu trên blockchain thành công')
+        }
+      }
+    }
+  )
 
-  const currentDataQuery = queryData
-  const currentFileQuery = queryFile
+  useEffect(() => {
+    if (props.isBlockchain) {
+      mutateVerifyDigitalDegreeDataBlockchain.trigger()
+    }
+  }, [props.isBlockchain])
+
+  const queryBlockchainFile = useSWR(
+    props.isBlockchain && props.id && props.universityCode ? `digital-degree-blockchain-file-${props.id}` : undefined,
+    () => verifyDigitalDegreeFileBlockchain(props.universityCode ?? '', props.id),
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+      onError: () => {
+        showNotification('error', 'Không tải được tệp PDF')
+      }
+    }
+  )
+
+  // const currentDataQuery = props.isBlockchain
+  //   ? {
+  //       isLoading: mutateVerifyDigitalDegreeDataBlockchain.isMutating,
+  //       error: mutateVerifyDigitalDegreeDataBlockchain.error,
+  //       data: {
+  //         data: {
+  //           name: 'Chứng chỉ số'
+  //         }
+  //       }
+  //     }
+  //   : queryData
+
+  const currentFileQuery = props.isBlockchain ? queryBlockchainFile : queryFile
 
   const getDegreeItems = (data: any) => {
     return [
@@ -148,27 +190,50 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
 
   return (
     <div>
-      {currentDataQuery.isLoading ? null : !currentDataQuery.error ? (
+      {props.isBlockchain ? (
         <>
           <Alert className={cn('mx-auto mb-4 max-w-[800px]', !props.isBlockchain && 'hidden')} variant='success'>
             <CheckCircleIcon />
             <AlertTitle>Thông báo</AlertTitle>
-            <AlertDescription>{currentDataQuery.data?.message || 'Không tải được dữ liệu'}</AlertDescription>
+            <AlertDescription>
+              {mutateVerifyDigitalDegreeDataBlockchain.data?.message || 'Không tải được dữ liệu'}
+            </AlertDescription>
           </Alert>
           <DecriptionView
-            title={currentDataQuery?.data?.data?.name || 'Không có dữ liệu'}
-            items={getDegreeItems(currentDataQuery?.data?.data)}
+            title={mutateVerifyDigitalDegreeDataBlockchain?.data?.data?.name || 'Không có dữ liệu'}
+            items={getDegreeItems(mutateVerifyDigitalDegreeDataBlockchain?.data?.data)}
             description={`Thông tin chi tiết về văn bằng số`}
-            extra={<CertificateQrCode id={props.id} isIcon={false} />}
+            extra={
+              <CertificateQrCode
+                id={
+                  encodeJSON({
+                    university_id: props.universityId,
+                    faculty_id: props.facultyId,
+                    certificate_type: props.certificateType,
+                    course: props.course,
+                    ediploma_id: props.id,
+                    university_code: props.universityCode
+                  }) ?? ''
+                }
+                isIcon={false}
+              />
+            }
           />
         </>
       ) : (
         <>
-          <Alert className='mx-auto mb-4 max-w-[800px]' variant='destructive'>
-            <CircleX />
-            <AlertTitle>Lỗi</AlertTitle>
-            <AlertDescription>{currentDataQuery?.error?.message || 'Không tải được dữ liệu'}</AlertDescription>
+          <Alert className={cn('mx-auto mb-4 max-w-[800px]', !props.isBlockchain && 'hidden')} variant='success'>
+            <CheckCircleIcon />
+            <AlertTitle>Thông báo</AlertTitle>
+            <AlertDescription>{queryData.data?.message || 'Không tải được dữ liệu'}</AlertDescription>
           </Alert>
+
+          <DecriptionView
+            title={queryData?.data?.data?.name || 'Không có dữ liệu'}
+            items={getDegreeItems(queryData?.data?.data)}
+            description={`Thông tin chi tiết về văn bằng số`}
+            extra={<CertificateQrCode id={props.id} isIcon={false} />}
+          />
         </>
       )}
 

@@ -37,6 +37,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Link from 'next/link'
 import CertificateQrCode from '@/components/common/certificate-qr-code'
+import { encodeJSON } from '@/lib/utils/lz-string'
 
 const DegreeManagement = () => {
   const [filter, setFilter] = useState<any>({
@@ -87,7 +88,7 @@ const DegreeManagement = () => {
         filter.faculty_id,
         filter.certificate_type,
         filter.course,
-        arg.ediplosma_id
+        arg.ediploma_id
       ),
     {
       onError: (error) => {
@@ -301,6 +302,7 @@ const DegreeManagement = () => {
                             <li>ID Chuyên ngành: {filter.faculty_id}</li>
                             {filter.certificate_type && <li>Loại bằng: {filter.certificate_type}</li>}
                             {filter.course && <li>Khóa học: {filter.course}</li>}
+                            <li>ID Văn bằng: {item.id}</li>
                           </ul>
                         </AlertDescription>
                       </Alert>
@@ -316,13 +318,33 @@ const DegreeManagement = () => {
                     )}
                     <AlertDialogFooter>
                       <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => mutateVerifyDigitalDegreeDataBlockchain.trigger(item.id)}>
+                      <AlertDialogAction
+                        disabled={filter.faculty_id === ''}
+                        onClick={() =>
+                          mutateVerifyDigitalDegreeDataBlockchain.trigger({
+                            ediploma_id: item.id,
+                            university_id: item.university_id
+                          })
+                        }
+                      >
                         Xác minh
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-                <CertificateQrCode id={item.id} isIcon={true} />
+                <CertificateQrCode
+                  id={
+                    encodeJSON({
+                      faculty_id: filter.faculty_id,
+                      certificate_type: filter.certificate_type,
+                      course: filter.course,
+                      ediploma_id: item.id,
+                      university_code: item.university_code,
+                      university_id: item.university_id
+                    }) ?? ''
+                  }
+                  isIcon={true}
+                />
               </div>
             )
           }

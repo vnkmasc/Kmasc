@@ -2,11 +2,12 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PackageSearch } from 'lucide-react'
 import CertificateView from './certificate-view'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { decodeJSON } from '@/lib/utils/lz-string'
+import DigitalDegreeView from './digital-degree-view'
 
 const SearchVerifyCode = () => {
   const [verifyCode, setVerifyCode] = useState('')
@@ -14,12 +15,19 @@ const SearchVerifyCode = () => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const decodedVerifyCode = useMemo(() => {
+    if (!blockchainVerifyCode) return null
+    return decodeJSON(blockchainVerifyCode)
+  }, [blockchainVerifyCode])
 
   useEffect(() => {
     if (blockchainVerifyCode) {
-      router.push(`${pathname}?code=${blockchainVerifyCode}`)
+      const currentCode = searchParams.get('code')
+      if (currentCode !== blockchainVerifyCode) {
+        router.push(`${pathname}?code=${blockchainVerifyCode}`)
+      }
     }
-  }, [blockchainVerifyCode, pathname, router])
+  }, [blockchainVerifyCode, pathname, router, searchParams])
 
   useEffect(() => {
     const code = searchParams.get('code')
@@ -48,7 +56,19 @@ const SearchVerifyCode = () => {
         </CardContent>
       </Card>
       <div className='w-full'>
-        {blockchainVerifyCode && <CertificateView id={blockchainVerifyCode} isBlockchain={true} />}
+        {!blockchainVerifyCode ? null : decodedVerifyCode ? (
+          <DigitalDegreeView
+            id={decodedVerifyCode?.ediploma_id}
+            isBlockchain={true}
+            universityCode={decodedVerifyCode?.university_code}
+            universityId={decodedVerifyCode?.university_id}
+            facultyId={decodedVerifyCode?.faculty_id}
+            certificateType={decodedVerifyCode?.certificate_type}
+            course={decodedVerifyCode?.course}
+          />
+        ) : (
+          <CertificateView id={blockchainVerifyCode} isBlockchain={true} />
+        )}
       </div>
     </>
   )
