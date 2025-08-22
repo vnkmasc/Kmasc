@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Kmasc',
+  title: 'KMAsc',
   description: 'Giải pháp quản lý văn bằng chứng chỉ ứng dụng Blockchain.',
   icons: {
     icon: '/assets/images/logoKMA.png'

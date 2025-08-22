@@ -120,7 +120,7 @@ const Header: React.FC<Props> = (props) => {
         <Link href='/'>
           <div className='flex items-center gap-1'>
             <Image src={logoKmasc} alt='logoKmasc' width={30} height={30} />
-            <h1 className='text-lg font-semibold text-main sm:text-xl'>Kmasc</h1>
+            <h1 className='text-lg font-semibold text-main sm:text-xl'>KMAsc</h1>
           </div>
         </Link>
 

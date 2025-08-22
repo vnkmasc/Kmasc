@@ -11,7 +11,6 @@ import {
   ChartAreaIcon,
   CheckCircleIcon,
   CircleX,
-  Eye,
   FileTextIcon,
   Library,
   School,
@@ -19,7 +18,6 @@ import {
   Text,
   User
 } from 'lucide-react'
-import { Button } from '../ui/button'
 import PDFView from './pdf-view'
 import { Separator } from '../ui/separator'
 import CertificateBlankButton from '../role/education-admin/certificate-management/certificate-blank-button'
@@ -27,7 +25,6 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils/common'
 import CertificateQrCode from './certificate-qr-code'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
 import { Badge } from '../ui/badge'
 
 interface Props {
@@ -234,27 +231,7 @@ const CertificateView: React.FC<Props> = (props) => {
             title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
             items={getDecriptionViewItems(currentDataQuery?.data)}
             description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
-            extra={
-              <div className='flex items-center gap-2'>
-                <CertificateQrCode id={props.id} isIcon={false} />
-                {isDegree && currentDataQuery?.data?.certificate && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant='outline'>
-                        <Eye />
-                        <span className='hidden md:block'>Xem trước</span>
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className='md:min-w-[600px]'>
-                      <DialogHeader>
-                        <DialogTitle>Văn bằng</DialogTitle>
-                      </DialogHeader>
-                      {/* <CertificatePreview {...getCertificatePreviewProps(currentDataQuery?.data)!} /> */}
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
-            }
+            extra={<CertificateQrCode id={props.id} isIcon={false} />}
           />
         </>
       ) : (

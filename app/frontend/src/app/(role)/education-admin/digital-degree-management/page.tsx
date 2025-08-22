@@ -7,8 +7,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import DegreeManagement from '@/components/role/education-admin/digital-degree-management/degree/degree-management'
 import { Suspense } from 'react'
 import SuspendPage from '@/components/common/suspend-page'
+import UseBreakpoint from '@/lib/hooks/use-breakpoint'
 
 const DigitalDegreeManagement = () => {
+  const { sm } = UseBreakpoint()
   const router = useRouter()
   const searchTabParams = useSearchParams()
   return (
@@ -17,9 +19,9 @@ const DigitalDegreeManagement = () => {
       onValueChange={(value) => router.push(`/education-admin/digital-degree-management?tab=${value}`)}
     >
       <TabsList>
-        <TabsTrigger value='degree'>Quản lý văn bằng</TabsTrigger>
-        <TabsTrigger value='template'>Quản lý mẫu bằng</TabsTrigger>
-        <TabsTrigger value='template-interface'>Giao diện mẫu bằng</TabsTrigger>
+        <TabsTrigger value='degree'>{sm ? 'Quản lý văn bằng' : 'QLVB'} </TabsTrigger>
+        <TabsTrigger value='template'>{sm ? 'Quản lý mẫu bằng' : 'QLMB'}</TabsTrigger>
+        <TabsTrigger value='template-interface'>{sm ? 'Giao diện mẫu bằng' : 'GDMB'}</TabsTrigger>
       </TabsList>
       <TabsContent value='degree'>
         <DegreeManagement />

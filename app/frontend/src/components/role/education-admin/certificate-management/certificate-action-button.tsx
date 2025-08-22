@@ -29,12 +29,12 @@ const CertificateActionButton: React.FC<Props> = (props) => {
 
   return (
     <div className='flex gap-2'>
-      <Link href={`/education-admin/certificate-management/${props.id}`}>
+      <Link href={`/education-admin/certificate-management/${props.id}`} target='_blank'>
         <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
           <EyeIcon />
         </Button>
       </Link>
-      <Link href={`/education-admin/certificate-management/${props.id}/blockchain`}>
+      <Link href={`/education-admin/certificate-management/${props.id}/blockchain`} target='_blank'>
         <Button size={'icon'} variant={'secondary'} title='Xem dữ liệu trên blockchain'>
           <Blocks />
         </Button>

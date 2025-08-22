@@ -14,7 +14,7 @@ const HomePage = async () => {
       <section className='container mt-16 flex flex-1 flex-col items-center py-8'>
         <div className='flex items-center gap-2'>
           <Image src={logoKmasc} alt='logoKmasc' width={50} height={50} />
-          <h1 className='text-2xl font-semibold text-main sm:text-4xl'>Kmasc</h1>
+          <h1 className='text-2xl font-semibold text-main sm:text-4xl'>KMAsc</h1>
         </div>
         <h1 className='mt-3 text-center text-xl font-semibold sm:text-3xl md:mt-6'>
           Giải pháp <span className='text-main'>quản lý văn bằng chứng chỉ </span> ứng dụng{' '}
@@ -25,7 +25,7 @@ const HomePage = async () => {
           Blockchain.
         </p>
         <p className='mt-3 text-center text-sm text-muted-foreground sm:text-lg'>
-          Dữ án đã tích hợp mật mã Việt Nam – Ban Cơ yếu để đảm bảo tính minh bạch và an toàn, bảo mật.
+          Dự án đã tích hợp mật mã Việt Nam – Ban Cơ yếu để đảm bảo tính minh bạch và an toàn, bảo mật.
         </p>
         <SearchVerifyCode />
       </section>

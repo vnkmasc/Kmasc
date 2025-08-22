@@ -9,7 +9,6 @@ import {
   ChartAreaIcon,
   CheckCircleIcon,
   CircleX,
-  Eye,
   FileTextIcon,
   Library,
   School,
@@ -17,7 +16,6 @@ import {
   Text,
   User
 } from 'lucide-react'
-import { Button } from '../ui/button'
 import PDFView from './pdf-view'
 import { Separator } from '../ui/separator'
 import CertificateBlankButton from '../role/education-admin/certificate-management/certificate-blank-button'
@@ -25,7 +23,6 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils/common'
 import CertificateQrCode from './certificate-qr-code'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
 import { getDigitalDegreeById, getDigitalDegreeFileById } from '@/lib/api/digital-degree'
 import { Badge } from '../ui/badge'
 
@@ -159,30 +156,10 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
             <AlertDescription>{currentDataQuery.data?.message || 'Không tải được dữ liệu'}</AlertDescription>
           </Alert>
           <DecriptionView
-            title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
+            title={currentDataQuery?.data?.data?.name || 'Không có dữ liệu'}
             items={getDegreeItems(currentDataQuery?.data?.data)}
             description={`Thông tin chi tiết về văn bằng số`}
-            extra={
-              <div className='flex items-center gap-2'>
-                <CertificateQrCode id={props.id} isIcon={false} />
-                {currentDataQuery?.data?.certificate && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant='outline'>
-                        <Eye />
-                        <span className='hidden md:block'>Xem trước</span>
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className='md:min-w-[600px]'>
-                      <DialogHeader>
-                        <DialogTitle>Văn bằng</DialogTitle>
-                      </DialogHeader>
-                      {/* <CertificatePreview {...getCertificatePreviewProps(currentDataQuery?.data)!} /> */}
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
-            }
+            extra={<CertificateQrCode id={props.id} isIcon={false} />}
           />
         </>
       ) : (
