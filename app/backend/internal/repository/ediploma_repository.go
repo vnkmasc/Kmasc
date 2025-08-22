@@ -55,7 +55,6 @@ func (r *eDiplomaRepository) SearchByFilters(ctx context.Context, filter models.
 		}
 		bsonFilter["university_id"] = universityID
 	}
-	// filter theo FacultyID nếu có
 	if filter.FacultyID != "" {
 		facultyID, err := primitive.ObjectIDFromHex(filter.FacultyID)
 		if err != nil {

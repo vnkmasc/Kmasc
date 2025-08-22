@@ -592,6 +592,8 @@ func (s *blockchainService) VerifyBatch(
 		parts = append(parts, course)
 	}
 	batchID := strings.Join(parts, "-")
+	log.Printf("[VerifyBatch] batchID=%s", batchID)
+
 	batchOnChain, err := s.fabricClient.GetEDiplomaBatch(batchID)
 	if err != nil {
 		return false, "", targetDTO, fmt.Errorf("failed to get batch from blockchain: %w", err)

@@ -46,7 +46,8 @@ func (h *EDiplomaHandler) SearchEDiplomas(c *gin.Context) {
 	}
 
 	filters := models.EDiplomaSearchFilter{
-		FacultyID:       c.Query("faculty_id"), // dùng trực tiếp faculty_id từ query
+		UniversityID:    c.Query("university_id"),
+		FacultyID:       c.Query("faculty_id"),
 		CertificateType: c.Query("certificate_type"),
 		Course:          c.Query("course"),
 		Issued:          issued,
