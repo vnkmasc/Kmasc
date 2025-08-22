@@ -56,6 +56,7 @@ type EDiploma struct {
 type EDiplomaResponse struct {
 	ID                 primitive.ObjectID `json:"id"`
 	CertificateID      primitive.ObjectID `json:"certificate_id"`
+	UniversityID       primitive.ObjectID `json:"university_id"`
 	Name               string             `json:"name"`
 	TemplateName       string             `json:"template_name"`
 	UniversityCode     string             `json:"university_code"`
