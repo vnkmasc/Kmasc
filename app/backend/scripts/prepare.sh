@@ -5,7 +5,7 @@ set -e  # Dừng script nếu gặp lỗi
 # Load biến môi trường từ .env
 export $(grep -v '^#' .env | xargs)
 
-FABRIC_SAMPLES_PATH=~/Kmasc/fabric-3.1.1/fabric-samples/test-network
+FABRIC_SAMPLES_PATH=/mnt/c/workspaces/Kmasc/fabric-3.1.1/fabric-samples/test-network
 
 TLS_DEST=./config/tls
 ADMIN_DEST=./config/credentials/org1-admin

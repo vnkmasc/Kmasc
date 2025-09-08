@@ -204,13 +204,13 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain(c *gin.Context) {
 
 func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 	var req struct {
-		FacultyID       string `form:"faculty_id"`
-		CertificateType string `form:"certificate_type"`
-		Course          string `form:"course"`
+		FacultyID       string `json:"faculty_id"`       // bind từ JSON
+		CertificateType string `json:"certificate_type"` // bind từ JSON
+		Course          string `json:"course"`           // bind từ JSON
 	}
 
-	// Bind form-data
-	if err := c.ShouldBind(&req); err != nil {
+	// Bind raw JSON
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid input",
 			"details": err.Error(),
@@ -218,7 +218,7 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 		return
 	}
 
-	// Lấy claims từ context
+	// Lấy claims từ context (JWT token)
 	claimsRaw, exists := c.Get("claims")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -237,10 +237,10 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 		return
 	}
 
-	// Gọi service
+	// Gọi service để đẩy eDiplomas lên blockchain
 	count, err := h.BlockchainSvc.PushToBlockchain1(
 		c.Request.Context(),
-		universityID.Hex(),
+		universityID.Hex(), // UniversityID lấy từ token
 		req.FacultyID,
 		req.CertificateType,
 		req.Course,
@@ -266,38 +266,32 @@ func (h *BlockchainHandler) PushEDiplomasToBlockchain1(c *gin.Context) {
 	})
 }
 
-type VerifyBatchResponse struct {
-	Verified  bool        `json:"verified"`
-	Message   string      `json:"message"`
-	EDiplomas interface{} `json:"ediploma_data,omitempty"`
-}
-
 func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 	var req struct {
-		UniversityID    string `form:"university_id"`
-		FacultyID       string `form:"faculty_id"`
-		CertificateType string `form:"certificate_type"`
-		Course          string `form:"course"`
-		EdiplomaID      string `form:"ediploma_id"`
+		UniversityID    string `json:"university_id" binding:"required"`
+		FacultyID       string `json:"faculty_id"`
+		CertificateType string `json:"certificate_type"`
+		Course          string `json:"course"`
+		EDiplomaID      string `json:"ediploma_id"`
 	}
 
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+	// Bind JSON từ body request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	if req.UniversityID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "UniversityID is required"})
-		return
-	}
-
-	okVerify, msg, ediploma, err := h.BlockchainSvc.VerifyBatch(
+	// Gọi service
+	result, err := h.BlockchainSvc.VerifyBatch(
 		c.Request.Context(),
 		req.UniversityID,
 		req.FacultyID,
 		req.CertificateType,
 		req.Course,
-		req.EdiplomaID,
+		req.EDiplomaID,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -305,9 +299,10 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"verified": okVerify,
-		"message":  msg,
-		"data":     ediploma,
+		"batch_id": result.BatchID,
+		"verified": result.Verified,
+		"details":  result.Details,
+		"data":     result.EDiplomaData,
 	})
 }
 

@@ -56,7 +56,7 @@ var (
 var (
 	ErrNoDiplomas      = errors.New("no eDiplomas found")
 	ErrNoValidDiplomas = errors.New("no valid eDiplomas to push")
-	ErrAlreadyOnChain  = errors.New("ediploma đã được ghi lên blockchain")
+	ErrAlreadyOnChain  = errors.New("id đã tồn tại")
 	ErrMissingHash     = errors.New("ediploma chưa có hash")
 )
 

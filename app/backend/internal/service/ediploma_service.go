@@ -578,6 +578,17 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 	if len(ediplomas) == 0 {
 		return "", nil
 	}
+	log.Printf("Tìm thấy %d eDiploma:", len(ediplomas))
+	for _, ed := range ediplomas {
+		log.Printf("- ID=%s | StudentCode=%s | FacultyID=%s | Course=%s | CertificateType=%s | Issued=%v",
+			ed.ID.Hex(),
+			ed.StudentCode,
+			ed.FacultyID.Hex(),
+			ed.Course,
+			ed.CertificateType,
+			ed.Issued,
+		)
+	}
 
 	// 7. Tạo thư mục tạm
 	tmpDir, err := os.MkdirTemp("", "ediplomas_*")
@@ -606,22 +617,29 @@ func (s *eDiplomaService) GenerateBulkEDiplomasZip(
 			"NgayCap":        time.Now().Format("02/01/2006"),
 		}
 
-		// Render HTML từ TemplateSample
 		renderedHTML, err := s.templateEngine.Render(sample.HTMLContent, data)
 		if err != nil {
+			log.Printf("❌ Render lỗi cho StudentCode=%s: %v", ed.StudentCode, err)
 			continue
 		}
+		log.Printf("✅ Render thành công cho StudentCode=%s", ed.StudentCode)
 
+		// Convert HTML → PDF
 		pdfBytes, err := s.pdfGenerator.ConvertHTMLToPDF(renderedHTML)
 		if err != nil {
+			log.Printf("❌ PDF convert lỗi cho StudentCode=%s: %v", ed.StudentCode, err)
 			continue
 		}
+		log.Printf("✅ PDF convert thành công cho StudentCode=%s (size=%d bytes)", ed.StudentCode, len(pdfBytes))
 
+		// Ghi file
 		fileName := fmt.Sprintf("%s.pdf", ed.StudentCode)
 		filePath := filepath.Join(tmpDir, fileName)
 		if err := os.WriteFile(filePath, pdfBytes, 0644); err != nil {
+			log.Printf("❌ Ghi file lỗi %s: %v", filePath, err)
 			continue
 		}
+		log.Printf("✅ Đã ghi file PDF: %s", filePath)
 
 		// Update eDiploma
 		ed.TemplateID = templateID
