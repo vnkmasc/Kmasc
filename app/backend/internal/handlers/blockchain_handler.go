@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -275,7 +276,6 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		EDiplomaID      string `json:"ediploma_id"`
 	}
 
-	// Bind JSON từ body request
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid input",
@@ -284,7 +284,6 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		return
 	}
 
-	// Gọi service
 	result, err := h.BlockchainSvc.VerifyBatch(
 		c.Request.Context(),
 		req.UniversityID,
@@ -293,9 +292,21 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 		req.Course,
 		req.EDiplomaID,
 	)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		switch err {
+		case common.ErrBatchNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		case common.ErrInvalidFaculty:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Lỗi khi verify batch: %v", err),
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

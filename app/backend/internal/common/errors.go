@@ -54,10 +54,11 @@ var (
 )
 
 var (
-	ErrNoDiplomas      = errors.New("no eDiplomas found")
+	ErrNoDiplomas      = errors.New("không tìm thấy bằng số")
 	ErrNoValidDiplomas = errors.New("no valid eDiplomas to push")
 	ErrAlreadyOnChain  = errors.New("id đã tồn tại")
 	ErrMissingHash     = errors.New("ediploma chưa có hash")
+	ErrBatchNotFound   = errors.New("batch không tồn tại")
 )
 
 type ValidationError struct {

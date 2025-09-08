@@ -171,6 +171,10 @@ func (fc *FabricClient) UpdateCertificate(cert any) error {
 func (fc *FabricClient) GetEDiplomaBatch(batchID string) (*models.EDiplomaBatchOnChain, error) {
 	result, err := fc.contract.EvaluateTransaction("ReadEDiplomaBatch", batchID)
 	if err != nil {
+		// Kiểm tra lỗi "does not exist" từ Fabric
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, fmt.Errorf("batch %s không tồn tại", batchID)
+		}
 		return nil, fmt.Errorf("failed to evaluate transaction: %v", err)
 	}
 

@@ -528,6 +528,9 @@ func (s *blockchainService) VerifyBatch(
 	// --- 2. Lấy batch từ blockchain ---
 	batchOnChain, err := s.fabricClient.GetEDiplomaBatch(batchID)
 	if err != nil {
+		if strings.Contains(err.Error(), "không tồn tại") {
+			return nil, common.ErrBatchNotFound
+		}
 		return nil, fmt.Errorf("failed to fetch batch on blockchain: %w", err)
 	}
 
