@@ -317,6 +317,54 @@ func (h *BlockchainHandler) VerifyBatch(c *gin.Context) {
 	})
 }
 
+func (h *BlockchainHandler) VerifyCertificateBatch(c *gin.Context) {
+	var req struct {
+		UniversityID    string `json:"university_id" binding:"required"`
+		FacultyID       string `json:"faculty_id"`
+		CertificateType string `json:"certificate_type"`
+		Course          string `json:"course"`
+		CertificateID   string `json:"certificate_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	result, err := h.BlockchainSvc.VerifyCertificateBatch(
+		c.Request.Context(),
+		req.UniversityID,
+		req.FacultyID,
+		req.CertificateType,
+		req.Course,
+		req.CertificateID,
+	)
+
+	if err != nil {
+		switch err {
+		case common.ErrBatchNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case common.ErrInvalidFaculty:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Lỗi khi verify certificate batch: %v", err),
+			})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"batch_id": result.BatchID,
+		"verified": result.Verified,
+		"details":  result.Details,
+		"data":     result.CertificateData,
+	})
+}
+
 type VerifyEDiplomaRequest struct {
 	UniversityID string `json:"university_id" binding:"required"`
 	FacultyID    string `json:"faculty_id" binding:"required"`
@@ -357,4 +405,68 @@ func (h *BlockchainHandler) VerifyEDiploma(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+func (h *BlockchainHandler) PushCertificatesToBlockchain(c *gin.Context) {
+	var req struct {
+		FacultyID       string `json:"faculty_id"`
+		CertificateType string `json:"certificate_type"`
+		Course          string `json:"course"`
+	}
+
+	// Bind input JSON
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Lấy claims từ context (JWT token)
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims, ok := claimsRaw.(*utils.CustomClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims format"})
+		return
+	}
+
+	universityID, err := primitive.ObjectIDFromHex(claims.UniversityID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid university ID"})
+		return
+	}
+
+	// Gọi service để đẩy Certificates lên blockchain
+	count, err := h.BlockchainSvc.PushCertificatesToBlockchain(
+		c.Request.Context(),
+		universityID.Hex(),
+		req.FacultyID,
+		req.CertificateType,
+		req.Course,
+	)
+
+	if err != nil {
+		switch err {
+		case common.ErrInvalidFaculty:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case common.ErrCertificateNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case common.ErrNoValidCertificates:
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "Certificates đã được đẩy lên blockchain",
+		"updated_records": count,
+	})
 }

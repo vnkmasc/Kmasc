@@ -398,10 +398,11 @@ func (s *certificateService) UploadCertificateFileDirect(ctx context.Context, ce
 	// Cập nhật thông tin file trong MongoDB
 	update := bson.M{
 		"$set": bson.M{
-			"path":                 objectKey,
-			"hash_file":            certHash,
-			"physical_copy_issued": true,
-			"updated_at":           time.Now(),
+			"path":           objectKey,
+			"hash_file":      certHash,
+			"issued":         true,
+			"data_encrypted": true,
+			"updated_at":     time.Now(),
 		},
 	}
 	if err := s.certificateRepo.UpdateCertificateByID(ctx, certificateID, update); err != nil {
@@ -469,9 +470,6 @@ func (s *certificateService) SearchCertificates(ctx context.Context, params mode
 	}
 	if params.CertificateType != "" {
 		filter["certificate_type"] = bson.M{"$regex": params.CertificateType, "$options": "i"}
-	}
-	if params.Signed != nil {
-		filter["signed"] = *params.Signed
 	}
 	if params.Course != "" {
 		filter["course"] = bson.M{"$regex": params.Course, "$options": "i"}

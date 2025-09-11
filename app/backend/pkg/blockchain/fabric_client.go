@@ -144,6 +144,25 @@ func (fc *FabricClient) IssueEDiplomaBatch(batch models.EDiplomaBatchOnChain) (s
 	return string(result), nil
 }
 
+func (fc *FabricClient) IssueCertificateBatch(batch models.CertificateBatchOnChain) (string, error) {
+	batchBytes, err := json.Marshal(batch)
+	if err != nil {
+		return "", fmt.Errorf("marshal batch lỗi: %v", err)
+	}
+	result, err := fc.contract.SubmitTransaction("IssueCertificateBatch", string(batchBytes))
+	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "already exists") {
+			return "", common.ErrAlreadyOnChain
+		}
+		if strings.Contains(errMsg, "endorser") {
+			return "", fmt.Errorf("blockchain endorsement error: %v", errMsg)
+		}
+		return "", fmt.Errorf("invoke IssueCertificateBatch lỗi: %v", errMsg)
+	}
+	return string(result), nil
+}
+
 func (fc *FabricClient) GetCertificateByID(certID string) (*models.CertificateOnChain, error) {
 	result, err := fc.contract.EvaluateTransaction("ReadCertificate", certID)
 	if err != nil {
@@ -186,6 +205,27 @@ func (fc *FabricClient) GetEDiplomaBatch(batchID string) (*models.EDiplomaBatchO
 	}
 
 	log.Printf("[GetEDiplomaBatch] Parsed batch from chain: %+v", batch)
+
+	return &batch, nil
+}
+
+func (fc *FabricClient) GetCertificateBatch(batchID string) (*models.CertificateBatchOnChain, error) {
+	result, err := fc.contract.EvaluateTransaction("ReadCertificateBatch", batchID)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, fmt.Errorf("batch %s không tồn tại", batchID)
+		}
+		return nil, fmt.Errorf("failed to evaluate transaction: %v", err)
+	}
+
+	log.Printf("[GetCertificateBatch] Raw result from chain for batchID=%s: %s", batchID, string(result))
+
+	var batch models.CertificateBatchOnChain
+	if err := json.Unmarshal(result, &batch); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal certificate batch: %v", err)
+	}
+
+	log.Printf("[GetCertificateBatch] Parsed batch from chain: %+v", batch)
 
 	return &batch, nil
 }

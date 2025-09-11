@@ -13,6 +13,7 @@ import (
 )
 
 type CertificateRepository interface {
+	FindByDynamicFilter(ctx context.Context, filter bson.M) ([]*models.Certificate, error)
 	FindByFacultyIDAndCourse(ctx context.Context, facultyID primitive.ObjectID, course string) ([]*models.Certificate, error)
 	FindOneByFilter(ctx context.Context, filter bson.M) (*models.Certificate, error)
 	FindOneByStudentCodeAndType(ctx context.Context, studentCode string, certificateType string, universityID primitive.ObjectID) (*models.Certificate, error)
@@ -57,6 +58,34 @@ func (r *certificateRepository) FindByFacultyIDAndCourse(ctx context.Context, fa
 		return nil, err
 	}
 	return certs, nil
+}
+
+func (r *certificateRepository) FindByDynamicFilter(ctx context.Context, filter bson.M) ([]*models.Certificate, error) {
+	var results []*models.Certificate
+
+	if filter == nil {
+		filter = bson.M{}
+	}
+
+	cursor, err := r.col.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var c models.Certificate
+		if err := cursor.Decode(&c); err != nil {
+			return nil, err
+		}
+		results = append(results, &c)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 func (r *certificateRepository) CreateCertificate(ctx context.Context, cert *models.Certificate) error {

@@ -22,6 +22,8 @@ import (
 )
 
 type BlockchainService interface {
+	VerifyCertificateBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course, certificateID string) (*models.VerifyResultCertificate, error)
+	PushCertificatesToBlockchain(ctx context.Context, universityID, facultyIDStr, certificateType, course string) (int, error)
 	VerifyBatch(ctx context.Context, universityID, facultyIDStr, certificateType, course, ediplomaID string) (*VerifyResult1, error)
 	VerifyEDiploma(ctx context.Context, universityID, facultyIDStr, course, studentCode string) (*VerifyResult, error)
 	PushCertificateToChain(ctx context.Context, certificateID primitive.ObjectID) (string, error)
@@ -77,7 +79,7 @@ func (s *blockchainService) PushCertificateToChain(ctx context.Context, certific
 	if cert.CertHash == "" {
 		return "", fmt.Errorf("%w", common.ErrCertificateMissingHash)
 	}
-	if !cert.PhysicalCopyIssued {
+	if !cert.Issued {
 		return "", fmt.Errorf("%w", common.ErrCertificateNoFile)
 	}
 	// if !cert.Signed {
@@ -280,7 +282,7 @@ func (s *blockchainService) PushToBlockchain1(
 
 	// Tạo BatchID linh hoạt: universityID[-facultyID][-certificateType][-course]
 	// versionSuffix := time.Now().Format("20060102T150405")
-	batchID := strings.Join(parts, "-")
+	batchID := "EDIP-" + strings.Join(parts, "-")
 	log.Printf("[PushToBlockchain] Generated batchID: %s", batchID)
 	log.Printf("[PushToBlockchain] universityID=%s, facultyIDStr=%s, certificateType=%s, course=%s", universityID, facultyIDStr, certificateType, course)
 
@@ -489,6 +491,27 @@ func aggregateHashes(hashes []string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+func hashCertificateInfo(c *models.Certificate) (string, error) {
+	data := c.StudentCode +
+		c.CertificateType +
+		c.Name +
+		c.Major +
+		c.Course +
+		c.EducationType +
+		fmt.Sprintf("%.2f", c.GPA) +
+		c.GraduationRank +
+		c.IssueDate.Format("2006-01-02") +
+		c.SerialNumber +
+		c.RegNo
+
+	h := sha256.New()
+	_, err := h.Write([]byte(data))
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 type VerifyResult1 struct {
 	BatchID      string                   `json:"batch_id"`
 	Verified     bool                     `json:"verified"`
@@ -524,7 +547,7 @@ func (s *blockchainService) VerifyBatch(
 		parts = append(parts, course)
 	}
 
-	batchID := strings.Join(parts, "-")
+	batchID := "EDIP-" + strings.Join(parts, "-")
 
 	// --- 2. Lấy batch từ blockchain ---
 	batchOnChain, err := s.fabricClient.GetEDiplomaBatch(batchID)
@@ -607,6 +630,168 @@ func (s *blockchainService) VerifyBatch(
 	}, nil
 }
 
+func (s *blockchainService) VerifyCertificateBatch(
+	ctx context.Context,
+	universityID, facultyIDStr, certificateType, course, certificateID string,
+) (*models.VerifyResultCertificate, error) {
+
+	// --- 1. Build filter & BatchID ---
+	filter := bson.M{}
+	parts := []string{universityID}
+
+	if facultyIDStr != "" {
+		facultyID, err := primitive.ObjectIDFromHex(facultyIDStr)
+		if err != nil {
+			return nil, common.ErrInvalidFaculty
+		}
+		filter["faculty_id"] = facultyID
+		parts = append(parts, facultyIDStr)
+	}
+
+	if certificateType != "" {
+		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+		parts = append(parts, certificateType)
+	}
+
+	if course != "" {
+		filter["course"] = bson.M{"$regex": course, "$options": "i"}
+		parts = append(parts, course)
+	}
+
+	batchID := "CERT-" + strings.Join(parts, "-")
+	log.Printf("[VerifyCertificateBatch] batchID=%s, filter=%+v", batchID, filter)
+
+	// --- 2. Lấy batch từ blockchain ---
+	batchOnChain, err := s.fabricClient.GetCertificateBatch(batchID)
+	if err != nil {
+		if strings.Contains(err.Error(), "không tồn tại") {
+			return nil, common.ErrBatchNotFound
+		}
+		log.Printf("[VerifyCertificateBatch] ❌ Lỗi lấy batch từ blockchain: %v", err)
+		return nil, fmt.Errorf("failed to fetch certificate batch on blockchain: %w", err)
+	}
+	log.Printf("[VerifyCertificateBatch] ✅ Batch onchain: InfoHash=%s, FileHash=%s",
+		batchOnChain.AggregateInfoHash, batchOnChain.AggregateFileHash)
+
+	// --- 3. Lấy danh sách Certificate trong DB ---
+	certificates, err := s.certRepo.FindByDynamicFilter(ctx, filter)
+	if err != nil {
+		log.Printf("[VerifyCertificateBatch] ❌ Lỗi lấy certificates từ DB: %v", err)
+		return nil, fmt.Errorf("failed to load certificates: %w", err)
+	}
+	log.Printf("[VerifyCertificateBatch] ✅ Tìm thấy %d certificates trong DB", len(certificates))
+
+	if len(certificates) == 0 {
+		return nil, common.ErrCertificateNotFound
+	}
+
+	// --- 4. Gom hash info + file ---
+	infoHashes := []string{}
+	fileHashes := []string{}
+	details := []map[string]interface{}{}
+
+	for _, c := range certificates {
+		hInfo, err := hashCertificateInfo(c)
+		if err != nil {
+			log.Printf("[VerifyCertificateBatch] ❌ Lỗi hash info cho student_code=%s: %v", c.StudentCode, err)
+			details = append(details, map[string]interface{}{
+				"student_code": c.StudentCode,
+				"verified":     false,
+				"error":        err.Error(),
+			})
+			continue
+		}
+		log.Printf("[VerifyCertificateBatch] student_code=%s, infoHash=%s, hashFile=%s, certHash=%s",
+			c.StudentCode, hInfo, c.HashFile, c.CertHash)
+
+		infoHashes = append(infoHashes, hInfo)
+
+		if c.HashFile != "" {
+			fileHashes = append(fileHashes, c.HashFile)
+		}
+		if c.CertHash != "" {
+			fileHashes = append(fileHashes, c.CertHash)
+		}
+
+		details = append(details, map[string]interface{}{
+			"student_code": c.StudentCode,
+			"verified":     true,
+		})
+	}
+
+	aggregateInfoHash, _ := aggregateHashes(infoHashes)
+	aggregateFileHash, _ := aggregateHashes(fileHashes)
+	if aggregateFileHash == "" {
+		aggregateFileHash = "NO_FILE_HASH"
+	}
+
+	log.Printf("[VerifyCertificateBatch] ✅ Local aggregate InfoHash=%s", aggregateInfoHash)
+	log.Printf("[VerifyCertificateBatch] ✅ Local aggregate FileHash=%s", aggregateFileHash)
+
+	// --- 5. So sánh với blockchain ---
+	batchVerified := aggregateInfoHash == batchOnChain.AggregateInfoHash &&
+		aggregateFileHash == batchOnChain.AggregateFileHash
+	log.Printf("[VerifyCertificateBatch] 🔍 batchVerified=%v", batchVerified)
+
+	// --- 6. Nếu cần lấy dữ liệu chi tiết 1 certificate ---
+	var certData *models.CertificateResponse
+	if batchVerified && certificateID != "" {
+		log.Printf("[VerifyCertificateBatch] 🔍 Input certificateID=%s", certificateID)
+
+		id, err := primitive.ObjectIDFromHex(certificateID)
+		if err != nil {
+			log.Printf("[VerifyCertificateBatch] ❌ ObjectIDFromHex error: %v", err)
+		} else {
+			log.Printf("[VerifyCertificateBatch] ✅ Parsed ObjectID: %s", id.Hex())
+
+			cert, err := s.certRepo.GetCertificateByID(ctx, id)
+			if err != nil {
+				log.Printf("[VerifyCertificateBatch] ❌ GetCertificateByID error: %v", err)
+			} else if cert == nil {
+				log.Printf("[VerifyCertificateBatch] ⚠️ Certificate not found with id=%s", certificateID)
+			} else {
+				log.Printf("[VerifyCertificateBatch] ✅ Found certificate: student_code=%s, serial=%s",
+					cert.StudentCode, cert.SerialNumber)
+
+				university, _ := s.universityRepo.FindByID(ctx, cert.UniversityID)
+				faculty, _ := s.facultyRepo.FindByID(ctx, cert.FacultyID)
+				user, _ := s.userRepo.GetUserByID(ctx, cert.UserID)
+
+				log.Printf("[VerifyCertificateBatch] ℹ️ Related info: university=%v, faculty=%v, user=%v",
+					func() string {
+						if university != nil {
+							return university.UniversityName
+						}
+						return "nil"
+					}(),
+					func() string {
+						if faculty != nil {
+							return faculty.FacultyName
+						}
+						return "nil"
+					}(),
+					func() string {
+						if user != nil {
+							return user.FullName
+						}
+						return "nil"
+					}(),
+				)
+
+				certData = mapper.MapCertificateToResponse(cert, user, faculty, university)
+				log.Printf("[VerifyCertificateBatch] ✅ certData mapped successfully for id=%s", certificateID)
+			}
+		}
+	}
+
+	return &models.VerifyResultCertificate{
+		BatchID:         batchID,
+		Verified:        batchVerified,
+		Details:         details,
+		CertificateData: certData,
+	}, nil
+}
+
 type VerifyResult struct {
 	StudentCode    string             `json:"student_code"`
 	Valid          bool               `json:"valid"`
@@ -667,4 +852,117 @@ func (s *blockchainService) VerifyEDiploma(
 		ComputedHash:   hInfo,
 		Proof:          proof,
 	}, nil
+}
+
+func (s *blockchainService) PushCertificatesToBlockchain(
+	ctx context.Context,
+	universityID, facultyIDStr, certificateType, course string,
+) (int, error) {
+
+	// Build dynamic filter
+	filter := bson.M{}
+	parts := []string{universityID} // luôn có universityID
+
+	if facultyIDStr != "" {
+		parts = append(parts, facultyIDStr)
+		fid, err := primitive.ObjectIDFromHex(facultyIDStr)
+		if err != nil {
+			return 0, common.ErrInvalidFaculty
+		}
+		filter["faculty_id"] = fid
+	}
+
+	if certificateType != "" {
+		parts = append(parts, certificateType)
+		filter["certificate_type"] = bson.M{"$regex": certificateType, "$options": "i"}
+	}
+
+	if course != "" {
+		parts = append(parts, course)
+		filter["course"] = bson.M{"$regex": course, "$options": "i"}
+	}
+
+	// Query từ DB
+	certificates, err := s.certRepo.FindByDynamicFilter(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("failed to load certificates: %w", err)
+	}
+	if len(certificates) == 0 {
+		return 0, common.ErrCertificateNotFound
+	}
+
+	// Gom hash
+	infoHashes := []string{}
+	fileHashes := []string{}
+	for _, c := range certificates {
+		if c.DataEncrypted && c.Issued {
+			hInfo, err := hashCertificateInfo(c)
+			if err != nil {
+				log.Printf("hash failed for %s: %v", c.StudentCode, err)
+				continue
+			}
+			infoHashes = append(infoHashes, hInfo)
+
+			// Hash file
+			if c.HashFile != "" {
+				fileHashes = append(fileHashes, c.HashFile)
+			}
+			if c.CertHash != "" {
+				fileHashes = append(fileHashes, c.CertHash)
+			}
+		}
+	}
+
+	if len(infoHashes) == 0 {
+		return 0, common.ErrNoValidCertificates
+	}
+
+	aggregateInfoHash, _ := aggregateHashes(infoHashes)
+	aggregateFileHash, _ := aggregateHashes(fileHashes)
+	if aggregateFileHash == "" {
+		aggregateFileHash = "NO_FILE_HASH"
+	}
+
+	// Tạo BatchID
+	batchID := "CERT-" + strings.Join(parts, "-")
+	log.Printf("[PushCertificates] Generated batchID: %s", batchID)
+
+	batchOnChain := models.CertificateBatchOnChain{
+		BatchID:           batchID,
+		UniversityID:      universityID,
+		FacultyID:         facultyIDStr,
+		CertificateType:   certificateType,
+		Course:            course,
+		AggregateInfoHash: aggregateInfoHash,
+		AggregateFileHash: aggregateFileHash,
+		Count:             len(infoHashes),
+	}
+
+	// Đẩy lên blockchain
+	txID, err := s.fabricClient.IssueCertificateBatch(batchOnChain)
+	if err != nil {
+		return 0, err
+	}
+
+	// Update DB
+	updatedCount := 0
+	for _, c := range certificates {
+		if c.DataEncrypted && c.Issued {
+			update := bson.M{
+				"$set": bson.M{
+					"on_blockchain":  true,
+					"transaction_id": txID,
+					"batch_id":       batchID,
+					"updated_at":     time.Now(),
+				},
+			}
+			if err := s.certRepo.UpdateCertificateByID(ctx, c.ID, update); err != nil {
+				log.Printf("Failed to update %s: %v", c.StudentCode, err)
+				continue
+			}
+			updatedCount++
+		}
+	}
+
+	return updatedCount, nil
 }

@@ -24,20 +24,15 @@ type EDiploma struct {
 	GraduationRank  string             `bson:"graduation_rank" json:"graduation_rank"`
 	IssueDate       time.Time          `bson:"issue_date" json:"issue_date"`
 
-	SerialNumber       string `bson:"serial_number" json:"serial_number"`             // Số hiệu
-	RegistrationNumber string `bson:"registration_number" json:"registration_number"` // Số vào sổ
-
-	// File văn bằng
-	// FileLink         string `bson:"file_link" json:"file_link"`
-	// FileHash         string `bson:"file_hash" json:"file_hash"`                   // SHA256 mã băm file PDF
-	EDiplomaFileLink string `bson:"ediploma_file_link" json:"ediploma_file_link"` // Đường dẫn đến file văn bằng số
-	EDiplomaFileHash string `bson:"ediploma_file_hash" json:"ediploma_file_hash"` // Mã băm của văn bằng số
-	// Ch
-	Signature     string    `bson:"signature" json:"signature"`           // Chữ ký số
-	Signed        bool      `bson:"signed" json:"signed"`                 // Đã ký hay chưa
-	DataEncrypted bool      `bson:"data_encrypted" json:"data_encrypted"` //Đã mã hóa dữ liệu hay chưa
-	Issued        bool      `bson:"issued" json:"issued"`                 // Đã cấp bằng số hay chưa
-	SignedAt      time.Time `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
+	SerialNumber       string    `bson:"serial_number" json:"serial_number"`             // Số hiệu
+	RegistrationNumber string    `bson:"registration_number" json:"registration_number"` // Số vào sổ
+	EDiplomaFileLink   string    `bson:"ediploma_file_link" json:"ediploma_file_link"`   // Đường dẫn đến file văn bằng số
+	EDiplomaFileHash   string    `bson:"ediploma_file_hash" json:"ediploma_file_hash"`   // Mã băm của văn bằng số
+	Signature          string    `bson:"signature" json:"signature"`                     // Chữ ký số
+	Signed             bool      `bson:"signed" json:"signed"`                           // Đã ký hay chưa
+	DataEncrypted      bool      `bson:"data_encrypted" json:"data_encrypted"`           //Đã mã hóa dữ liệu hay chưa
+	Issued             bool      `bson:"issued" json:"issued"`                           // Đã cấp bằng số hay chưa
+	SignedAt           time.Time `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
 
 	// Blockchain & trạng thái
 	OnBlockchain   bool        `bson:"on_blockchain" json:"on_blockchain"`

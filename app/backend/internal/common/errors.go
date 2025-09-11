@@ -41,6 +41,7 @@ var (
 	ErrCertificateNoFile         = errors.New("certificate chưa có bản in văn bằng")
 	ErrCertificateAlreadyOnChain = errors.New("certificate đã được ghi lên blockchain")
 	ErrCertificateMissingHash    = errors.New("certificate chưa có cert_hash")
+	ErrNoValidCertificates       = errors.New("certificate k hợp lệ")
 
 	ErrTemplateNotFound = errors.New("template_not_found")
 

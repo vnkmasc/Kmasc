@@ -67,18 +67,17 @@ func SetupRouter(
 
 	// ===== Certificate routes =====
 	certificateGroup := api.Group("/certificates")
-	certificateGroup.Use(middleware.JWTAuthMiddleware())
-	certificateGroup.GET("", certificateHandler.GetAllCertificates)
-	certificateGroup.POST("", certificateHandler.CreateCertificate)
-	certificateGroup.GET("/:id", certificateHandler.GetCertificateByID)
-	certificateGroup.POST("/upload-pdf", certificateHandler.UploadCertificateFile)
+	certificateGroup.GET("", middleware.JWTAuthMiddleware(), certificateHandler.GetAllCertificates)
+	certificateGroup.POST("", middleware.JWTAuthMiddleware(), certificateHandler.CreateCertificate)
+	certificateGroup.GET("/:id", middleware.JWTAuthMiddleware(), certificateHandler.GetCertificateByID)
+	certificateGroup.POST("/upload-pdf", middleware.JWTAuthMiddleware(), certificateHandler.UploadCertificateFile)
 	certificateGroup.GET("/file/:id", certificateHandler.GetCertificateFile)
-	certificateGroup.GET("/student/:id", certificateHandler.GetCertificatesByStudentID)
-	certificateGroup.GET("/search", certificateHandler.SearchCertificates)
-	certificateGroup.GET("/my-certificate", certificateHandler.GetMyCertificates)
-	certificateGroup.DELETE("/:id", certificateHandler.DeleteCertificate)
-	certificateGroup.GET("/simple", certificateHandler.GetMyCertificateNames)
-	certificateGroup.POST("/import-excel", certificateHandler.ImportCertificatesFromExcel)
+	certificateGroup.GET("/student/:id", middleware.JWTAuthMiddleware(), certificateHandler.GetCertificatesByStudentID)
+	certificateGroup.GET("/search", middleware.JWTAuthMiddleware(), certificateHandler.SearchCertificates)
+	certificateGroup.GET("/my-certificate", middleware.JWTAuthMiddleware(), certificateHandler.GetMyCertificates)
+	certificateGroup.DELETE("/:id", middleware.JWTAuthMiddleware(), certificateHandler.DeleteCertificate)
+	certificateGroup.GET("/simple", middleware.JWTAuthMiddleware(), certificateHandler.GetMyCertificateNames)
+	certificateGroup.POST("/import-excel", middleware.JWTAuthMiddleware(), certificateHandler.ImportCertificatesFromExcel)
 
 	// ===== University routes =====
 	universityGroup := api.Group("/universities")
@@ -120,6 +119,8 @@ func SetupRouter(
 	//blockchain
 	blockchainGroup := api.Group("/blockchain")
 	blockchainGroup.POST("/push-chain/:id", blockchainHandler.PushCertificateToChain)
+	blockchainGroup.POST("/push-certificates", middleware.JWTAuthMiddleware(), blockchainHandler.PushCertificatesToBlockchain)
+	blockchainGroup.POST("/verify-batch-certificates", blockchainHandler.VerifyCertificateBatch)
 	blockchainGroup.GET("/certificate-on-chain/:id", blockchainHandler.GetCertificateByID)
 	blockchainGroup.GET("/verify/:id", blockchainHandler.VerifyCertificateIntegrity)
 	blockchainGroup.GET("/verify-file/:id", blockchainHandler.VerifyCertificateFile)
