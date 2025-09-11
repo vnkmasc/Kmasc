@@ -279,6 +279,7 @@ func (s *blockchainService) PushToBlockchain1(
 	}
 
 	// Tạo BatchID linh hoạt: universityID[-facultyID][-certificateType][-course]
+	// versionSuffix := time.Now().Format("20060102T150405")
 	batchID := strings.Join(parts, "-")
 	log.Printf("[PushToBlockchain] Generated batchID: %s", batchID)
 	log.Printf("[PushToBlockchain] universityID=%s, facultyIDStr=%s, certificateType=%s, course=%s", universityID, facultyIDStr, certificateType, course)
