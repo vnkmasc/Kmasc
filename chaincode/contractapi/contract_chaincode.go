@@ -20,6 +20,17 @@ type CertificateOnChain struct {
 	UpdatedDate         string `json:"updated_date"`
 }
 
+type CertificateBatchOnChain struct {
+	BatchID           string `json:"batch_id"`
+	UniversityID      string `json:"university_id"`
+	FacultyID         string `json:"faculty_id"`
+	CertificateType   string `json:"certificate_type"`
+	Course            string `json:"course"`
+	AggregateInfoHash string `json:"aggregate_info_hash"`
+	AggregateFileHash string `json:"aggregate_file_hash"`
+	Count             int    `json:"count"`
+	TxID              string `json:"tx_id"`
+}
 type EDiplomaBatchOnChain struct {
 	BatchID           string `json:"batch_id"`
 	FacultyID         string `json:"faculty_id"`
@@ -67,13 +78,21 @@ func (c *CertificateContract) IssueEDiplomaBatch(ctx contractapi.TransactionCont
 		batch.BatchID = fmt.Sprintf("%s-%s-%s", batch.FacultyID, batch.CertificateType, batch.Course)
 	}
 
-	// Check tồn tại chưa
+	// // Check tồn tại chưa
+	// exists, err := c.EDiplomaBatchExists(ctx, batch.BatchID)
+	// if err != nil {
+	// 	return "", err
+	// }
+	// if exists {
+	// 	return "", fmt.Errorf("batch %s already exists", batch.BatchID)
+	// }
+
 	exists, err := c.EDiplomaBatchExists(ctx, batch.BatchID)
 	if err != nil {
 		return "", err
 	}
 	if exists {
-		return "", fmt.Errorf("batch %s already exists", batch.BatchID)
+		fmt.Printf(" Batch %s đã tồn tại, sẽ ghi đè dữ liệu mới\n", batch.BatchID)
 	}
 
 	// Lưu xuống world state
@@ -227,4 +246,66 @@ func (c *CertificateContract) ReadEDiplomaBatch(ctx contractapi.TransactionConte
 		return nil, fmt.Errorf("failed to unmarshal batch: %v", err)
 	}
 	return &batch, nil
+}
+
+func (c *CertificateContract) ReadCertificateBatch(ctx contractapi.TransactionContextInterface, batchID string) (*CertificateBatchOnChain, error) {
+	bytes, err := ctx.GetStub().GetState(batchID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read certificate batch from world state: %v", err)
+	}
+	if bytes == nil {
+		return nil, fmt.Errorf("batch %s does not exist", batchID)
+	}
+
+	var batch CertificateBatchOnChain
+	if err := json.Unmarshal(bytes, &batch); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal certificate batch: %v", err)
+	}
+	return &batch, nil
+}
+
+func (c *CertificateContract) IssueCertificateBatch(ctx contractapi.TransactionContextInterface, batchJSON string) (string, error) {
+	var batch CertificateBatchOnChain
+	if err := json.Unmarshal([]byte(batchJSON), &batch); err != nil {
+		return "", fmt.Errorf("failed to unmarshal batch JSON: %v", err)
+	}
+
+	if batch.BatchID == "" {
+		batch.BatchID = fmt.Sprintf("%s-%s-%s", batch.FacultyID, batch.CertificateType, batch.Course)
+	}
+
+	exists, err := c.CertificateBatchExists(ctx, batch.BatchID)
+	if err != nil {
+		return "", err
+	}
+	if exists {
+		fmt.Printf("Batch %s đã tồn tại, sẽ ghi đè dữ liệu mới\n", batch.BatchID)
+	}
+
+	batch.TxID = ctx.GetStub().GetTxID()
+	bytes, err := json.Marshal(batch)
+	if err != nil {
+		return "", err
+	}
+	if err := ctx.GetStub().PutState(batch.BatchID, bytes); err != nil {
+		return "", err
+	}
+
+	// Emit event
+	eventPayload := map[string]string{
+		"batch_id": batch.BatchID,
+		"tx_id":    batch.TxID,
+	}
+	eventBytes, _ := json.Marshal(eventPayload)
+	ctx.GetStub().SetEvent("CertificateBatchIssued", eventBytes)
+
+	return batch.TxID, nil
+}
+
+func (c *CertificateContract) CertificateBatchExists(ctx contractapi.TransactionContextInterface, batchID string) (bool, error) {
+	data, err := ctx.GetStub().GetState(batchID)
+	if err != nil {
+		return false, fmt.Errorf("failed to read from world state: %v", err)
+	}
+	return data != nil, nil
 }
