@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -44,10 +45,20 @@ func (s *authService) GetAccountByID(ctx context.Context, id primitive.ObjectID)
 }
 
 func (s *authService) RequestOTP(ctx context.Context, input models.RequestOTPInput) error {
+	// Tìm user theo email
 	user, err := s.userRepo.FindByEmail(ctx, input.StudentEmail)
 	if err != nil {
+		// Nếu repo trả lỗi thì log và wrap lại
+		return fmt.Errorf("lỗi khi tìm user theo email: %w", err)
+	}
+	if user == nil {
+		// Không tìm thấy user
 		return common.ErrUserNotExisted
 	}
+
+	log.Printf("DEBUG authRepo: %+v, userID: %v", s.authRepo, user.ID)
+
+	// Kiểm tra xem đã có account cá nhân cho user này chưa
 	existingAccount, err := s.authRepo.FindPersonalAccountByUserID(ctx, user.ID)
 	if err != nil {
 		return common.ErrCheckingPersonalAccount
@@ -56,6 +67,7 @@ func (s *authService) RequestOTP(ctx context.Context, input models.RequestOTPInp
 		return common.ErrPersonalAccountAlreadyExist
 	}
 
+	// Sinh OTP
 	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
 	otpData := models.OTP{
 		Email:     input.StudentEmail,
@@ -64,11 +76,16 @@ func (s *authService) RequestOTP(ctx context.Context, input models.RequestOTPInp
 	}
 
 	if err := s.authRepo.SaveOTP(ctx, otpData); err != nil {
-		return err
+		return fmt.Errorf("lỗi khi lưu OTP: %w", err)
 	}
 
+	// Gửi email OTP
 	body := fmt.Sprintf("Mã OTP của bạn là: %s. Có hiệu lực trong 3 phút.", otp)
-	return s.emailSender.SendEmail(input.StudentEmail, "Mã xác thực OTP", body)
+	if err := s.emailSender.SendEmail(input.StudentEmail, "Mã xác thực OTP", body); err != nil {
+		return fmt.Errorf("lỗi khi gửi email OTP: %w", err)
+	}
+
+	return nil
 }
 
 func (s *authService) VerifyOTP(ctx context.Context, input *models.VerifyOTPRequest) (string, error) {

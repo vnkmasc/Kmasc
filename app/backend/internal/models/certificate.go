@@ -90,6 +90,7 @@ type CreateCertificateRequest struct {
 type CertificateResponse struct {
 	ID              string  `json:"id"`
 	UserID          string  `json:"user_id"`
+	UniversityID    string  `json:"university_id"`
 	StudentCode     string  `json:"student_code,omitempty"`
 	StudentName     string  `json:"student_name,omitempty"`
 	CertificateType string  `json:"certificate_type,omitempty"`

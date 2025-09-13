@@ -65,6 +65,7 @@ func main() {
 	// Repository
 	userRepo := repository.NewUserRepository(db)
 	authRepo := repository.NewAuthRepository(db)
+
 	universityRepo := repository.NewUniversityRepository(db)
 	certificateRepo := repository.NewCertificateRepository(db)
 	facultyRepo := repository.NewFacultyRepository(db)

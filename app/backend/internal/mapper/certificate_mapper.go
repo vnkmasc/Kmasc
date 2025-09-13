@@ -9,6 +9,7 @@ func MapCertificateToResponse(cert *models.Certificate, user *models.User, facul
 	return &models.CertificateResponse{
 		ID:              cert.ID.Hex(),
 		UserID:          cert.UserID.Hex(),
+		UniversityID:    cert.UniversityID.Hex(),
 		StudentCode:     cert.StudentCode,
 		StudentName:     user.FullName,
 		CertificateType: cert.CertificateType,

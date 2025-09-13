@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -96,14 +97,15 @@ func (h *AuthHandler) RequestOTP(c *gin.Context) {
 
 	err := h.authService.RequestOTP(c.Request.Context(), input)
 	if err != nil {
-		switch err {
-		case common.ErrUserNotExisted:
+		switch {
+		case errors.Is(err, common.ErrUserNotExisted):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Email không tồn tại trong hệ thống"})
-		case common.ErrPersonalAccountAlreadyExist:
+		case errors.Is(err, common.ErrPersonalAccountAlreadyExist):
 			c.JSON(http.StatusConflict, gin.H{"error": "Email này đã được liên kết với tài khoản cá nhân"})
-		case common.ErrCheckingPersonalAccount:
+		case errors.Is(err, common.ErrCheckingPersonalAccount):
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi khi kiểm tra tài khoản cá nhân"})
 		default:
+			log.Printf("RequestOTP unexpected error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi hệ thống"})
 		}
 		return
