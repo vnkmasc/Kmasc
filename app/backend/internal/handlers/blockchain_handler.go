@@ -39,7 +39,6 @@ func (h *BlockchainHandler) PushCertificateToChain(c *gin.Context) {
 		switch {
 		case errors.Is(err, common.ErrCertificateNotSigned),
 			errors.Is(err, common.ErrCertificateNoFile),
-			errors.Is(err, common.ErrCertificateAlreadyOnChain),
 			errors.Is(err, common.ErrCertificateMissingHash):
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":  "Không thể đưa lên blockchain",

@@ -85,9 +85,6 @@ func (s *blockchainService) PushCertificateToChain(ctx context.Context, certific
 	// if !cert.Signed {
 	// 	return "", fmt.Errorf("%w", common.ErrCertificateNotSigned)
 	// }
-	if cert.OnBlockchain {
-		return "", fmt.Errorf("%w", common.ErrCertificateAlreadyOnChain)
-	}
 
 	chainData := models.CertificateOnChain{
 		CertID:              cert.ID.Hex(),
