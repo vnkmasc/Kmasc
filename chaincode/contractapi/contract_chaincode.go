@@ -131,14 +131,6 @@ func (c *CertificateContract) IssueCertificate(ctx *CertificateTransactionContex
 		return "", fmt.Errorf("failed to unmarshal certificate JSON: %v", err)
 	}
 
-	exists, err := c.CertificateExists(ctx, certificate.CertID)
-	if err != nil {
-		return "", err
-	}
-	if exists {
-		return "", fmt.Errorf("certificate %s already exists", certificate.CertID)
-	}
-
 	bytes, err := json.Marshal(certificate)
 	if err != nil {
 		return "", err
