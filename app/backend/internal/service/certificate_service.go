@@ -87,7 +87,9 @@ func (s *certificateService) CreateCertificate(ctx context.Context, claims *util
 	if err := s.checkDuplicateSerialAndRegNo(ctx, universityID, req); err != nil {
 		return err
 	}
-
+	if !req.IsDegree {
+		req.CertificateType = "Chứng chỉ"
+	}
 	university, err := s.universityRepo.FindByID(ctx, universityID)
 	if err != nil || university == nil {
 		return common.ErrUniversityNotFound
