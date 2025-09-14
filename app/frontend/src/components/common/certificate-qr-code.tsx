@@ -14,6 +14,7 @@ import Link from 'next/link'
 interface QRCodeDialogProps {
   id: string
   isIcon?: boolean
+  disable?: boolean
 }
 
 const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
@@ -81,6 +82,7 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
           size={props.isIcon ? 'icon' : md ? 'default' : 'icon'}
           variant={props.isIcon ? 'outline' : undefined}
           title='Hiển thị mã QR'
+          disabled={props.disable}
         >
           <QrCode /> {!props.isIcon && md ? 'Mã QR' : ''}
         </Button>
@@ -111,7 +113,7 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = (props) => {
 
           {/* URL Input with Copy Button */}
           <div className='w-full'>
-            <Label>ID chứng chỉ</Label>
+            <Label>Mã xác minh chứng chỉ</Label>
             <div className='mt-1 flex gap-2'>
               <Input value={props.id} readOnly className='flex-1 text-xs' />
               <Button size='icon' variant='outline' onClick={() => copyToClipboard(props.id)}>

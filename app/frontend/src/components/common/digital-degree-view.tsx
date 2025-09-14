@@ -108,18 +108,6 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
     }
   )
 
-  // const currentDataQuery = props.isBlockchain
-  //   ? {
-  //       isLoading: mutateVerifyDigitalDegreeDataBlockchain.isMutating,
-  //       error: mutateVerifyDigitalDegreeDataBlockchain.error,
-  //       data: {
-  //         data: {
-  //           name: 'Chứng chỉ số'
-  //         }
-  //       }
-  //     }
-  //   : queryData
-
   const currentFileQuery = props.isBlockchain ? queryBlockchainFile : queryFile
 
   const getDegreeItems = (data: any) => {
@@ -196,7 +184,7 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
             <CheckCircleIcon />
             <AlertTitle>Thông báo</AlertTitle>
             <AlertDescription>
-              {mutateVerifyDigitalDegreeDataBlockchain.data?.message || 'Không tải được dữ liệu'}
+              {mutateVerifyDigitalDegreeDataBlockchain.data?.message || 'Không có dữ liệu'}
             </AlertDescription>
           </Alert>
           <DecriptionView
@@ -208,11 +196,11 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
                 id={
                   encodeJSON({
                     university_id: props.universityId,
+                    university_code: props.universityCode,
                     faculty_id: props.facultyId,
                     certificate_type: props.certificateType,
                     course: props.course,
-                    ediploma_id: props.id,
-                    university_code: props.universityCode
+                    ediploma_id: props.id
                   }) ?? ''
                 }
                 isIcon={false}
@@ -232,7 +220,6 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
             title={queryData?.data?.data?.name || 'Không có dữ liệu'}
             items={getDegreeItems(queryData?.data?.data)}
             description={`Thông tin chi tiết về văn bằng số`}
-            extra={<CertificateQrCode id={props.id} isIcon={false} />}
           />
         </>
       )}
