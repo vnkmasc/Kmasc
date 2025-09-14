@@ -90,6 +90,8 @@ func (h *BlockchainHandler) VerifyCertificateIntegrity(c *gin.Context) {
 		switch {
 		case strings.Contains(err.Error(), "certID không hợp lệ"):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case strings.Contains(err.Error(), "không tìm thấy trên chuỗi khối"):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case strings.Contains(err.Error(), "không tìm thấy"):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:

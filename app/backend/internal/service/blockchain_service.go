@@ -136,6 +136,9 @@ func (s *blockchainService) VerifyCertificateIntegrity(ctx context.Context, cert
 ) {
 	onChainCert, err := s.fabricClient.GetCertificateByID(certID)
 	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return false, "", nil, nil, nil, nil, nil, fmt.Errorf("không tìm thấy trên chuỗi khối")
+		}
 		return false, "", nil, nil, nil, nil, nil, fmt.Errorf("lỗi lấy từ blockchain: %w", err)
 	}
 
