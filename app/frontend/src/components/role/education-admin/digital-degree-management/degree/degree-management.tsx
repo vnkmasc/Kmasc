@@ -60,12 +60,12 @@ const DegreeManagement = () => {
   const mutatePushDegreesBlockchain = useSWRMutation(
     'push-digital-degree-blockchain',
     async (_key, { arg }: { arg: any }) => {
-      const formData = new FormData()
-      formData.append('faculty_id', arg.faculty_id)
-      if (filter.course !== '') formData.append('course', arg.course)
-      if (filter.certificate_type !== '') formData.append('certificate_type', arg.certificate_type)
-
-      const res = await uploadDigitalDegreesBlockchain(formData)
+      const res = await uploadDigitalDegreesBlockchain(
+        arg.faculty_id,
+        arg.certificate_type,
+        arg.course,
+        Boolean(arg.issued)
+      )
       queryCertificates.mutate()
 
       return res
@@ -115,6 +115,7 @@ const DegreeManagement = () => {
             certificateType={filter.certificate_type}
             course={filter.course}
           />,
+
           <SignDegreeButton key='sign-degree-button' />,
           <HashUploadButton key='hash-upload-button' />,
           <AlertDialog key='blockchain-alert'>
@@ -137,6 +138,7 @@ const DegreeManagement = () => {
                       <li>Chuyên ngành: {findLabel(filter.faculty_id, facultyOptions)}</li>
                       {filter.certificate_type && <li>Loại bằng: {filter.certificate_type}</li>}
                       {filter.course && <li>Khóa học: {filter.course}</li>}
+                      {filter.issued && <li>Trạng thái cấp: {filter.issued === 'true' ? 'Đã cấp' : 'Chưa cấp'}</li>}
                     </ul>
                   </AlertDescription>
                 </Alert>
@@ -277,7 +279,7 @@ const DegreeManagement = () => {
             value: 'action',
             render: (item) => (
               <div className='flex gap-2'>
-                <Link href={`/education-admin/digital-degree-management/${item.id}`} target='_blank'>
+                <Link href={`/education-admin/digital-degree-management/${item.id}`}>
                   <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
                     <Eye />
                   </Button>
@@ -335,12 +337,12 @@ const DegreeManagement = () => {
                 <CertificateQrCode
                   id={
                     encodeJSON({
-                      faculty_id: filter.faculty_id,
-                      certificate_type: filter.certificate_type,
-                      course: filter.course,
-                      ediploma_id: item.id,
+                      university_id: item.university_id,
                       university_code: item.university_code,
-                      university_id: item.university_id
+                      faculty_id: item.faculty_id,
+                      certificate_type: item.certificate_type,
+                      course: item.course,
+                      ediploma_id: item.id
                     }) ?? ''
                   }
                   isIcon={true}

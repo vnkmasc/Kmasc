@@ -226,11 +226,7 @@ const StudentManagementPage: React.FC = () => {
             header: 'Mã SV',
             value: 'code',
             className: 'min-w-[80px] font-semibold text-blue-500',
-            render: (item) => (
-              <Link href={`/education-admin/student-management/${item.id}`} target='_blank'>
-                {item.code}
-              </Link>
-            )
+            render: (item) => <Link href={`/education-admin/student-management/${item.id}`}>{item.code}</Link>
           },
           { header: 'Họ và tên', value: 'name', className: 'min-w-[200px]' },
           { header: 'Email', value: 'email', className: 'min-w-[200px]' },

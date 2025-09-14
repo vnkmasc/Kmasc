@@ -37,8 +37,6 @@ const apiService = async (
       body: data ? (isFormData ? data : JSON.stringify(data)) : null
     })
 
-    console.log(method + ' ' + fullUrl)
-
     const contentType = response.headers.get('content-type')
 
     if (!response.ok) {

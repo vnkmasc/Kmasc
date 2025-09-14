@@ -26,10 +26,16 @@ import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils/common'
 import CertificateQrCode from './certificate-qr-code'
 import { Badge } from '../ui/badge'
+import { encodeJSON } from '@/lib/utils/lz-string'
 
 interface Props {
   isBlockchain: boolean
   id: string
+  universityCode?: string
+  universityId?: string
+  facultyId?: string
+  certificateType?: string
+  course?: string
 }
 
 const CertificateView: React.FC<Props> = (props) => {
@@ -43,6 +49,7 @@ const CertificateView: React.FC<Props> = (props) => {
     }
   )
   const isDegree = queryData.data?.certificate?.certificateType !== undefined
+
   const queryFile = useSWR(
     !props.isBlockchain && props.id ? `certificate-file-${props.id}` : undefined,
     () => getCertificateFile(props.id),
@@ -57,7 +64,14 @@ const CertificateView: React.FC<Props> = (props) => {
 
   const queryBlockchainData = useSWR(
     props.isBlockchain && props.id ? `blockchain-data-${props.id}` : undefined,
-    () => getBlockchainData(props.id),
+    () =>
+      getBlockchainData(
+        props.universityId ?? '',
+        props.facultyId ?? '',
+        props.certificateType ?? '',
+        props.course ?? '',
+        props.id
+      ),
     {
       revalidateOnFocus: false,
       shouldRetryOnError: false,
@@ -66,6 +80,7 @@ const CertificateView: React.FC<Props> = (props) => {
       }
     }
   )
+
   const queryBlockchainFile = useSWR(
     props.isBlockchain && props.id ? `blockchain-file-${props.id}` : undefined,
     () => getBlockchainFile(props.id),
@@ -231,7 +246,23 @@ const CertificateView: React.FC<Props> = (props) => {
             title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
             items={getDecriptionViewItems(currentDataQuery?.data)}
             description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
-            extra={<CertificateQrCode id={props.id} isIcon={false} />}
+            extra={
+              !props.isBlockchain ? null : (
+                <CertificateQrCode
+                  id={
+                    encodeJSON({
+                      university_id: props.universityId,
+                      university_code: props.universityCode,
+                      faculty_id: props.facultyId,
+                      certificate_type: props.certificateType,
+                      course: props.course,
+                      certificate_id: props.id
+                    }) ?? ''
+                  }
+                  isIcon={false}
+                />
+              )
+            }
           />
         </>
       ) : (

@@ -70,8 +70,18 @@ export const uploadDigitalDegreesMinio = async (data: FormData) => {
   return res
 }
 
-export const uploadDigitalDegreesBlockchain = async (data: FormData) => {
-  const res = await apiService('POST', 'blockchain/push-ediploma', data)
+export const uploadDigitalDegreesBlockchain = async (
+  facultyId: string,
+  certificateType: string,
+  course: string,
+  issued: boolean
+) => {
+  const res = await apiService('POST', 'blockchain/push-ediploma', {
+    faculty_id: facultyId,
+    certificate_type: certificateType,
+    course: course,
+    issued: issued
+  })
   return res
 }
 
@@ -112,44 +122,19 @@ export const verifyDigitalDegreeDataBlockchain = async (
   course: string,
   ediplomaId: string
 ) => {
-  const formData = new FormData()
-  formData.append('university_id', universityId)
-  if (facultyId !== '') formData.append('faculty_id', facultyId)
-  if (certificateType !== '') formData.append('certificate_type', certificateType)
-  if (course !== '') formData.append('course', course)
-  if (ediplomaId !== '') formData.append('ediploma_id', ediplomaId)
-
-  // const res = await apiService('POST', 'blockchain/verify-batch', formData, false)
-  return {
-    data: {
-      id: '68a77870aacf9ece849c85f0',
-      certificate_id: '68a77870aacf9ece849c85ef',
-      name: 'Bằng Cử nhân Khoa học máy tính',
-      template_name: 'Bằng mẫu',
-      university_code: 'KMA',
-      university_name: 'Học viện Kỹ thuật Mật mã',
-      faculty_id: '68a1cdf3688b235903145551',
-      faculty_code: 'CNTT',
-      faculty_name: 'Công nghệ thông tin',
-      student_name: 'Ho Ngoc Yen',
-      student_code: 'SV000011',
-      full_name: 'Ho Ngoc Yen',
-      certificate_type: 'Kỹ sư',
-      course: '2025',
-      education_type: 'Chính quy',
-      gpa: 3.94,
-      graduation_rank: 'Xuất sắc',
-      issue_date: '01/01/0001',
-      serial_number: '10093',
-      registration_number: '10093',
-      issued: true,
-      signed: false,
-      data_encrypted: true,
-      on_blockchain: true
+  const res = await apiService(
+    'POST',
+    'blockchain/verify-batch',
+    {
+      university_id: universityId,
+      faculty_id: facultyId,
+      certificate_type: certificateType,
+      course: course,
+      ediploma_id: ediplomaId
     },
-    message: 'Dữ liệu khớp hoàn toàn trên chuỗi khối',
-    verified: true
-  }
+    false
+  )
+  return res
 }
 
 export const verifyDigitalDegreeFileBlockchain = async (universityCode: string, ediplomaId: string) => {
