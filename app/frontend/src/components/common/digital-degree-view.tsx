@@ -94,10 +94,13 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
     if (props.isBlockchain) {
       mutateVerifyDigitalDegreeDataBlockchain.trigger()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.isBlockchain])
 
   const queryBlockchainFile = useSWR(
-    props.isBlockchain && props.id && props.universityCode ? `digital-degree-blockchain-file-${props.id}` : undefined,
+    props.isBlockchain && props.id && props.universityCode && mutateVerifyDigitalDegreeDataBlockchain.data?.verified
+      ? `digital-degree-blockchain-file-${props.id}`
+      : undefined,
     () => verifyDigitalDegreeFileBlockchain(props.universityCode ?? '', props.id),
     {
       revalidateOnFocus: false,

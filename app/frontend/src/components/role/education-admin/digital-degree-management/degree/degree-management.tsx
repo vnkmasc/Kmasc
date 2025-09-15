@@ -85,9 +85,9 @@ const DegreeManagement = () => {
     async (_key, { arg }: { arg: any }) =>
       verifyDigitalDegreeDataBlockchain(
         arg.university_id,
-        filter.faculty_id,
-        filter.certificate_type,
-        filter.course,
+        arg.faculty_id,
+        arg.certificate_type,
+        arg.course,
         arg.ediploma_id
       ),
     {
@@ -294,16 +294,16 @@ const DegreeManagement = () => {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Xác minh dữ liệu trên blockchain</AlertDialogTitle>
                     </AlertDialogHeader>
-                    {filter.faculty_id ? (
+                    {item.faculty_id ? (
                       <Alert variant={'success'}>
                         <CheckCircle2Icon />
                         <AlertTitle>Sẵn sàng</AlertTitle>
                         <AlertDescription>
                           <ul className='list-inside list-disc'>
                             <li>ID Trường: {item.university_id}</li>
-                            <li>ID Chuyên ngành: {filter.faculty_id}</li>
-                            {filter.certificate_type && <li>Loại bằng: {filter.certificate_type}</li>}
-                            {filter.course && <li>Khóa học: {filter.course}</li>}
+                            <li>ID Chuyên ngành: {item.faculty_id}</li>
+                            {item.certificate_type && <li>Loại bằng: {item.certificate_type}</li>}
+                            {item.course && <li>Khóa học: {item.course}</li>}
                             <li>ID Văn bằng: {item.id}</li>
                           </ul>
                         </AlertDescription>
@@ -312,22 +312,14 @@ const DegreeManagement = () => {
                       <Alert variant={'warning'}>
                         <AlertCircleIcon />
                         <AlertTitle>Cảnh báo</AlertTitle>
-                        <AlertDescription>
-                          Vui lòng chọn chuyên ngành trong <strong>phần tìm kiếm</strong> để tiến hành xác minh trên
-                          blockchain.
-                        </AlertDescription>
+                        <AlertDescription>Chuyên ngành của văn bằng số không hợp lệ</AlertDescription>
                       </Alert>
                     )}
                     <AlertDialogFooter>
                       <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
                       <AlertDialogAction
-                        disabled={filter.faculty_id === ''}
-                        onClick={() =>
-                          mutateVerifyDigitalDegreeDataBlockchain.trigger({
-                            ediploma_id: item.id,
-                            university_id: item.university_id
-                          })
-                        }
+                        disabled={item.faculty_id === ''}
+                        onClick={() => mutateVerifyDigitalDegreeDataBlockchain.trigger(item)}
                       >
                         Xác minh
                       </AlertDialogAction>

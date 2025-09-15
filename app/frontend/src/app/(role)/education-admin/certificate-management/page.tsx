@@ -82,6 +82,7 @@ const CertificateManagementPage = () => {
       course: filter.course || undefined
     })
   )
+  console.log('🚀 ~ CertificateManagementPage ~ queryCertificates:', queryCertificates.data?.data)
 
   const mutateCreateCertificate = useSWRMutation('create-certificate', (_, { arg }: any) => createCertificate(arg), {
     onSuccess: () => {
@@ -225,6 +226,19 @@ const CertificateManagementPage = () => {
     },
     [mutateCreateDegree]
   )
+
+  const encodeCertificateData = (data: any): string => {
+    return (
+      encodeJSON({
+        university_id: data.universityId,
+        university_code: data.universityCode,
+        faculty_id: facultyOptions.find((faculty) => faculty.code === data.faculty)?.id,
+        certificate_type: data.certificateType,
+        course: data.course,
+        certificate_id: data.id
+      }) ?? ''
+    )
+  }
 
   return (
     <>
@@ -439,7 +453,7 @@ const CertificateManagementPage = () => {
                   </Button>
                 </Link>
                 <Link
-                  href={`/education-admin/certificate-management/${item.id}/blockchain`}
+                  href={`/education-admin/certificate-management/${encodeCertificateData(item)}/blockchain`}
                   onClick={(e) => {
                     if (!item.onBlockchain) {
                       e.preventDefault()
@@ -452,20 +466,7 @@ const CertificateManagementPage = () => {
                     <Blocks />
                   </Button>
                 </Link>
-                <CertificateQRCode
-                  id={
-                    encodeJSON({
-                      university_id: item.universityId,
-                      university_code: item.universityCode,
-                      faculty_id: facultyOptions.find((faculty) => faculty.code === item.faculty)?.id,
-                      certificate_type: item.certificateType,
-                      course: item.course,
-                      certificate_id: item.id
-                    }) ?? ''
-                  }
-                  isIcon={true}
-                  disable={!item.onBlockchain}
-                />
+                <CertificateQRCode id={encodeCertificateData(item)} isIcon={true} disable={!item.onBlockchain} />
               </div>
             )
           }

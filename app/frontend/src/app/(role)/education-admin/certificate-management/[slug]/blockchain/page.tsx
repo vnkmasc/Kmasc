@@ -1,5 +1,6 @@
 import Back from '@/components/common/back'
 import CertificateView from '@/components/common/certificate-view'
+import { decodeJSON } from '@/lib/utils/lz-string'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -7,6 +8,7 @@ interface Props {
 
 const CertificateBlockchainDetailPage = async ({ params }: Props) => {
   const { slug } = await params
+  const decodeCertificateData = decodeJSON(slug)
 
   return (
     <>
@@ -14,7 +16,15 @@ const CertificateBlockchainDetailPage = async ({ params }: Props) => {
         <Back />
         <h2>Chi tiết thông tin trên blockchain</h2>
       </div>
-      <CertificateView id={slug} isBlockchain={true} />
+      <CertificateView
+        id={decodeCertificateData.certificate_id}
+        certificateType={decodeCertificateData.certificate_type}
+        course={decodeCertificateData.course}
+        facultyId={decodeCertificateData.faculty_id}
+        universityId={decodeCertificateData.university_id}
+        universityCode={decodeCertificateData.university_code}
+        isBlockchain={true}
+      />
     </>
   )
 }

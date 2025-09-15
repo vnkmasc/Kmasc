@@ -5,7 +5,6 @@ import { FileTextIcon, DownloadIcon } from 'lucide-react'
 import { showNotification } from '@/lib/utils/common'
 
 interface Props {
-  isIcon?: boolean
   action: () => Promise<any>
 }
 
@@ -46,14 +45,14 @@ const CertificateBlankButton: React.FC<Props> = (props) => {
 
   return (
     <div className='flex items-center gap-2'>
-      <Button size={props.isIcon ? 'icon' : 'default'} onClick={() => mutateViewFile.trigger()} variant={'outline'}>
+      <Button onClick={() => mutateViewFile.trigger()} variant={'outline'}>
         <FileTextIcon />
-        {!props.isIcon && <span>Xem tệp</span>}
+        <span className='hidden md:block'>Xem tệp</span>
       </Button>
 
-      <Button size={props.isIcon ? 'icon' : 'default'} onClick={() => mutateDownloadFile.trigger()}>
+      <Button onClick={() => mutateDownloadFile.trigger()}>
         <DownloadIcon />
-        {!props.isIcon && <span>Tải xuống</span>}
+        <span className='hidden md:block'>Tải xuống</span>
       </Button>
     </div>
   )

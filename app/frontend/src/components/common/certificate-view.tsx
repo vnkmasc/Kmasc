@@ -81,7 +81,7 @@ const CertificateView: React.FC<Props> = (props) => {
   )
 
   const queryBlockchainFile = useSWR(
-    props.isBlockchain && props.id ? `blockchain-file-${props.id}` : undefined,
+    props.isBlockchain && props.id && queryBlockchainData.data?.verified ? `blockchain-file-${props.id}` : undefined,
     () => getBlockchainFile(props.id),
     {
       revalidateOnFocus: false,
@@ -224,7 +224,9 @@ const CertificateView: React.FC<Props> = (props) => {
           <Alert className={cn('mx-auto mb-4 max-w-[800px]', !props.isBlockchain && 'hidden')} variant='success'>
             <CheckCircleIcon />
             <AlertTitle>Thông báo</AlertTitle>
-            <AlertDescription>{currentDataQuery.data?.message || 'Không tải được dữ liệu'}</AlertDescription>
+            <AlertDescription>
+              {currentDataQuery.data?.message || 'Xác minh dữ liệu trên blockchain thành công'}
+            </AlertDescription>
           </Alert>
           <DecriptionView
             title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
