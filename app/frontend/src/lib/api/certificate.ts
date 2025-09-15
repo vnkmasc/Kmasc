@@ -92,7 +92,7 @@ export const getBlockchainData = async (
 }
 
 export const getBlockchainFile = async (id: string) => {
-  const res = await apiService('GET', `blockchain/verify-file/${id}`, undefined, true, {}, true)
+  const res = await apiService('GET', `certificates/file/${id}`, undefined, true, {}, true)
   return res
 }
 

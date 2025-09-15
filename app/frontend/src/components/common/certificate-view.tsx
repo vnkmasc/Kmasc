@@ -4,7 +4,6 @@ import { getBlockchainData, getBlockchainFile, getCertificateDataById, getCertif
 import useSWR from 'swr'
 import DecriptionView from './description-view'
 import {
-  Blocks,
   Book,
   BookOpen,
   Calendar,
@@ -214,21 +213,6 @@ const CertificateView: React.FC<Props> = (props) => {
 
   const getDecriptionViewItems = (data: any) => {
     const items = isDegree ? getDegreeItems(data?.certificate) : getCertificateItems(data?.certificate)
-
-    if (props.isBlockchain) {
-      return [
-        {
-          icon: <Blocks className='h-5 w-5 text-gray-500' />,
-          title: 'Mã HASH',
-          value: (
-            <p className='max-w-[300px] truncate' title={data?.on_chain.cert_hash}>
-              {data?.on_chain.cert_hash}
-            </p>
-          )
-        },
-        ...items
-      ]
-    }
 
     return items
   }
