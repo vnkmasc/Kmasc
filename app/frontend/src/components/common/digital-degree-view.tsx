@@ -187,7 +187,7 @@ const DigitalDegreeView: React.FC<Props> = (props) => {
             <CheckCircleIcon />
             <AlertTitle>Thông báo</AlertTitle>
             <AlertDescription>
-              {mutateVerifyDigitalDegreeDataBlockchain.data?.message || 'Không có dữ liệu'}
+              {mutateVerifyDigitalDegreeDataBlockchain.data?.message || 'Xác minh dữ liệu trên blockchain thành công'}
             </AlertDescription>
           </Alert>
           <DecriptionView
