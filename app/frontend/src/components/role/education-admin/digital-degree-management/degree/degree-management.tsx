@@ -15,7 +15,6 @@ import {
   uploadDigitalDegreesBlockchain,
   verifyDigitalDegreeDataBlockchain
 } from '@/lib/api/digital-degree'
-import { formatDate } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { AlertCircleIcon, Blocks, CheckCircle2Icon, Eye, Grid2X2Check } from 'lucide-react'
 import IssueDegreeDialog from '@/components/role/education-admin/digital-degree-management/degree/issue-degree-dialog'
@@ -247,10 +246,7 @@ const DegreeManagement = () => {
           {
             header: 'Ngày cấp bằng',
             value: 'issue_date',
-            className: 'min-w-[100px]',
-            render: (item) => {
-              return formatDate(item.issue_date, 'dd/MM/yyyy')
-            }
+            className: 'min-w-[100px]'
           },
           {
             header: 'Trạng thái ký & mã',

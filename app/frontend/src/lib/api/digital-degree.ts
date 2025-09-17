@@ -46,6 +46,7 @@ export const signDegreeTemplateById = async (id: string, signature: string) => {
 
 export const searchDigitalDegreeList = async (params: any) => {
   const res = await apiService('GET', queryString(['ediplomas', 'search'], params))
+  console.log('🚀 ~ searchDigitalDegreeList ~ res:', res)
   return res
 }
 
