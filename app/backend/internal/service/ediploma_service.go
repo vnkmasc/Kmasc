@@ -22,6 +22,7 @@ import (
 )
 
 type EDiplomaService interface {
+	GetSimpleEDiplomasByUserID(ctx context.Context, userID primitive.ObjectID) ([]*models.EDiplomaSimpleResponse, error)
 	GetEDiplomaFileByUniversityCode(ctx context.Context, ediplomaID primitive.ObjectID, universityCode string) (io.ReadCloser, string, error)
 	GetEDiplomaFile(ctx context.Context, ediplomaID, universityID primitive.ObjectID) (io.ReadCloser, string, error)
 	GetEDiplomaDTOByID(ctx context.Context, id primitive.ObjectID) (*models.EDiplomaResponse, error)
@@ -725,4 +726,25 @@ func (s *eDiplomaService) GetEDiplomaFileByUniversityCode(ctx context.Context, e
 	}
 
 	return stream, contentType, nil
+}
+func (s *eDiplomaService) GetSimpleEDiplomasByUserID(
+	ctx context.Context,
+	userID primitive.ObjectID,
+) ([]*models.EDiplomaSimpleResponse, error) {
+
+	ediplomas, err := s.repo.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []*models.EDiplomaSimpleResponse
+	for _, ed := range ediplomas {
+		responses = append(responses, &models.EDiplomaSimpleResponse{
+			ID:                 ed.ID.Hex(),
+			Name:               ed.Name,
+			OnBlockchainVerify: ed.OnBlockchainVerify,
+		})
+	}
+
+	return responses, nil
 }

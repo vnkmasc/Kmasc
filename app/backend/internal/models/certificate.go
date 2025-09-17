@@ -16,31 +16,40 @@ type Certificate struct {
 	UniversityID   primitive.ObjectID `bson:"university_id" json:"university_id"`
 	IsDegree       bool               `bson:"is_degree" json:"is_degree"` // true: văn bằng, false: chứng chỉ
 
-	StudentCode      string            `bson:"student_code" json:"student_code"`
-	CertificateType  string            `bson:"certificate_type" json:"certificate_type"`       // Cử nhân, Thạc sĩ,.....
-	Name             string            `bson:"name" json:"name"`                               // Tên văn bằng
-	SerialNumber     string            `bson:"serial_number" json:"serial_number"`             // Số hiệu
-	RegNo            string            `bson:"registration_number" json:"registration_number"` // Số vào sổ gốc
-	Path             string            `bson:"path" json:"path"`
-	CertHash         string            `bson:"cert_hash" json:"cert_hash"`
-	IssueDate        time.Time         `bson:"issue_date" json:"issue_date"` // Ngày cấp
-	HashFile         string            `bson:"hash_file,omitempty" json:"hash_file,omitempty"`
-	CertificateFiles []CertificateFile `bson:"certificate_files,omitempty"`
-	Major            string            `bson:"major" json:"major"`                     // Ngành đào tạo
-	Course           string            `bson:"course" json:"course"`                   //  Khóa học (VD: AT18)
-	GPA              float64           `bson:"gpa" json:"gpa"`                         //  GPA toàn khóa
-	GraduationRank   string            `bson:"graduation_rank" json:"graduation_rank"` //  Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
-	EducationType    string            `bson:"education_type" json:"education_type"`   //  Hệ đào tạo: Chính quy, Tại chức...
-	Issued           bool              `bson:"issued" json:"issued"`                   // Đã phát hành bản giấy
-	Signed           bool              `bson:"signed" json:"signed"`
-	DataEncrypted    bool              `bson:"data_encrypted" json:"data_encrypted"` //Đã mã hóa dữ liệu hay chưa
-	OnBlockchain     bool              `bson:"on_blockchain" json:"on_blockchain"`   // Đã đẩy lên blockchain
-	SignedAt         time.Time         `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
-	Description      string            `bson:"description,omitempty" json:"description,omitempty"` // Mô tả thêm
+	StudentCode        string              `bson:"student_code" json:"student_code"`
+	CertificateType    string              `bson:"certificate_type" json:"certificate_type"`       // Cử nhân, Thạc sĩ,.....
+	Name               string              `bson:"name" json:"name"`                               // Tên văn bằng
+	SerialNumber       string              `bson:"serial_number" json:"serial_number"`             // Số hiệu
+	RegNo              string              `bson:"registration_number" json:"registration_number"` // Số vào sổ gốc
+	Path               string              `bson:"path" json:"path"`
+	CertHash           string              `bson:"cert_hash" json:"cert_hash"`
+	IssueDate          time.Time           `bson:"issue_date" json:"issue_date"` // Ngày cấp
+	HashFile           string              `bson:"hash_file,omitempty" json:"hash_file,omitempty"`
+	OnBlockchainVerify *OnBlockchainVerify `bson:"on_blockchain_verify,omitempty" json:"on_blockchain_verify,omitempty"`
+	CertificateFiles   []CertificateFile   `bson:"certificate_files,omitempty"`
+	Major              string              `bson:"major" json:"major"`                     // Ngành đào tạo
+	Course             string              `bson:"course" json:"course"`                   //  Khóa học (VD: AT18)
+	GPA                float64             `bson:"gpa" json:"gpa"`                         //  GPA toàn khóa
+	GraduationRank     string              `bson:"graduation_rank" json:"graduation_rank"` //  Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
+	EducationType      string              `bson:"education_type" json:"education_type"`   //  Hệ đào tạo: Chính quy, Tại chức...
+	Issued             bool                `bson:"issued" json:"issued"`                   // Đã phát hành bản giấy
+	Signed             bool                `bson:"signed" json:"signed"`
+	DataEncrypted      bool                `bson:"data_encrypted" json:"data_encrypted"` //Đã mã hóa dữ liệu hay chưa
+	OnBlockchain       bool                `bson:"on_blockchain" json:"on_blockchain"`   // Đã đẩy lên blockchain
+	SignedAt           time.Time           `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
+	Description        string              `bson:"description,omitempty" json:"description,omitempty"` // Mô tả thêm
 
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
+
+type OnBlockchainVerify struct {
+	UniversityID    string `bson:"university_id,omitempty" json:"university_id,omitempty"`
+	FacultyID       string `bson:"faculty_id,omitempty" json:"faculty_id,omitempty"`
+	CertificateType string `bson:"certificate_type,omitempty" json:"certificate_type,omitempty"`
+	Course          string `bson:"course,omitempty" json:"course,omitempty"`
+}
+
 type CertificateFile struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty"` // MongoDB ID
 	FileName  string             `bson:"file_name"`     // Tên file gốc
@@ -88,35 +97,33 @@ type CreateCertificateRequest struct {
 }
 
 type CertificateResponse struct {
-	ID              string  `json:"id"`
-	UserID          string  `json:"user_id"`
-	UniversityID    string  `json:"university_id"`
-	StudentCode     string  `json:"student_code,omitempty"`
-	StudentName     string  `json:"student_name,omitempty"`
-	CertificateType string  `json:"certificate_type,omitempty"`
-	Name            string  `json:"name,omitempty"`
-	SerialNumber    string  `json:"serial_number,omitempty"`
-	RegNo           string  `json:"reg_no,omitempty"`
-	Path            string  `json:"path,omitempty"`
-	FacultyCode     string  `json:"faculty_code,omitempty"`
-	FacultyName     string  `json:"faculty_name,omitempty"`
-	UniversityCode  string  `json:"university_code,omitempty"`
-	UniversityName  string  `json:"university_name,omitempty"`
-	HashFile        string  `json:"hash_file,omitempty"`
-	Major           string  `json:"major,omitempty"`           // Ngành đào tạo
-	Course          string  `json:"course,omitempty"`          // Khóa học (VD: AT18)
-	GPA             float64 `json:"gpa,omitempty"`             // GPA toàn khóa
-	GraduationRank  string  `json:"graduation_rank,omitempty"` // Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
-	EducationType   string  `json:"education_type,omitempty"`  // Hệ đào tạo
-	Issued          bool    `json:"issued"`                    // Đã phát hành bản giấy
-	Signed          bool    `json:"signed"`
-	DataEncrypted   bool    `json:"data_encrypted"`
-	OnBlockchain    bool    `json:"on_blockchain"`         // Đã đẩy lên blockchain
-	IssueDate       string  `json:"issue_date,omitempty"`  // Định dạng ISO hoặc "02/01/2006"
-	Description     string  `json:"description,omitempty"` // Mô tả thêm
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                 string              `json:"id"`
+	UserID             string              `json:"user_id"`
+	UniversityID       string              `json:"university_id"`
+	StudentCode        string              `json:"student_code,omitempty"`
+	StudentName        string              `json:"student_name,omitempty"`
+	CertificateType    string              `json:"certificate_type,omitempty"`
+	Name               string              `json:"name,omitempty"`
+	SerialNumber       string              `json:"serial_number,omitempty"`
+	RegNo              string              `json:"reg_no,omitempty"`
+	Path               string              `json:"path,omitempty"`
+	FacultyCode        string              `json:"faculty_code,omitempty"`
+	FacultyName        string              `json:"faculty_name,omitempty"`
+	UniversityCode     string              `json:"university_code,omitempty"`
+	UniversityName     string              `json:"university_name,omitempty"`
+	HashFile           string              `json:"hash_file,omitempty"`
+	Major              string              `json:"major,omitempty"`           // Ngành đào tạo
+	Course             string              `json:"course,omitempty"`          // Khóa học (VD: AT18)
+	GPA                float64             `json:"gpa,omitempty"`             // GPA toàn khóa
+	GraduationRank     string              `json:"graduation_rank,omitempty"` // Hạng tốt nghiệp: Xuất sắc, Giỏi, Khá...
+	EducationType      string              `json:"education_type,omitempty"`  // Hệ đào tạo
+	Issued             bool                `json:"issued"`                    // Đã phát hành bản giấy
+	Signed             bool                `json:"signed"`
+	DataEncrypted      bool                `json:"data_encrypted"`
+	OnBlockchain       bool                `json:"on_blockchain"`         // Đã đẩy lên blockchain
+	IssueDate          string              `json:"issue_date,omitempty"`  // Định dạng ISO hoặc "02/01/2006"
+	Description        string              `json:"description,omitempty"` // Mô tả thêm
+	OnBlockchainVerify *OnBlockchainVerify `json:"on_blockchain_verify,omitempty"`
 }
 
 type SearchCertificateParams struct {
@@ -150,8 +157,9 @@ func ValidateCreateCertificateRequest(sl validator.StructLevel) {
 }
 
 type CertificateSimpleResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"certificate_name"`
+	ID                 string              `json:"id"`
+	Name               string              `json:"certificate_name"`
+	OnBlockchainVerify *OnBlockchainVerify `json:"on_blockchain_verify,omitempty"`
 }
 
 func NewCertificate(req *CreateCertificateRequest, user *User, universityID primitive.ObjectID) *Certificate {

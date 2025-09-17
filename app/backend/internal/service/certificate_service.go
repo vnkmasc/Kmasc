@@ -298,8 +298,6 @@ func (s *certificateService) GetAllCertificates(ctx context.Context) ([]*models.
 			UniversityCode:  university.UniversityCode,
 			UniversityName:  university.UniversityName,
 			Signed:          cert.Signed,
-			CreatedAt:       cert.CreatedAt,
-			UpdatedAt:       cert.UpdatedAt,
 		})
 	}
 
@@ -611,8 +609,9 @@ func (s *certificateService) GetSimpleCertificatesByUserID(ctx context.Context, 
 	var responses []*models.CertificateSimpleResponse
 	for _, cert := range certs {
 		responses = append(responses, &models.CertificateSimpleResponse{
-			ID:   cert.ID.Hex(),
-			Name: cert.Name,
+			ID:                 cert.ID.Hex(),
+			Name:               cert.Name,
+			OnBlockchainVerify: cert.OnBlockchainVerify,
 		})
 	}
 

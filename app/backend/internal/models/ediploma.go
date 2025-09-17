@@ -35,9 +35,10 @@ type EDiploma struct {
 	SignedAt           time.Time `bson:"signed_at,omitempty" json:"signed_at,omitempty"`
 
 	// Blockchain & trạng thái
-	OnBlockchain   bool        `bson:"on_blockchain" json:"on_blockchain"`
-	MerkleProof    []ProofNode `bson:"merkle_proof,omitempty" json:"merkle_proof,omitempty"`
-	BlockchainTxID string      `bson:"blockchain_tx_id,omitempty" json:"blockchain_tx_id,omitempty"`
+	OnBlockchain       bool                `bson:"on_blockchain" json:"on_blockchain"`
+	OnBlockchainVerify *OnBlockchainVerify `bson:"on_blockchain_verify,omitempty" json:"on_blockchain_verify,omitempty"`
+	MerkleProof        []ProofNode         `bson:"merkle_proof,omitempty" json:"merkle_proof,omitempty"`
+	BlockchainTxID     string              `bson:"blockchain_tx_id,omitempty" json:"blockchain_tx_id,omitempty"`
 
 	SignatureOfUni    string `bson:"signature_of_uni,omitempty" json:"signatureOfUni,omitempty"`
 	SignatureOfMinEdu string `bson:"signature_of_minedu,omitempty" json:"signatureOfMinEdu,omitempty"`
@@ -49,31 +50,32 @@ type EDiploma struct {
 }
 
 type EDiplomaResponse struct {
-	ID                 primitive.ObjectID `json:"id"`
-	CertificateID      primitive.ObjectID `json:"certificate_id"`
-	UniversityID       primitive.ObjectID `json:"university_id"`
-	Name               string             `json:"name"`
-	TemplateName       string             `json:"template_name"`
-	UniversityCode     string             `json:"university_code"`
-	UniversityName     string             `json:"university_name"`
-	FacultyID          primitive.ObjectID `json:"faculty_id"`
-	FacultyCode        string             `json:"faculty_code"`
-	FacultyName        string             `json:"faculty_name"`
-	StudentName        string             `json:"student_name"`
-	StudentCode        string             `json:"student_code"`
-	FullName           string             `json:"full_name"`
-	CertificateType    string             `json:"certificate_type"`
-	Course             string             `json:"course"`
-	EducationType      string             `json:"education_type"`
-	GPA                float64            `json:"gpa"`
-	GraduationRank     string             `json:"graduation_rank"`
-	IssueDate          string             `json:"issue_date"`
-	SerialNumber       string             `json:"serial_number"`
-	RegistrationNumber string             `json:"registration_number"`
-	Issued             bool               `json:"issued"`
-	Signed             bool               `json:"signed"`
-	DataEncrypted      bool               `json:"data_encrypted"`
-	OnBlockchain       bool               `json:"on_blockchain"`
+	ID                 primitive.ObjectID  `json:"id"`
+	CertificateID      primitive.ObjectID  `json:"certificate_id"`
+	UniversityID       primitive.ObjectID  `json:"university_id"`
+	Name               string              `json:"name"`
+	TemplateName       string              `json:"template_name"`
+	UniversityCode     string              `json:"university_code"`
+	UniversityName     string              `json:"university_name"`
+	FacultyID          primitive.ObjectID  `json:"faculty_id"`
+	FacultyCode        string              `json:"faculty_code"`
+	FacultyName        string              `json:"faculty_name"`
+	StudentName        string              `json:"student_name"`
+	StudentCode        string              `json:"student_code"`
+	FullName           string              `json:"full_name"`
+	CertificateType    string              `json:"certificate_type"`
+	Course             string              `json:"course"`
+	EducationType      string              `json:"education_type"`
+	GPA                float64             `json:"gpa"`
+	GraduationRank     string              `json:"graduation_rank"`
+	IssueDate          string              `json:"issue_date"`
+	SerialNumber       string              `json:"serial_number"`
+	RegistrationNumber string              `json:"registration_number"`
+	Issued             bool                `json:"issued"`
+	Signed             bool                `json:"signed"`
+	DataEncrypted      bool                `json:"data_encrypted"`
+	OnBlockchain       bool                `json:"on_blockchain"`
+	OnBlockchainVerify *OnBlockchainVerify `json:"on_blockchain_verify,omitempty"`
 }
 type EDiplomaSearchFilter struct {
 	UniversityID    string `json:"university_id"`
@@ -94,4 +96,9 @@ type EDiplomaBatchOnChain struct {
 	AggregateInfoHash string `json:"aggregate_info_hash"`
 	AggregateFileHash string `json:"aggregate_file_hash"`
 	Count             int    `json:"count"`
+}
+type EDiplomaSimpleResponse struct {
+	ID                 string              `json:"id"`
+	Name               string              `json:"name"`
+	OnBlockchainVerify *OnBlockchainVerify `json:"on_blockchain_verify"`
 }

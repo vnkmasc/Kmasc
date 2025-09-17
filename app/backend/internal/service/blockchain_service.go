@@ -307,13 +307,20 @@ func (s *blockchainService) PushToBlockchain1(
 	updatedCount := 0
 	for _, ed := range ediplomas {
 		if ed.DataEncrypted && ed.Issued {
+			verifyObj := &models.OnBlockchainVerify{
+				UniversityID:    universityID,
+				FacultyID:       facultyIDStr,
+				CertificateType: certificateType,
+				Course:          course,
+			}
 			update := bson.M{
 				"$set": bson.M{
-					"on_blockchain":  true,
-					"transaction_id": txID,
-					"batch_id":       batchID,
-					"university_id":  universityID,
-					"updated_at":     time.Now(),
+					"on_blockchain":        true,
+					"transaction_id":       txID,
+					"batch_id":             batchID,
+					"university_id":        universityID,
+					"on_blockchain_verify": verifyObj,
+					"updated_at":           time.Now(),
 				},
 			}
 			if err := s.ediplomaRepo.UpdateByID(ctx, ed.ID, update); err != nil {
@@ -948,14 +955,23 @@ func (s *blockchainService) PushCertificatesToBlockchain(
 	updatedCount := 0
 	for _, c := range certificates {
 		if c.DataEncrypted && c.Issued {
+			verifyObj := &models.OnBlockchainVerify{
+				UniversityID:    universityID,
+				FacultyID:       facultyIDStr,
+				CertificateType: certificateType,
+				Course:          course,
+			}
+
 			update := bson.M{
 				"$set": bson.M{
-					"on_blockchain":  true,
-					"transaction_id": txID,
-					"batch_id":       batchID,
-					"updated_at":     time.Now(),
+					"on_blockchain":        true,
+					"transaction_id":       txID,
+					"batch_id":             batchID,
+					"updated_at":           time.Now(),
+					"on_blockchain_verify": verifyObj,
 				},
 			}
+
 			if err := s.certRepo.UpdateCertificateByID(ctx, c.ID, update); err != nil {
 				log.Printf("Failed to update %s: %v", c.StudentCode, err)
 				continue

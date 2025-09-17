@@ -165,5 +165,6 @@ func SetupRouter(
 	ediplomaGroup.POST("/upload-zip", ediplomaHandler.UploadEDiplomasZip)
 	ediplomaGroup.GET("/search", ediplomaHandler.SearchEDiplomas)
 	ediplomaGroup.GET("/file/:id", ediplomaHandler.ViewEDiplomaFile)
+	ediplomaGroup.GET("/simple", middleware.JWTAuthMiddleware(), ediplomaHandler.GetMyEDiplomaNames)
 	return r
 }

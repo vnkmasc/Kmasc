@@ -79,5 +79,6 @@ func MapEDiplomaToDTO(
 		Signed:             ed.Signed,
 		DataEncrypted:      ed.DataEncrypted,
 		OnBlockchain:       ed.OnBlockchain,
+		OnBlockchainVerify: ed.OnBlockchainVerify,
 	}
 }

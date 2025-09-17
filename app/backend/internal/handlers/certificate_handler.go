@@ -334,8 +334,6 @@ func (h *CertificateHandler) GetCertificatesByStudentID(c *gin.Context) {
 		UniversityCode:  university.UniversityCode,
 		UniversityName:  university.UniversityName,
 		Signed:          certificate.Signed,
-		CreatedAt:       certificate.CreatedAt,
-		UpdatedAt:       certificate.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": result})

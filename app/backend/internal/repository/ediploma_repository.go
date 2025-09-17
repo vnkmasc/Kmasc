@@ -13,6 +13,7 @@ import (
 )
 
 type EDiplomaRepository interface {
+	GetByUserID(ctx context.Context, userID primitive.ObjectID) ([]*models.EDiploma, error)
 	UpdateByID(ctx context.Context, id primitive.ObjectID, update bson.M) error
 	UpdateFields(ctx context.Context, id primitive.ObjectID, updates bson.M) error
 	FindByStudentCode(ctx context.Context, studentCode string) (*models.EDiploma, error)
@@ -120,6 +121,21 @@ func (r *eDiplomaRepository) FindByID(ctx context.Context, id primitive.ObjectID
 		return nil, err
 	}
 	return &diploma, nil
+}
+
+func (r *eDiplomaRepository) GetByUserID(ctx context.Context, userID primitive.ObjectID) ([]*models.EDiploma, error) {
+	filter := bson.M{"user_id": userID}
+	cursor, err := r.db.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var diplomas []*models.EDiploma
+	if err := cursor.All(ctx, &diplomas); err != nil {
+		return nil, err
+	}
+	return diplomas, nil
 }
 
 func (r *eDiplomaRepository) FindByDynamicFilter(ctx context.Context, filter bson.M) ([]*models.EDiploma, error) {
