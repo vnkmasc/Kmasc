@@ -11,7 +11,7 @@ const defaultHeaders = {
 const apiService = async (
   method: 'POST' | 'PUT' | 'GET' | 'DELETE' | 'PATCH',
   url: string,
-  data?: Record<string, string | number | boolean | null | undefined> | FormData,
+  data?: Record<string, string | number | boolean | null | undefined | Date> | FormData,
   isAuth: boolean = true,
   headers?: HeadersInit,
   isBlob?: boolean

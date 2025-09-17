@@ -82,10 +82,10 @@ export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: 
       ? {
           student_code: data.studentCode,
           name: data.name,
-          certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
+          certificate_type: data.certificateType,
           serial_number: data.serialNumber,
           reg_no: data.regNo,
-          issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined,
+          issue_date: new Date(data.date),
           major: data.major,
           graduation_rank: data.graduationRank,
           gpa: data.gpa,
@@ -97,11 +97,11 @@ export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: 
       : {
           student_code: data.studentCode,
           name: data.name,
-          certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
           serial_number: data.serialNumber,
           reg_no: data.regNo,
-          issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined,
-          is_degree: false
+          issue_date: new Date(data.date),
+          is_degree: false,
+          description: data.description
         }
     : {
         id: data.id,
@@ -113,11 +113,12 @@ export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: 
         date: data.issue_date,
         signed: data.signed,
         name: data.name,
-        isDegree: data.certificate_type !== undefined,
+        isDegree: data.graduation_rank !== undefined,
         onBlockchain: data.on_blockchain,
         universityCode: data.university_code,
         universityId: data.university_id,
-        course: data.course
+        course: data.course,
+        educationType: data.education_type
       }
 }
 

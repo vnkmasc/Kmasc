@@ -1,20 +1,9 @@
 'use client'
 
-import {
-  AlertDialog,
-  AlertDialogDescription,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { deleteDegreeTemplate, signDegreeTemplateById } from '@/lib/api/digital-degree'
+import { signDegreeTemplateById } from '@/lib/api/digital-degree'
 import { showMessage, showNotification } from '@/lib/utils/common'
-import { CodeXml, KeyRound, PencilIcon, TrashIcon } from 'lucide-react'
+import { CodeXml, KeyRound, PencilIcon } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
 import useSWRMutation from 'swr/mutation'
 import Link from 'next/link'
@@ -47,15 +36,15 @@ const TableActionButton: React.FC<Props> = (props) => {
     }
   )
 
-  const mutateDeleteDegreeTemplate = useSWRMutation('delete-degree-template', () => deleteDegreeTemplate(props.id), {
-    onSuccess: () => {
-      showNotification('success', 'Xóa mẫu bằng số thành công')
-      props.refetch()
-    },
-    onError: (error) => {
-      showNotification('error', error.message || 'Lỗi khi xóa mẫu bằng số')
-    }
-  })
+  // const mutateDeleteDegreeTemplate = useSWRMutation('delete-degree-template', () => deleteDegreeTemplate(props.id), {
+  //   onSuccess: () => {
+  //     showNotification('success', 'Xóa mẫu bằng số thành công')
+  //     props.refetch()
+  //   },
+  //   onError: (error) => {
+  //     showNotification('error', error.message || 'Lỗi khi xóa mẫu bằng số')
+  //   }
+  // })
 
   return (
     <div className='flex gap-2'>
@@ -93,7 +82,7 @@ const TableActionButton: React.FC<Props> = (props) => {
       >
         <KeyRound />
       </Button>
-      <AlertDialog>
+      {/* <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant='destructive' size='icon'>
             <TrashIcon />
@@ -111,7 +100,7 @@ const TableActionButton: React.FC<Props> = (props) => {
             <AlertDialogAction onClick={() => mutateDeleteDegreeTemplate.trigger()}>Xóa</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog> */}
     </div>
   )
 }

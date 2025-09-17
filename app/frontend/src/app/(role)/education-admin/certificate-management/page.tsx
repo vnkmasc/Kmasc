@@ -82,7 +82,6 @@ const CertificateManagementPage = () => {
       course: filter.course || undefined
     })
   )
-  console.log('🚀 ~ CertificateManagementPage ~ queryCertificates:', queryCertificates.data?.data)
 
   const mutateCreateCertificate = useSWRMutation('create-certificate', (_, { arg }: any) => createCertificate(arg), {
     onSuccess: () => {
@@ -541,6 +540,13 @@ const CertificateManagementPage = () => {
             name: 'course',
             label: 'Khóa',
             validator: validateNoEmpty('Khóa')
+          },
+          {
+            type: 'input',
+            placeholder: 'Nhập hệ đào tạo',
+            name: 'educationType',
+            label: 'Hệ đào tạo',
+            validator: validateNoEmpty('Hệ đào tạo')
           },
           {
             type: 'input',

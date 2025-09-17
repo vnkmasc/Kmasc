@@ -18,7 +18,7 @@ export const createCertificate = async (data: any) => {
 
 export const createDegree = async (data: any) => {
   const formattedData = formatCertificate(data, true, true)
-  const res = await apiService('POST', 'certificates/degree', formattedData)
+  const res = await apiService('POST', 'certificates', formattedData)
   return res
 }
 

@@ -47,7 +47,7 @@ const CertificateView: React.FC<Props> = (props) => {
       }
     }
   )
-  const isDegree = queryData.data?.certificate?.certificateType !== undefined
+  const isDegree = queryData.data?.certificate?.graduationRank !== undefined
 
   const queryFile = useSWR(
     !props.isBlockchain && props.id ? `certificate-file-${props.id}` : undefined,
