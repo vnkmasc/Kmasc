@@ -50,3 +50,13 @@ export const validateCitizenId = z
   .regex(/^\d+$/, {
     message: 'CMND chỉ được chứa các ký tự số'
   })
+
+export const validateGPA = z
+  .number()
+  .or(z.string().transform((val) => parseFloat(val)))
+  .refine((val) => val >= 0, {
+    message: 'Điểm GPA phải lớn hơn 0'
+  })
+  .refine((val) => val <= 10, {
+    message: 'Điểm GPA phải nhỏ hơn 10'
+  })

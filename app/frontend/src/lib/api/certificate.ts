@@ -1,5 +1,5 @@
 import { queryString } from '../utils/common'
-import { formatCertificate, formatCertificateVerifyCode, formatCertificateView } from '../utils/format-api'
+import { formatCertificate, formatCertificateView } from '../utils/format-api'
 import apiService from './root'
 
 export const getCertificateList = async (params: any) => {
@@ -18,7 +18,7 @@ export const createCertificate = async (data: any) => {
 
 export const createDegree = async (data: any) => {
   const formattedData = formatCertificate(data, true, true)
-  const res = await apiService('POST', 'certificates/degree', formattedData)
+  const res = await apiService('POST', 'certificates', formattedData)
   return res
 }
 
@@ -50,52 +50,10 @@ export const getCertificateFile = async (id: string) => {
   return res
 }
 
-export const getVerifyCodeList = async (params: any) => {
-  const res = await apiService('GET', queryString(['verification', 'my-codes'], params))
-  return {
-    ...res,
-    data: res.data.map((item: any) => formatCertificateVerifyCode(item))
-  }
-}
-
-export const createVerifyCode = async (data: any) => {
-  const formattedData = formatCertificateVerifyCode(data, true) as Record<string, string | number | null | undefined>
-  const res = await apiService('POST', 'verification/create', formattedData)
-  return res
-}
-
 export const getCertificateDataStudent = async () => {
   const res = await apiService('GET', 'certificates/my-certificate')
 
   return formatCertificateView(res.data[0])
-}
-
-export const verifyCodeDataforGuest = async (code: string) => {
-  const res = await apiService(
-    'POST',
-    'auth/verification',
-    {
-      code,
-      view_type: 'data'
-    },
-    false
-  )
-  return formatCertificateView(res.data)
-}
-
-export const verifyCodeFileforGuest = async (code: string) => {
-  const res = await apiService(
-    'POST',
-    'auth/verification',
-    {
-      code,
-      view_type: 'file'
-    },
-    false,
-    {},
-    true
-  )
-  return res
 }
 
 export const getCertificatesNameByStudent = async () => {
@@ -108,16 +66,63 @@ export const pushCertificateIntoBlockchain = async (id: string) => {
   return res
 }
 
-export const getBlockchainData = async (id: string) => {
-  const res = await apiService('GET', `blockchain/verify/${id}`, undefined, true, {}, true)
-
+export const getBlockchainData = async (
+  universityId: string,
+  facultyId: string,
+  certificateType: string,
+  course: string,
+  certificateId: string
+) => {
+  const res = await apiService(
+    'POST',
+    'blockchain/verify-batch-certificates',
+    {
+      university_id: universityId,
+      faculty_id: facultyId,
+      certificate_type: certificateType,
+      course: course,
+      certificate_id: certificateId
+    },
+    false
+  )
   return {
     ...res,
-    certificate: formatCertificateView(res.certificate)
+    certificate: formatCertificateView(res.data)
   }
 }
 
 export const getBlockchainFile = async (id: string) => {
-  const res = await apiService('GET', `blockchain/verify-file/${id}`, undefined, true, {}, true)
+  const res = await apiService('GET', `certificates/file/${id}`, undefined, true, {}, true)
+  return res
+}
+
+export const uploadCertificatesBlockchain = async (facultyId: string, certificateType: string, course: string) => {
+  const res = await apiService('POST', 'blockchain/push-certificates', {
+    faculty_id: facultyId,
+    certificate_type: certificateType,
+    course: course
+  })
+  return res
+}
+
+export const verifyDegreeDataBlockchain = async (
+  universityId: string,
+  facultyId: string,
+  certificateType: string,
+  course: string,
+  certificateId: string
+) => {
+  const res = await apiService(
+    'POST',
+    'blockchain/verify-batch-certificates',
+    {
+      university_id: universityId,
+      faculty_id: facultyId,
+      certificate_type: certificateType,
+      course: course,
+      certificate_id: certificateId
+    },
+    false
+  )
   return res
 }

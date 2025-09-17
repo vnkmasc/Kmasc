@@ -1,5 +1,5 @@
 'use client'
-import CertificateActionButton from '@/components/role/education-admin/certificate-management/certificate-action-button'
+
 import PageHeader from '@/components/common/page-header'
 import CommonPagination from '@/components/common/pagination'
 import { UseData } from '@/components/providers/data-provider'
@@ -28,24 +28,38 @@ import {
   PAGE_SIZE,
   STUDENT_CODE_SEARCH_SETTING
 } from '@/constants/common'
-
+import CertificateQRCode from '@/components/common/certificate-qr-code'
 import {
   createCertificate,
   createDegree,
   getCertificateList,
   importCertificateExcel,
   uploadCertificate,
+  uploadCertificatesBlockchain,
   uploadDegree
 } from '@/lib/api/certificate'
-import { formatResponseImportExcel, showNotification } from '@/lib/utils/common'
+import { findLabel, formatResponseImportExcel, showNotification } from '@/lib/utils/common'
 import { formatFacultyOptions } from '@/lib/utils/format-api'
-import { validateNoEmpty } from '@/lib/utils/validators'
-import { FileUpIcon, PlusIcon } from 'lucide-react'
+import { validateGPA, validateNoEmpty } from '@/lib/utils/validators'
+import { AlertCircleIcon, Blocks, CheckCircle2Icon, EyeIcon, FileUpIcon, Grid2X2Plus, PlusIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
+import {
+  AlertDialog,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogContent,
+  AlertDialogTrigger,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction
+} from '@/components/ui/alert-dialog'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import Link from 'next/link'
+import { encodeJSON } from '@/lib/utils/lz-string'
 
 const CertificateManagementPage = () => {
   const [openCreateDegreeDialog, setOpenCreateDegreeDialog] = useState(false)
@@ -54,8 +68,8 @@ const CertificateManagementPage = () => {
   const [certificateName, setCertificateName] = useState<string>('')
   const uploadButtonRef = useRef<UploadButtonRef>(null)
   const [openUploadDialog, setOpenUploadDialog] = useState(false)
-
   const [filter, setFilter] = useState<any>({})
+  const facultyOptions = UseData().facultyList
 
   const queryCertificates = useSWR('certificates-list' + JSON.stringify(filter), () =>
     getCertificateList({
@@ -160,6 +174,25 @@ const CertificateManagementPage = () => {
       }
     }
   )
+  const mutatePushCertificatesBlockchain = useSWRMutation(
+    'push-certificates-blockchain',
+    async (_key, { arg }: { arg: any }) => {
+      const facultyId = facultyOptions.find((item) => item.code === arg.faculty)?.id
+
+      const res = await uploadCertificatesBlockchain(facultyId as string, arg.certificateType, arg.course)
+      queryCertificates.mutate()
+
+      return res
+    },
+    {
+      onError: (error) => {
+        showNotification('error', error.message || 'Lỗi khi đẩy cả khóa lên Blockchain')
+      },
+      onSuccess: () => {
+        showNotification('success', 'Đẩy cả khóa lên Blockchain thành công')
+      }
+    }
+  )
 
   const handleUpload = useCallback(
     (file: FormData) => {
@@ -192,6 +225,19 @@ const CertificateManagementPage = () => {
     },
     [mutateCreateDegree]
   )
+
+  const encodeCertificateData = (data: any): string => {
+    return (
+      encodeJSON({
+        university_id: data.universityId,
+        university_code: data.universityCode,
+        faculty_id: facultyOptions.find((faculty) => faculty.code === data.faculty)?.id,
+        certificate_type: data.certificateType,
+        course: data.course,
+        certificate_id: data.id
+      }) ?? ''
+    )
+  }
 
   return (
     <>
@@ -264,7 +310,50 @@ const CertificateManagementPage = () => {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+          </Dialog>,
+          <AlertDialog key='blockchain-push-degrees'>
+            <AlertDialogTrigger asChild>
+              <Button title='Đẩy cả khóa lên Blockchain'>
+                <Grid2X2Plus />
+                <span className='hidden md:block'>{'Blockchain'}</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xác nhận đẩy cả khóa lên Blockchain</AlertDialogTitle>
+              </AlertDialogHeader>
+              {filter.faculty ? (
+                <Alert variant={'success'}>
+                  <CheckCircle2Icon />
+                  <AlertTitle>Sẵn sàng</AlertTitle>
+                  <AlertDescription>
+                    <ul className='list-inside list-disc'>
+                      <li>Chuyên ngành: {findLabel(filter.faculty, formatFacultyOptions(facultyOptions))}</li>
+                      {filter.certificateType && <li>Loại bằng: {filter.certificateType}</li>}
+                      {filter.course && <li>Khóa học: {filter.course}</li>}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert variant={'warning'}>
+                  <AlertCircleIcon />
+                  <AlertTitle>Cảnh báo</AlertTitle>
+                  <AlertDescription>
+                    Vui lòng chọn chuyên ngành trong <strong>phần tìm kiếm</strong> để tiến hành cấp bằng số.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={!filter.faculty}
+                  onClick={() => mutatePushCertificatesBlockchain.trigger(filter)}
+                >
+                  Xác nhận
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         ]}
       />
       <div className='hidden'>
@@ -291,7 +380,7 @@ const CertificateManagementPage = () => {
                 groups: [
                   {
                     label: 'Chuyên ngành',
-                    options: formatFacultyOptions(UseData().facultyList)
+                    options: formatFacultyOptions(facultyOptions)
                   }
                 ]
               }
@@ -332,7 +421,7 @@ const CertificateManagementPage = () => {
               return item.isDegree ? (
                 <div className='flex items-center gap-2'>
                   <Badge>Văn bằng</Badge>
-                  <Badge className='bg-blue-500 text-white hover:bg-blue-400'> {item.certificateType}</Badge>
+                  <Badge className='bg-blue-500 text-white hover:bg-blue-400'>{item.certificateType}</Badge>
                 </div>
               ) : (
                 <Badge variant='outline'>Chứng chỉ</Badge>
@@ -355,7 +444,30 @@ const CertificateManagementPage = () => {
             header: 'Hành động',
             value: 'action',
 
-            render: (item) => <CertificateActionButton id={item.id} onBlockchain={item.onBlockchain} />
+            render: (item) => (
+              <div className='flex gap-2'>
+                <Link href={`/education-admin/certificate-management/${item.id}`}>
+                  <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
+                    <EyeIcon />
+                  </Button>
+                </Link>
+                <Link
+                  href={`/education-admin/certificate-management/${encodeCertificateData(item)}/blockchain`}
+                  onClick={(e) => {
+                    if (!item.onBlockchain) {
+                      e.preventDefault()
+                      showNotification('error', (item.isDegree ? 'Văn bằng' : 'Chứng chỉ') + ' chưa đẩy lên blockchain')
+                      return
+                    }
+                  }}
+                >
+                  <Button size={'icon'} title='Xem dữ liệu trên blockchain' disabled={!item.onBlockchain}>
+                    <Blocks />
+                  </Button>
+                </Link>
+                <CertificateQRCode id={encodeCertificateData(item)} isIcon={true} disable={!item.onBlockchain} />
+              </div>
+            )
           }
         ]}
         data={queryCertificates.data?.data || []}
@@ -382,9 +494,9 @@ const CertificateManagementPage = () => {
           },
           {
             type: 'input',
-            placeholder: 'Nhập chuyên ngành',
             name: 'major',
             label: 'Chuyên ngành',
+            placeholder: 'Nhập chuyên ngành',
             validator: validateNoEmpty('Chuyên ngành')
           },
           {
@@ -431,6 +543,13 @@ const CertificateManagementPage = () => {
           },
           {
             type: 'input',
+            placeholder: 'Nhập hệ đào tạo',
+            name: 'educationType',
+            label: 'Hệ đào tạo',
+            validator: validateNoEmpty('Hệ đào tạo')
+          },
+          {
+            type: 'input',
             name: 'serialNumber',
             placeholder: 'Nhập số hiệu',
             label: 'Số hiệu',
@@ -460,12 +579,7 @@ const CertificateManagementPage = () => {
             name: 'gpa',
             placeholder: 'Nhập điểm GPA',
             label: 'Điểm GPA',
-            validator: validateNoEmpty('Điểm GPA'),
-            setting: {
-              input: {
-                type: 'number'
-              }
-            }
+            validator: validateGPA
           },
           {
             type: 'textarea',

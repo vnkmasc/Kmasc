@@ -15,7 +15,6 @@ import {
   uploadDigitalDegreesBlockchain,
   verifyDigitalDegreeDataBlockchain
 } from '@/lib/api/digital-degree'
-import { formatDate } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { AlertCircleIcon, Blocks, CheckCircle2Icon, Eye, Grid2X2Check } from 'lucide-react'
 import IssueDegreeDialog from '@/components/role/education-admin/digital-degree-management/degree/issue-degree-dialog'
@@ -60,12 +59,12 @@ const DegreeManagement = () => {
   const mutatePushDegreesBlockchain = useSWRMutation(
     'push-digital-degree-blockchain',
     async (_key, { arg }: { arg: any }) => {
-      const formData = new FormData()
-      formData.append('faculty_id', arg.faculty_id)
-      if (filter.course !== '') formData.append('course', arg.course)
-      if (filter.certificate_type !== '') formData.append('certificate_type', arg.certificate_type)
-
-      const res = await uploadDigitalDegreesBlockchain(formData)
+      const res = await uploadDigitalDegreesBlockchain(
+        arg.faculty_id,
+        arg.certificate_type,
+        arg.course,
+        Boolean(arg.issued)
+      )
       queryCertificates.mutate()
 
       return res
@@ -85,9 +84,9 @@ const DegreeManagement = () => {
     async (_key, { arg }: { arg: any }) =>
       verifyDigitalDegreeDataBlockchain(
         arg.university_id,
-        filter.faculty_id,
-        filter.certificate_type,
-        filter.course,
+        arg.faculty_id,
+        arg.certificate_type,
+        arg.course,
         arg.ediploma_id
       ),
     {
@@ -115,6 +114,7 @@ const DegreeManagement = () => {
             certificateType={filter.certificate_type}
             course={filter.course}
           />,
+
           <SignDegreeButton key='sign-degree-button' />,
           <HashUploadButton key='hash-upload-button' />,
           <AlertDialog key='blockchain-alert'>
@@ -137,6 +137,7 @@ const DegreeManagement = () => {
                       <li>Chuyên ngành: {findLabel(filter.faculty_id, facultyOptions)}</li>
                       {filter.certificate_type && <li>Loại bằng: {filter.certificate_type}</li>}
                       {filter.course && <li>Khóa học: {filter.course}</li>}
+                      {filter.issued && <li>Trạng thái cấp: {filter.issued === 'true' ? 'Đã cấp' : 'Chưa cấp'}</li>}
                     </ul>
                   </AlertDescription>
                 </Alert>
@@ -245,10 +246,7 @@ const DegreeManagement = () => {
           {
             header: 'Ngày cấp bằng',
             value: 'issue_date',
-            className: 'min-w-[100px]',
-            render: (item) => {
-              return formatDate(item.issue_date, 'dd/MM/yyyy')
-            }
+            className: 'min-w-[100px]'
           },
           {
             header: 'Trạng thái ký & mã',
@@ -277,7 +275,7 @@ const DegreeManagement = () => {
             value: 'action',
             render: (item) => (
               <div className='flex gap-2'>
-                <Link href={`/education-admin/digital-degree-management/${item.id}`} target='_blank'>
+                <Link href={`/education-admin/digital-degree-management/${item.id}`}>
                   <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
                     <Eye />
                   </Button>
@@ -292,16 +290,16 @@ const DegreeManagement = () => {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Xác minh dữ liệu trên blockchain</AlertDialogTitle>
                     </AlertDialogHeader>
-                    {filter.faculty_id ? (
+                    {item.faculty_id ? (
                       <Alert variant={'success'}>
                         <CheckCircle2Icon />
                         <AlertTitle>Sẵn sàng</AlertTitle>
                         <AlertDescription>
                           <ul className='list-inside list-disc'>
                             <li>ID Trường: {item.university_id}</li>
-                            <li>ID Chuyên ngành: {filter.faculty_id}</li>
-                            {filter.certificate_type && <li>Loại bằng: {filter.certificate_type}</li>}
-                            {filter.course && <li>Khóa học: {filter.course}</li>}
+                            <li>ID Chuyên ngành: {item.faculty_id}</li>
+                            {item.certificate_type && <li>Loại bằng: {item.certificate_type}</li>}
+                            {item.course && <li>Khóa học: {item.course}</li>}
                             <li>ID Văn bằng: {item.id}</li>
                           </ul>
                         </AlertDescription>
@@ -310,22 +308,14 @@ const DegreeManagement = () => {
                       <Alert variant={'warning'}>
                         <AlertCircleIcon />
                         <AlertTitle>Cảnh báo</AlertTitle>
-                        <AlertDescription>
-                          Vui lòng chọn chuyên ngành trong <strong>phần tìm kiếm</strong> để tiến hành xác minh trên
-                          blockchain.
-                        </AlertDescription>
+                        <AlertDescription>Chuyên ngành của văn bằng số không hợp lệ</AlertDescription>
                       </Alert>
                     )}
                     <AlertDialogFooter>
                       <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
                       <AlertDialogAction
-                        disabled={filter.faculty_id === ''}
-                        onClick={() =>
-                          mutateVerifyDigitalDegreeDataBlockchain.trigger({
-                            ediploma_id: item.id,
-                            university_id: item.university_id
-                          })
-                        }
+                        disabled={item.faculty_id === ''}
+                        onClick={() => mutateVerifyDigitalDegreeDataBlockchain.trigger(item)}
                       >
                         Xác minh
                       </AlertDialogAction>
@@ -335,12 +325,12 @@ const DegreeManagement = () => {
                 <CertificateQrCode
                   id={
                     encodeJSON({
-                      faculty_id: filter.faculty_id,
-                      certificate_type: filter.certificate_type,
-                      course: filter.course,
-                      ediploma_id: item.id,
+                      university_id: item.university_id,
                       university_code: item.university_code,
-                      university_id: item.university_id
+                      faculty_id: item.faculty_id,
+                      certificate_type: item.certificate_type,
+                      course: item.course,
+                      ediploma_id: item.id
                     }) ?? ''
                   }
                   isIcon={true}

@@ -56,7 +56,7 @@ const SearchVerifyCode = () => {
         </CardContent>
       </Card>
       <div className='w-full'>
-        {!blockchainVerifyCode ? null : decodedVerifyCode ? (
+        {!decodedVerifyCode ? null : decodedVerifyCode?.ediploma_id ? (
           <DigitalDegreeView
             id={decodedVerifyCode?.ediploma_id}
             isBlockchain={true}
@@ -67,7 +67,15 @@ const SearchVerifyCode = () => {
             course={decodedVerifyCode?.course}
           />
         ) : (
-          <CertificateView id={blockchainVerifyCode} isBlockchain={true} />
+          <CertificateView
+            id={decodedVerifyCode?.certificate_id}
+            isBlockchain={true}
+            universityCode={decodedVerifyCode?.university_code}
+            universityId={decodedVerifyCode?.university_id}
+            facultyId={decodedVerifyCode?.faculty_id}
+            certificateType={decodedVerifyCode?.certificate_type}
+            course={decodedVerifyCode?.course}
+          />
         )}
       </div>
     </>

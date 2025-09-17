@@ -1,5 +1,5 @@
 import { DegreeTemplateType, OptionType } from '@/types/common'
-import { format } from 'date-fns'
+import { format, parse } from 'date-fns'
 
 export const formatStudent = (data: any, isSendToServer: boolean = false) => {
   return isSendToServer
@@ -8,7 +8,7 @@ export const formatStudent = (data: any, isSendToServer: boolean = false) => {
         full_name: data.name,
         email: data.email,
         faculty_code: data.faculty,
-        course: String(data.year ?? ''),
+        course: isNaN(Number(data.year)) ? '' : String(data.year),
         citizen_id_number: data.citizenId,
         ethnicity: data.ethnicity,
         current_address: data.currentAddress,
@@ -32,10 +32,10 @@ export const formatStudent = (data: any, isSendToServer: boolean = false) => {
         ethnicity: data.ethnicity,
         currentAddress: data.current_address,
         birthAddress: data.birth_address,
-        unionJoinDate: data.union_join_date,
-        partyJoinDate: data.party_join_date,
+        unionJoinDate: formatDateForInput(data.union_join_date),
+        partyJoinDate: formatDateForInput(data.party_join_date),
         description: data.description,
-        dateOfBirth: data.date_of_birth,
+        dateOfBirth: formatDateForInput(data.date_of_birth),
         gender: String(data.gender)
       }
 }
@@ -82,10 +82,10 @@ export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: 
       ? {
           student_code: data.studentCode,
           name: data.name,
-          certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
+          certificate_type: data.certificateType,
           serial_number: data.serialNumber,
           reg_no: data.regNo,
-          issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined,
+          issue_date: new Date(data.date),
           major: data.major,
           graduation_rank: data.graduationRank,
           gpa: data.gpa,
@@ -97,11 +97,11 @@ export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: 
       : {
           student_code: data.studentCode,
           name: data.name,
-          certificate_type: data.certificateType ? Number(data.certificateType) : undefined,
           serial_number: data.serialNumber,
           reg_no: data.regNo,
-          issue_date: data.date ? format(new Date(data.date), 'dd/MM/yyyy') : undefined,
-          is_degree: false
+          issue_date: new Date(data.date),
+          is_degree: false,
+          description: data.description
         }
     : {
         id: data.id,
@@ -113,8 +113,12 @@ export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: 
         date: data.issue_date,
         signed: data.signed,
         name: data.name,
-        isDegree: data.certificate_type !== undefined,
-        onBlockchain: data.on_blockchain
+        isDegree: data.graduation_rank !== undefined,
+        onBlockchain: data.on_blockchain,
+        universityCode: data.university_code,
+        universityId: data.university_id,
+        course: data.course,
+        educationType: data.education_type
       }
 }
 
@@ -260,4 +264,13 @@ export const formatTinyTextEdit = (html: string) => {
 </head>
 <body> ${html} </body>
 </html>`
+}
+
+export const formatDateForInput = (rawDate: string): string => {
+  try {
+    const dateObj = parse(rawDate, 'dd/MM/yyyy', new Date())
+    return format(dateObj, 'yyyy-MM-dd')
+  } catch {
+    return ''
+  }
 }

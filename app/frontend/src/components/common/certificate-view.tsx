@@ -4,7 +4,6 @@ import { getBlockchainData, getBlockchainFile, getCertificateDataById, getCertif
 import useSWR from 'swr'
 import DecriptionView from './description-view'
 import {
-  Blocks,
   Book,
   BookOpen,
   Calendar,
@@ -26,10 +25,16 @@ import { showNotification } from '@/lib/utils/common'
 import { cn } from '@/lib/utils/common'
 import CertificateQrCode from './certificate-qr-code'
 import { Badge } from '../ui/badge'
+import { encodeJSON } from '@/lib/utils/lz-string'
 
 interface Props {
   isBlockchain: boolean
   id: string
+  universityCode?: string
+  universityId?: string
+  facultyId?: string
+  certificateType?: string
+  course?: string
 }
 
 const CertificateView: React.FC<Props> = (props) => {
@@ -42,7 +47,8 @@ const CertificateView: React.FC<Props> = (props) => {
       }
     }
   )
-  const isDegree = queryData.data?.certificate?.certificateType !== undefined
+  const isDegree = queryData.data?.certificate?.graduationRank !== undefined
+
   const queryFile = useSWR(
     !props.isBlockchain && props.id ? `certificate-file-${props.id}` : undefined,
     () => getCertificateFile(props.id),
@@ -57,7 +63,14 @@ const CertificateView: React.FC<Props> = (props) => {
 
   const queryBlockchainData = useSWR(
     props.isBlockchain && props.id ? `blockchain-data-${props.id}` : undefined,
-    () => getBlockchainData(props.id),
+    () =>
+      getBlockchainData(
+        props.universityId ?? '',
+        props.facultyId ?? '',
+        props.certificateType ?? '',
+        props.course ?? '',
+        props.id
+      ),
     {
       revalidateOnFocus: false,
       shouldRetryOnError: false,
@@ -66,8 +79,9 @@ const CertificateView: React.FC<Props> = (props) => {
       }
     }
   )
+
   const queryBlockchainFile = useSWR(
-    props.isBlockchain && props.id ? `blockchain-file-${props.id}` : undefined,
+    props.isBlockchain && props.id && queryBlockchainData.data?.verified ? `blockchain-file-${props.id}` : undefined,
     () => getBlockchainFile(props.id),
     {
       revalidateOnFocus: false,
@@ -200,21 +214,6 @@ const CertificateView: React.FC<Props> = (props) => {
   const getDecriptionViewItems = (data: any) => {
     const items = isDegree ? getDegreeItems(data?.certificate) : getCertificateItems(data?.certificate)
 
-    if (props.isBlockchain) {
-      return [
-        {
-          icon: <Blocks className='h-5 w-5 text-gray-500' />,
-          title: 'Mã HASH',
-          value: (
-            <p className='max-w-[300px] truncate' title={data?.on_chain.cert_hash}>
-              {data?.on_chain.cert_hash}
-            </p>
-          )
-        },
-        ...items
-      ]
-    }
-
     return items
   }
 
@@ -225,13 +224,31 @@ const CertificateView: React.FC<Props> = (props) => {
           <Alert className={cn('mx-auto mb-4 max-w-[800px]', !props.isBlockchain && 'hidden')} variant='success'>
             <CheckCircleIcon />
             <AlertTitle>Thông báo</AlertTitle>
-            <AlertDescription>{currentDataQuery.data?.message || 'Không tải được dữ liệu'}</AlertDescription>
+            <AlertDescription>
+              {currentDataQuery.data?.message || 'Xác minh dữ liệu trên blockchain thành công'}
+            </AlertDescription>
           </Alert>
           <DecriptionView
             title={currentDataQuery?.data?.certificate?.name || 'Không có dữ liệu'}
             items={getDecriptionViewItems(currentDataQuery?.data)}
             description={`Thông tin chi tiết về ${isDegree ? 'văn bằng' : 'chứng chỉ'}`}
-            extra={<CertificateQrCode id={props.id} isIcon={false} />}
+            extra={
+              !props.isBlockchain ? null : (
+                <CertificateQrCode
+                  id={
+                    encodeJSON({
+                      university_id: props.universityId,
+                      university_code: props.universityCode,
+                      faculty_id: props.facultyId,
+                      certificate_type: props.certificateType,
+                      course: props.course,
+                      certificate_id: props.id
+                    }) ?? ''
+                  }
+                  isIcon={false}
+                />
+              )
+            }
           />
         </>
       ) : (
