@@ -1,26 +1,26 @@
 'use client'
 
-import CertificateView from '@/components/common/certificate-view'
-import SuspendPage from '@/components/common/suspend-page'
+import DigitalDegreeView from '@/components/common/digital-degree-view'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getCertificatesNameByStudent } from '@/lib/api/certificate'
+import { getDigitalDegreesByStudent } from '@/lib/api/digital-degree'
 import { clearFalsyValueObject } from '@/lib/utils/common'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import useSWR from 'swr'
+import { useRouter, useSearchParams } from 'next/navigation'
+import SuspendPage from '@/components/common/suspend-page'
 
-const StudentCertificateDetail = () => {
+const StudentDigitalDegreeDetail = () => {
   const [tab, setTab] = useState<string | undefined>(undefined)
   const history = useRouter()
   const searchParams = useSearchParams()
-  const queryListName = useSWR('list-name', getCertificatesNameByStudent, {
+  const queryListName = useSWR('list-name-digital-degree', getDigitalDegreesByStudent, {
     onSuccess: (data) => {
       const tab = searchParams.get('tab')
       setTab(tab ?? data?.[0]?.id)
     }
   })
 
-  const getPropsCertificateView = (item: any) => {
+  const getPropsDigitalDegreeView = (item: any) => {
     return {
       id: item.id,
       isBlockchain: true,
@@ -36,13 +36,13 @@ const StudentCertificateDetail = () => {
 
   return (
     <>
-      <h2>Danh sách văn bằng & chứng chỉ</h2>
+      <h2>Danh sách văn bằng số</h2>
       <Tabs
         className='mt-4'
         value={tab}
         onValueChange={(value) => {
           setTab(value)
-          history.replace(`/student/certificate?tab=${value}`)
+          history.replace(`/student/digital-degree?tab=${value}`)
         }}
       >
         <TabsList>
@@ -50,17 +50,17 @@ const StudentCertificateDetail = () => {
             (item: any) =>
               item.on_blockchain_verify && (
                 <TabsTrigger key={item.id} value={item.id}>
-                  {item.certificate_name}
+                  {item.name}
                 </TabsTrigger>
               )
           )}
         </TabsList>
         {queryListName.data?.map((item: any) => {
-          const props = getPropsCertificateView(item)
+          const props = getPropsDigitalDegreeView(item)
 
           return (
             <TabsContent key={item.id} value={item.id}>
-              <CertificateView {...props} />
+              <DigitalDegreeView {...props} />
             </TabsContent>
           )
         })}
@@ -69,10 +69,10 @@ const StudentCertificateDetail = () => {
   )
 }
 
-const StudentCertificateDetailPage = () => (
+const StudentDigitalDegreeDetailPage = () => (
   <Suspense fallback={<SuspendPage />}>
-    <StudentCertificateDetail />
+    <StudentDigitalDegreeDetail />
   </Suspense>
 )
 
-export default StudentCertificateDetailPage
+export default StudentDigitalDegreeDetailPage

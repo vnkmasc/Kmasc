@@ -118,7 +118,8 @@ export const formatCertificate = (data: any, isDegree: boolean, isSendToServer: 
         universityCode: data.university_code,
         universityId: data.university_id,
         course: data.course,
-        educationType: data.education_type
+        educationType: data.education_type,
+        onBlockchainVerify: data.on_blockchain_verify
       }
 }
 

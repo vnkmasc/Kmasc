@@ -82,7 +82,7 @@ export const DEGREE_TEMPLATE_STATUS = {
   },
   SIGNED_BY_MINEDU: {
     variant: 'default',
-    label: 'Đã ký bởi TĐF và Bộ GD'
+    label: 'Đã ký bởi trường và Bộ GD'
   }
 }
 

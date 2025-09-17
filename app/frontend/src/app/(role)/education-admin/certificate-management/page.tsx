@@ -226,19 +226,6 @@ const CertificateManagementPage = () => {
     [mutateCreateDegree]
   )
 
-  const encodeCertificateData = (data: any): string => {
-    return (
-      encodeJSON({
-        university_id: data.universityId,
-        university_code: data.universityCode,
-        faculty_id: facultyOptions.find((faculty) => faculty.code === data.faculty)?.id,
-        certificate_type: data.certificateType,
-        course: data.course,
-        certificate_id: data.id
-      }) ?? ''
-    )
-  }
-
   return (
     <>
       <PageHeader
@@ -274,8 +261,8 @@ const CertificateManagementPage = () => {
               <DialogHeader>
                 <DialogTitle>Tải tệp PDF chứng chỉ/văn bằng</DialogTitle>
                 <DialogDescription>
-                  Nếu tải văn bằng thì tên tệp là <strong>số hiệu văn bằng</strong>, nếu tải chứng chỉ thì tên tệp là{' '}
-                  <strong>mã sinh viên</strong>
+                  Nếu tải văn bằng thì tên tệp là <strong>mã sinh viên</strong>, nếu tải chứng chỉ thì tên tệp là{' '}
+                  <strong>mã sinh viên</strong> và tiến hành nhập <strong>tên chứng chỉ</strong>
                 </DialogDescription>
               </DialogHeader>
               <Label>Chọn loại</Label>
@@ -313,7 +300,7 @@ const CertificateManagementPage = () => {
           </Dialog>,
           <AlertDialog key='blockchain-push-degrees'>
             <AlertDialogTrigger asChild>
-              <Button title='Đẩy cả khóa lên Blockchain'>
+              <Button title='Đẩy cả khóa lên Blockchain' isLoading={mutatePushCertificatesBlockchain.isMutating}>
                 <Grid2X2Plus />
                 <span className='hidden md:block'>{'Blockchain'}</span>
               </Button>
@@ -444,30 +431,39 @@ const CertificateManagementPage = () => {
             header: 'Hành động',
             value: 'action',
 
-            render: (item) => (
-              <div className='flex gap-2'>
-                <Link href={`/education-admin/certificate-management/${item.id}`}>
-                  <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
-                    <EyeIcon />
-                  </Button>
-                </Link>
-                <Link
-                  href={`/education-admin/certificate-management/${encodeCertificateData(item)}/blockchain`}
-                  onClick={(e) => {
-                    if (!item.onBlockchain) {
-                      e.preventDefault()
-                      showNotification('error', (item.isDegree ? 'Văn bằng' : 'Chứng chỉ') + ' chưa đẩy lên blockchain')
-                      return
-                    }
-                  }}
-                >
-                  <Button size={'icon'} title='Xem dữ liệu trên blockchain' disabled={!item.onBlockchain}>
-                    <Blocks />
-                  </Button>
-                </Link>
-                <CertificateQRCode id={encodeCertificateData(item)} isIcon={true} disable={!item.onBlockchain} />
-              </div>
-            )
+            render: (item) => {
+              return (
+                <div className='flex gap-2'>
+                  <Link href={`/education-admin/certificate-management/${item.id}`}>
+                    <Button size={'icon'} variant={'outline'} title='Xem dữ liệu trên cơ sở dữ liệu'>
+                      <EyeIcon />
+                    </Button>
+                  </Link>
+                  <Link
+                    href={`/education-admin/certificate-management/${encodeJSON({ ...item?.onBlockchainVerify, certificate_id: item.id })}/blockchain`}
+                    onClick={(e) => {
+                      if (!item.onBlockchain) {
+                        e.preventDefault()
+                        showNotification(
+                          'error',
+                          (item.isDegree ? 'Văn bằng' : 'Chứng chỉ') + ' chưa đẩy lên blockchain'
+                        )
+                        return
+                      }
+                    }}
+                  >
+                    <Button size={'icon'} title='Xem dữ liệu trên blockchain' disabled={!item.onBlockchain}>
+                      <Blocks />
+                    </Button>
+                  </Link>
+                  <CertificateQRCode
+                    id={encodeJSON({ ...item?.onBlockchainVerify, certificate_id: item.id }) ?? ''}
+                    isIcon={true}
+                    disable={!item.onBlockchain}
+                  />
+                </div>
+              )
+            }
           }
         ]}
         data={queryCertificates.data?.data || []}

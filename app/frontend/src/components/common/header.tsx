@@ -68,8 +68,12 @@ const Header: React.FC<Props> = (props) => {
     //   href: '/student/score'
     // },
     {
-      title: 'Văn bằng - chứng chỉ',
+      title: 'Văn bằng & chứng chỉ',
       href: '/student/certificate'
+    },
+    {
+      title: 'Văn bằng số',
+      href: '/student/digital-degree'
     }
   ]
 

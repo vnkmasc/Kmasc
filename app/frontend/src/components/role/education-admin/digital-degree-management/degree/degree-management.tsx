@@ -119,7 +119,7 @@ const DegreeManagement = () => {
           <HashUploadButton key='hash-upload-button' />,
           <AlertDialog key='blockchain-alert'>
             <AlertDialogTrigger asChild>
-              <Button title='Đẩy lên Blockchain' variant={'outline'}>
+              <Button title='Đẩy lên Blockchain' variant={'outline'} isLoading={mutatePushDegreesBlockchain.isMutating}>
                 <Blocks />
                 <span className='hidden md:block'>Blockchain</span>
               </Button>
@@ -296,10 +296,16 @@ const DegreeManagement = () => {
                         <AlertTitle>Sẵn sàng</AlertTitle>
                         <AlertDescription>
                           <ul className='list-inside list-disc'>
-                            <li>ID Trường: {item.university_id}</li>
-                            <li>ID Chuyên ngành: {item.faculty_id}</li>
-                            {item.certificate_type && <li>Loại bằng: {item.certificate_type}</li>}
-                            {item.course && <li>Khóa học: {item.course}</li>}
+                            <li>ID Trường: {item.on_blockchain_verify?.university_id}</li>
+                            {item.on_blockchain_verify?.faculty_id && (
+                              <li>ID Chuyên ngành: {item.on_blockchain_verify?.faculty_id}</li>
+                            )}
+                            {item.on_blockchain_verify?.certificate_type && (
+                              <li>Loại bằng: {item.on_blockchain_verify?.certificate_type}</li>
+                            )}
+                            {item.on_blockchain_verify?.course && (
+                              <li>Khóa học: {item.on_blockchain_verify?.course}</li>
+                            )}
                             <li>ID Văn bằng: {item.id}</li>
                           </ul>
                         </AlertDescription>
@@ -325,15 +331,13 @@ const DegreeManagement = () => {
                 <CertificateQrCode
                   id={
                     encodeJSON({
-                      university_id: item.university_id,
-                      university_code: item.university_code,
-                      faculty_id: item.faculty_id,
-                      certificate_type: item.certificate_type,
-                      course: item.course,
-                      ediploma_id: item.id
+                      ...item.on_blockchain_verify,
+                      ediploma_id: item.id,
+                      university_code: item.university_code
                     }) ?? ''
                   }
                   isIcon={true}
+                  disable={!item.on_blockchain}
                 />
               </div>
             )
