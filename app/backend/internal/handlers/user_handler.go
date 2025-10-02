@@ -274,34 +274,66 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 		result := map[string]interface{}{"row": i + 1}
 
 		// Giới tính
-		gender := strings.EqualFold(getValue(row, 6), "Nam")
+		gender := strings.EqualFold(strings.TrimSpace(getValue(row, 6)), "Nam")
 
-		// Parse ngày
-		dob, errDOB := parseDate(getValue(row, 7))
-		unionDate, _ := parseDate(getValue(row, 11))
-		partyDate, _ := parseDate(getValue(row, 12))
+		// Parse ngày sinh, ngày vào đoàn, ngày vào đảng (trả về string)
+		dob := strings.TrimSpace(getValue(row, 7))
+		unionDate := strings.TrimSpace(getValue(row, 11))
+		partyDate := strings.TrimSpace(getValue(row, 12))
 
-		if errDOB != nil {
-			result["error"] = fmt.Sprintf("Ngày sinh không hợp lệ: %s", getValue(row, 7))
-			errorResults = append(errorResults, result)
-			continue
+		// Kiểm tra ngày sinh hợp lệ
+		if dob != "" {
+			if _, err := parseDate(dob); err != nil {
+				result["error"] = fmt.Sprintf("Ngày sinh không hợp lệ: %s", dob)
+				errorResults = append(errorResults, result)
+				continue
+			}
 		}
 
-		user := &models.CreateUserRequest{
-			StudentCode:     getValue(row, 0),
-			FullName:        getValue(row, 1),
-			Email:           getValue(row, 2),
-			FacultyCode:     getValue(row, 3),
-			Course:          getValue(row, 4),
-			CitizenIdNumber: getValue(row, 5),
-			Gender:          gender,
-			DateOfBirth:     dob,
-			Ethnicity:       getValue(row, 8),
-			CurrentAddress:  getValue(row, 9),
-			BirthAddress:    getValue(row, 10),
-			UnionJoinDate:   unionDate,
-			PartyJoinDate:   partyDate,
-			Description:     getValue(row, 13),
+		// Tạo user và chỉ gán nếu có giá trị
+		user := &models.CreateUserRequest{}
+
+		if val := strings.TrimSpace(getValue(row, 0)); val != "" {
+			user.StudentCode = val
+		}
+		if val := strings.TrimSpace(getValue(row, 1)); val != "" {
+			user.FullName = val
+		}
+		if val := strings.TrimSpace(getValue(row, 2)); val != "" {
+			user.Email = val
+		}
+		if val := strings.TrimSpace(getValue(row, 3)); val != "" {
+			user.FacultyCode = val
+		}
+		if val := strings.TrimSpace(getValue(row, 4)); val != "" {
+			user.Course = val
+		}
+		if val := strings.TrimSpace(getValue(row, 5)); val != "" {
+			user.CitizenIdNumber = val
+		}
+
+		user.Gender = gender
+
+		if dob != "" {
+			user.DateOfBirth = dob
+		}
+		if val := strings.TrimSpace(getValue(row, 8)); val != "" {
+			user.Ethnicity = val
+		}
+		if val := strings.TrimSpace(getValue(row, 9)); val != "" {
+			user.CurrentAddress = val
+		}
+		if val := strings.TrimSpace(getValue(row, 10)); val != "" {
+			user.BirthAddress = val
+		}
+		if unionDate != "" {
+			user.UnionJoinDate = unionDate
+		}
+		if partyDate != "" {
+			user.PartyJoinDate = partyDate
+		}
+		if val := strings.TrimSpace(getValue(row, 13)); val != "" {
+			user.Description = val
 		}
 
 		// Validate binding
@@ -319,6 +351,7 @@ func (h *UserHandler) ImportUsersFromExcel(c *gin.Context) {
 			continue
 		}
 
+		// Tạo user
 		_, err = h.userService.CreateUser(c.Request.Context(), claims, user)
 		if err != nil {
 			switch {
@@ -362,11 +395,23 @@ func parseDate(s string) (string, error) {
 	if s == "" {
 		return "", nil
 	}
-	t, err := time.Parse("02/01/2006", s)
-	if err != nil {
-		return "", err
+
+	layouts := []string{
+		"02-01-2006", // 04-09-2001
+		"02/01/2006", // 04/09/2001
+		"2006-01-02", // 2001-09-04
+		"02-01-06",   // 04-09-96
+		"02/01/06",   // 04/09/96
 	}
-	return t.Format("2006-01-02"), nil
+
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			// Trả về theo định dạng chuẩn yyyy-MM-dd
+			return t.Format("2006-01-02"), nil
+		}
+	}
+
+	return "", fmt.Errorf("invalid date format: %s", s)
 }
 
 func (h *UserHandler) GetUsersByFacultyCode(c *gin.Context) {

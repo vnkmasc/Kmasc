@@ -156,12 +156,14 @@ func (s *userService) CreateUser(ctx context.Context, claims *utils.CustomClaims
 		return nil, common.ErrStudentIDExists
 	}
 
-	exists, err = s.userRepo.ExistsByEmail(ctx, req.Email)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, common.ErrEmailExists
+	if req.Email != "" {
+		exists, err = s.userRepo.ExistsByEmail(ctx, req.Email)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, common.ErrEmailExists
+		}
 	}
 
 	university, err := s.universityRepo.FindByID(ctx, universityID)
