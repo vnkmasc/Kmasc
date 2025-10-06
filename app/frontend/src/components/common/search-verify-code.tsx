@@ -8,6 +8,7 @@ import CertificateView from './certificate-view'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { decodeJSON } from '@/lib/utils/lz-string'
 import DigitalDegreeView from './digital-degree-view'
+import ImgVerifyButton from './img-verify-button'
 
 const SearchVerifyCode = () => {
   const [verifyCode, setVerifyCode] = useState('')
@@ -40,7 +41,9 @@ const SearchVerifyCode = () => {
 
   return (
     <>
-      <Card className='my-6 w-full max-w-[600px] md:mt-10'>
+      <ImgVerifyButton onCodeDetected={setBlockchainVerifyCode} />
+      <p className='my-4 text-center text-muted-foreground'>hoặc</p>
+      <Card className='mb-6 w-full max-w-[600px]'>
         <CardHeader>
           <CardTitle className='px-3 text-center md:px-6'>
             <h3>Nhập mã xác minh để xem chứng chỉ</h3>

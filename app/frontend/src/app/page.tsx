@@ -24,7 +24,7 @@ const HomePage = async () => {
           Dự án sử dụng mô hình Web3, MongoDB, mã hóa CSDL, mã file và lưu trữ S3 MinIO được xây dựng trên nền tảng
           Blockchain.
         </p>
-        <p className='mt-3 text-center text-sm text-muted-foreground sm:text-lg'>
+        <p className='mb-6 mt-3 text-center text-sm text-muted-foreground sm:text-lg'>
           Dự án đã tích hợp mật mã Việt Nam – Ban Cơ yếu để đảm bảo tính minh bạch và an toàn, bảo mật.
         </p>
         <SearchVerifyCode />

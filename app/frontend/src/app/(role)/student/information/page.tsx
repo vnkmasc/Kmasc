@@ -1,6 +1,5 @@
 'use client'
-import { Badge } from '@/components/ui/badge'
-import { Book, ChartAreaIcon, AwardIcon, School, User, Mail, Library, Calendar } from 'lucide-react'
+import { Book, ChartAreaIcon, School, User, Mail, Library, Calendar } from 'lucide-react'
 import FastView from '@/components/common/fast-view'
 import DecriptionView from '@/components/common/description-view'
 import useSWR from 'swr'
@@ -65,7 +64,7 @@ export default function StudentDashboard() {
           icon={<Book className='text-green-500' />}
           color='text-green-500'
         />
-        <FastView
+        {/* <FastView
           title='Trạng thái'
           value={
             <Badge variant={queryData.data?.status === 'true' ? 'default' : 'outline'}>
@@ -74,7 +73,7 @@ export default function StudentDashboard() {
           }
           icon={<AwardIcon />}
           color='text-green-500'
-        />
+        /> */}
       </div>
 
       <DecriptionView

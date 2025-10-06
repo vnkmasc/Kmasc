@@ -7,7 +7,6 @@ import Filter from '@/components/common/filter'
 import TableActionButton from '@/components/role/education-admin/table-action-button'
 import TableList from '@/components/common/table-list'
 import UploadButton from '@/components/role/education-admin/upload-button'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GENDER_SELECT_SETTING, PAGE_SIZE, STUDENT_STATUS_OPTIONS } from '@/constants/common'
 
@@ -232,16 +231,16 @@ const StudentManagementPage: React.FC = () => {
           { header: 'Email', value: 'email', className: 'min-w-[200px]' },
           { header: 'Chuyên ngành', value: 'facultyName', className: 'min-w-[200px]' },
           { header: 'Khóa', value: 'year', className: 'min-w-[150px]' },
-          {
-            header: 'Trạng thái',
-            value: 'status',
-            className: 'min-w-[150px]',
-            render: (item) => (
-              <Badge variant={item.status === 'true' ? 'default' : 'secondary'}>
-                {item.status === 'true' ? 'Đã tốt nghiệp' : 'Đang học'}
-              </Badge>
-            )
-          },
+          // {
+          //   header: 'Trạng thái',
+          //   value: 'status',
+          //   className: 'min-w-[150px]',
+          //   render: (item) => (
+          //     <Badge variant={item.status === 'true' ? 'default' : 'secondary'}>
+          //       {item.status === 'true' ? 'Đã tốt nghiệp' : 'Đang học'}
+          //     </Badge>
+          //   )
+          // },
           {
             header: 'Hành động',
             value: 'action',
