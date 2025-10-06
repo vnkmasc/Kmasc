@@ -1,8 +1,8 @@
-import { Camera, ImageIcon, SwitchCamera } from 'lucide-react'
+import { Camera, ImageIcon, Download } from 'lucide-react'
 import { Button } from '../ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { showMessage } from '@/lib/utils/common'
 import QrScanner from 'qr-scanner'
@@ -19,21 +19,6 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
-  const [isMobile, setIsMobile] = useState(false)
-
-  // Detect if user is on mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent.toLowerCase()
-      const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone']
-      const isMobileDevice = mobileKeywords.some((keyword) => userAgent.includes(keyword))
-      setIsMobile(isMobileDevice)
-      // Set default camera based on device type
-      setFacingMode(isMobileDevice ? 'environment' : 'user')
-    }
-    checkMobile()
-  }, [])
 
   const handleOpenCamera = async () => {
     // Mở camera thiết bị
@@ -43,7 +28,7 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            facingMode: facingMode // sử dụng camera trước hoặc sau tùy theo thiết bị
+            facingMode: 'user' // sử dụng camera trước
           }
         })
 
@@ -64,41 +49,6 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
       }
     } else {
       showMessage('Trình duyệt không hỗ trợ camera')
-    }
-  }
-
-  const handleSwitchCamera = async () => {
-    // Dừng camera hiện tại
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      setStream(null)
-    }
-
-    // Đổi hướng camera
-    const newFacingMode = facingMode === 'user' ? 'environment' : 'user'
-    setFacingMode(newFacingMode)
-
-    // Mở camera với hướng mới
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: newFacingMode
-        }
-      })
-
-      setStream(mediaStream)
-
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream
-          videoRef.current.play()
-        }
-      }, 100)
-    } catch (error) {
-      console.error('Error switching camera:', error)
-      showMessage('Không thể chuyển đổi camera')
     }
   }
 
@@ -126,7 +76,7 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
         context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
         // Chuyển canvas thành base64 image
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
+        const imageDataUrl = canvas.toDataURL('image/png')
         setCapturedImage(imageDataUrl)
       }
     }
@@ -246,15 +196,8 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
                     muted
                     className='h-96 w-full rounded-lg bg-black object-cover'
                   />
-                  {/* Switch camera button for mobile devices */}
-                  {isMobile && (
-                    <div className='absolute right-4 top-4'>
-                      <Button variant='secondary' size='icon' onClick={handleSwitchCamera} className='rounded-full'>
-                        <SwitchCamera className='h-5 w-5' />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  <div className='absolute bottom-4 left-1/2 -translate-x-1/2 transform'></div>
+                </div>{' '}
                 <DialogFooter>
                   <Button onClick={handleCapturePhoto} className='w-full'>
                     <Camera />
@@ -274,7 +217,7 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
                     Chụp lại
                   </Button>
                   <Button onClick={handleConfirmPhoto} className='flex-1'>
-                    <ImageIcon />
+                    <Download />
                     Sử dụng ảnh này
                   </Button>
                 </DialogFooter>
