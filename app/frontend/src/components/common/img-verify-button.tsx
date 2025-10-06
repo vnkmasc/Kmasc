@@ -127,8 +127,14 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
       try {
         const result = await QrScanner.scanImage(file)
         if (result) {
-          onCodeDetected?.(result)
-          showMessage('Đã quét thành công QR code từ ảnh')
+          const code = extractCodeFromUrl(result)
+          if (code) {
+            onCodeDetected?.(code)
+            showMessage('Đã quét thành công QR code')
+          } else {
+            showMessage('QR code không hợp lệ')
+          }
+          handleCloseCamera()
         } else {
           showMessage('Không tìm thấy QR code trong ảnh')
         }
@@ -146,7 +152,7 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
         <DropdownMenuTrigger asChild>
           <Button variant='secondary' className='flex items-center gap-2'>
             <QrCode />
-            Tra cứu qua mã QR-code
+            Tra cứu qua mã QR
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
