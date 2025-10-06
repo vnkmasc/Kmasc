@@ -1,7 +1,7 @@
-import { Camera, ImageIcon, SwitchCamera } from 'lucide-react'
+import { Camera, ImageIcon, QrCode, SwitchCamera } from 'lucide-react'
 import { Button } from '../ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { useRef, useState, useEffect } from 'react'
 import { showMessage } from '@/lib/utils/common'
 import QrScanner from 'qr-scanner'
@@ -145,8 +145,8 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant='secondary' className='flex items-center gap-2'>
-            <Camera />
-            Quét QR
+            <QrCode />
+            Tra cứu qua mã QR-code
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
@@ -177,11 +177,6 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant='outline' onClick={handleCloseCamera} className='w-full'>
-              Đóng
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
