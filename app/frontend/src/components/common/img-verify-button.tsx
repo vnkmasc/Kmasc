@@ -3,7 +3,6 @@ import { Button } from '../ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
 import { useRef, useState, useEffect } from 'react'
-import Image from 'next/image'
 import { showMessage } from '@/lib/utils/common'
 import QrScanner from 'qr-scanner'
 
@@ -15,122 +14,20 @@ interface ImgVerifyButtonProps {
 const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const scannerRef = useRef<QrScanner | null>(null)
   const [isCameraOpen, setIsCameraOpen] = useState(false)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
   const [isMobile, setIsMobile] = useState(false)
 
-  // Detect if user is on mobile device
+  // Detect mobile device
   useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent.toLowerCase()
-      const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone']
-      const isMobileDevice = mobileKeywords.some((keyword) => userAgent.includes(keyword))
-      setIsMobile(isMobileDevice)
-      // Set default camera based on device type
-      setFacingMode(isMobileDevice ? 'environment' : 'user')
-    }
-    checkMobile()
+    const userAgent = navigator.userAgent.toLowerCase()
+    const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone']
+    const isMobileDevice = mobileKeywords.some((k) => userAgent.includes(k))
+    setIsMobile(isMobileDevice)
+    setFacingMode(isMobileDevice ? 'environment' : 'user')
   }, [])
-
-  const handleOpenCamera = async () => {
-    // Mở camera thiết bị
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: facingMode // sử dụng camera trước hoặc sau tùy theo thiết bị
-          }
-        })
-
-        setStream(mediaStream)
-        setIsCameraOpen(true)
-
-        // Đợi modal mở rồi mới gán stream cho video
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = mediaStream
-            videoRef.current.play()
-          }
-        }, 100)
-      } catch (error) {
-        console.error('Error accessing camera:', error)
-
-        showMessage('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập')
-      }
-    } else {
-      showMessage('Trình duyệt không hỗ trợ camera')
-    }
-  }
-
-  const handleSwitchCamera = async () => {
-    // Dừng camera hiện tại
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      setStream(null)
-    }
-
-    // Đổi hướng camera
-    const newFacingMode = facingMode === 'user' ? 'environment' : 'user'
-    setFacingMode(newFacingMode)
-
-    // Mở camera với hướng mới
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: newFacingMode
-        }
-      })
-
-      setStream(mediaStream)
-
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream
-          videoRef.current.play()
-        }
-      }, 100)
-    } catch (error) {
-      console.error('Error switching camera:', error)
-      showMessage('Không thể chuyển đổi camera')
-    }
-  }
-
-  const handleCloseCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      setStream(null)
-    }
-    setIsCameraOpen(false)
-    setCapturedImage(null)
-  }
-
-  const handleCapturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext('2d')
-
-      if (context) {
-        // Đặt kích thước canvas bằng với video
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-
-        // Vẽ frame hiện tại từ video lên canvas
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-        // Chuyển canvas thành base64 image
-        const imageDataUrl = canvas.toDataURL('image/png')
-        setCapturedImage(imageDataUrl)
-      }
-    }
-  }
 
   const extractCodeFromUrl = (url: string): string | null => {
     try {
@@ -143,76 +40,113 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
     }
   }
 
-  const handleQRCodeScan = async (imageSource: string | File) => {
+  const handleOpenCamera = async () => {
     try {
-      let result: string
-
-      if (typeof imageSource === 'string') {
-        // For base64 images (captured photos)
-        result = await QrScanner.scanImage(imageSource)
-      } else {
-        // For file objects (selected images)
-        result = await QrScanner.scanImage(imageSource)
-      }
-
-      // Check if the QR code contains a kma.edu.vn URL with code parameter
-      if (result.includes('kma.edu.vn') && result.includes('code=')) {
-        const code = extractCodeFromUrl(result)
-        if (code) {
-          onCodeDetected?.(code)
-          showMessage('Đã quét thành công mã QR')
-          handleCloseCamera()
-          return
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          facingMode: facingMode
         }
-      }
+      })
 
-      showMessage('QR code không hợp lệ, vui lòng thử lại')
+      setStream(mediaStream)
+      setIsCameraOpen(true)
+
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream
+
+          // Khởi tạo scanner
+          scannerRef.current = new QrScanner(
+            videoRef.current,
+            (result) => {
+              if (result) {
+                const code = extractCodeFromUrl(result.data)
+                if (code) {
+                  onCodeDetected?.(code)
+                  showMessage('Đã quét thành công QR code')
+                } else {
+                  showMessage('QR code không hợp lệ')
+                }
+                handleCloseCamera()
+              }
+            },
+            {
+              highlightScanRegion: true,
+              highlightCodeOutline: true,
+              maxScansPerSecond: 10 // scan nhiều frame/giây
+            }
+          )
+
+          scannerRef.current.start()
+        }
+      }, 200)
     } catch (error) {
-      console.error('Error scanning QR code:', error)
-      showMessage('Không tìm thấy QR code trong ảnh, vui lòng thử lại')
+      console.error('Error accessing camera:', error)
+      showMessage('Không thể truy cập camera. Vui lòng kiểm tra quyền.')
     }
   }
 
-  const handleConfirmPhoto = () => {
-    if (capturedImage) {
-      // Scan for QR code in the captured image
-      handleQRCodeScan(capturedImage)
+  const handleSwitchCamera = async () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop())
+      setStream(null)
     }
-  }
+    if (scannerRef.current) {
+      scannerRef.current.stop()
+      scannerRef.current.destroy()
+      scannerRef.current = null
+    }
 
-  const handleRetakePhoto = () => {
-    setCapturedImage(null)
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user'
+    setFacingMode(newFacingMode)
     handleOpenCamera()
   }
 
+  const handleCloseCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop())
+      setStream(null)
+    }
+    if (scannerRef.current) {
+      scannerRef.current.stop()
+      scannerRef.current.destroy()
+      scannerRef.current = null
+    }
+    setIsCameraOpen(false)
+  }
+
   const handleSelectImage = () => {
-    // Mở dialog chọn file
     fileInputRef.current?.click()
   }
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Check if selected file is an image
-      if (file.type.startsWith('image/')) {
-        // Scan for QR code in the selected image
-        handleQRCodeScan(file)
-      } else {
-        showMessage('Vui lòng chọn file ảnh hợp lệ.')
+      try {
+        const result = await QrScanner.scanImage(file)
+        if (result) {
+          onCodeDetected?.(result)
+          showMessage('Đã quét thành công QR code từ ảnh')
+        } else {
+          showMessage('Không tìm thấy QR code trong ảnh')
+        }
+      } catch (err) {
+        console.error('Error scanning QR from file:', err)
+        showMessage('Không tìm thấy QR code trong ảnh')
       }
-
-      // Reset the input value so the same file can be selected again
-      event.target.value = ''
     }
+    event.target.value = ''
   }
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant={'secondary'} className='flex items-center gap-2'>
+          <Button variant='secondary' className='flex items-center gap-2'>
             <Camera />
-            Xác thực bằng hình ảnh
+            Quét QR
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
@@ -227,65 +161,29 @@ const ImgVerifyButton: React.FC<ImgVerifyButtonProps> = ({ onCodeDetected }) => 
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Camera Preview Modal */}
+      {/* Camera Modal */}
       <Dialog open={isCameraOpen} onOpenChange={handleCloseCamera}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Camera</DialogTitle>
+            <DialogTitle>Quét QR Code</DialogTitle>
           </DialogHeader>
-
-          <div className='space-y-4'>
-            {!capturedImage ? (
-              // Camera Preview
-              <>
-                <div className='relative'>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className='h-96 w-full rounded-lg bg-black object-cover'
-                  />
-                  {/* Switch camera button for mobile devices */}
-                  {isMobile && (
-                    <div className='absolute right-4 top-4'>
-                      <Button variant='secondary' size='icon' onClick={handleSwitchCamera} className='rounded-full'>
-                        <SwitchCamera className='h-5 w-5' />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleCapturePhoto} className='w-full'>
-                    <Camera />
-                    Chụp ảnh
-                  </Button>
-                </DialogFooter>
-              </>
-            ) : (
-              // Captured Image Preview
-              <div className='space-y-4'>
-                <div className='relative h-96 w-full'>
-                  <Image src={capturedImage} alt='Captured' fill className='rounded-lg object-cover' />
-                </div>
-                <DialogFooter className='flex flex-col justify-center gap-2 md:flex-row'>
-                  <Button variant='outline' onClick={handleRetakePhoto} className='flex-1'>
-                    <Camera />
-                    Chụp lại
-                  </Button>
-                  <Button onClick={handleConfirmPhoto} className='flex-1'>
-                    <ImageIcon />
-                    Sử dụng ảnh này
-                  </Button>
-                </DialogFooter>
+          <div className='relative'>
+            <video ref={videoRef} autoPlay playsInline muted className='h-96 w-full rounded-lg bg-black object-cover' />
+            {isMobile && (
+              <div className='absolute right-4 top-4'>
+                <Button variant='secondary' size='icon' onClick={handleSwitchCamera} className='rounded-full'>
+                  <SwitchCamera className='h-5 w-5' />
+                </Button>
               </div>
             )}
           </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={handleCloseCamera} className='w-full'>
+              Đóng
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Hidden canvas for image capture */}
-      <canvas ref={canvasRef} className='hidden' />
 
       {/* Hidden file input */}
       <input ref={fileInputRef} type='file' accept='image/*' onChange={handleFileChange} className='hidden' />
