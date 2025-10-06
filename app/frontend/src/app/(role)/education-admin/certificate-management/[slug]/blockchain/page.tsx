@@ -8,7 +8,7 @@ interface Props {
 
 const CertificateBlockchainDetailPage = async ({ params }: Props) => {
   const { slug } = await params
-  const decodeCertificateData = decodeJSON(slug)
+  const decodeCertificateData = decodeJSON(decodeURIComponent(slug))
 
   return (
     <>

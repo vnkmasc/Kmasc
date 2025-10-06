@@ -19,7 +19,7 @@ import {
   updateStudent
 } from '@/lib/api/student'
 import { formatResponseImportExcel, showNotification } from '@/lib/utils/common'
-import { formatFacultyOptions, formatStudent } from '@/lib/utils/format-api'
+import { formatDateISO, formatFacultyOptions, formatStudent } from '@/lib/utils/format-api'
 
 import { validateAcademicEmail, validateCitizenId, validateNoEmpty } from '@/lib/utils/validators'
 import { PlusIcon } from 'lucide-react'
@@ -28,6 +28,7 @@ import { useCallback, useState } from 'react'
 import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
 import z from 'zod'
+import { Badge } from '@/components/ui/badge'
 
 const StudentManagementPage: React.FC = () => {
   const [idDetail, setIdDetail] = useState<string | null | undefined>(undefined)
@@ -228,9 +229,26 @@ const StudentManagementPage: React.FC = () => {
             render: (item) => <Link href={`/education-admin/student-management/${item.id}`}>{item.code}</Link>
           },
           { header: 'Họ và tên', value: 'name', className: 'min-w-[200px]' },
-          { header: 'Email', value: 'email', className: 'min-w-[200px]' },
+          // { header: 'Email', value: 'email', className: 'min-w-[200px]' },
+          {
+            header: 'Giới tính',
+            value: 'gender',
+            className: 'min-w-[150px]',
+            render: (item) => (
+              <Badge variant={item.gender === 'true' ? 'default' : 'secondary'}>
+                {item.gender === 'true' ? 'Nam' : 'Nữ'}
+              </Badge>
+            )
+          },
+          {
+            header: 'Ngày sinh',
+            value: 'dateOfBirth',
+            className: 'min-w-[150px]',
+            render: (item) => formatDateISO(item.dateOfBirth)
+          },
           { header: 'Chuyên ngành', value: 'facultyName', className: 'min-w-[200px]' },
           { header: 'Khóa', value: 'year', className: 'min-w-[150px]' },
+
           // {
           //   header: 'Trạng thái',
           //   value: 'status',

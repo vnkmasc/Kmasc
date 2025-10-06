@@ -1,5 +1,5 @@
 import { DegreeTemplateType, OptionType } from '@/types/common'
-import { format, parse } from 'date-fns'
+import { format, parse, parseISO } from 'date-fns'
 
 export const formatStudent = (data: any, isSendToServer: boolean = false) => {
   return isSendToServer
@@ -271,6 +271,22 @@ export const formatDateForInput = (rawDate: string): string => {
   try {
     const dateObj = parse(rawDate, 'dd/MM/yyyy', new Date())
     return format(dateObj, 'yyyy-MM-dd')
+  } catch {
+    return ''
+  }
+}
+
+export const formatDateISO = (input: string): string => {
+  try {
+    if (!input) return ''
+
+    const date = parseISO(input)
+    if (isNaN(date.getTime())) {
+      // Trường hợp date không hợp lệ
+      return ''
+    }
+
+    return format(date, 'dd/MM/yyyy')
   } catch {
     return ''
   }

@@ -432,6 +432,8 @@ const CertificateManagementPage = () => {
             value: 'action',
 
             render: (item) => {
+              const encodedData = encodeJSON({ ...item?.onBlockchainVerify, certificate_id: item.id })
+
               return (
                 <div className='flex gap-2'>
                   <Link href={`/education-admin/certificate-management/${item.id}`}>
@@ -440,7 +442,7 @@ const CertificateManagementPage = () => {
                     </Button>
                   </Link>
                   <Link
-                    href={`/education-admin/certificate-management/${encodeJSON({ ...item?.onBlockchainVerify, certificate_id: item.id })}/blockchain`}
+                    href={`/education-admin/certificate-management/${encodedData}/blockchain`}
                     onClick={(e) => {
                       if (!item.onBlockchain) {
                         e.preventDefault()
