@@ -25,7 +25,7 @@ const HomePage = async () => {
           Blockchain.
         </p>
         <p className='mb-6 mt-3 text-center text-sm text-muted-foreground sm:text-lg'>
-          Dự án đã tích hợp mật mã Việt Nam – Ban Cơ yếu để đảm bảo tính minh bạch và an toàn, bảo mật.
+          Dự án đã tích hợp mật mã của Ban Cơ yếu Chính phủ để đảm bảo tính minh bạch và an toàn, bảo mật.
         </p>
         <SearchVerifyCode />
       </section>
