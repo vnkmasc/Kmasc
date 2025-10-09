@@ -22,9 +22,7 @@ const Footer: React.FC = () => {
         </div>
         <p className='text-sm text-muted-foreground'>Giải pháp quản lý văn bằng chứng chỉ ứng dụng Blockchain.</p>
         <div className='flex flex-col justify-between gap-4 md:flex-row'>
-          <p className='text-sm text-muted-foreground'>
-            © 2025 KMAsc. Bản quyền thuộc về chuyên ngành CNTT Học viện Kỹ thuật mật mã.
-          </p>
+          <p className='text-sm text-muted-foreground'>© 2025 KMAsc. Bản quyền thuộc về Học viện Kỹ thuật mật mã.</p>
           <ul className='flex items-center space-x-6 text-muted-foreground'>
             {defaultSocialLinks.map((social, idx) => (
               <li key={idx} className='font-medium hover:text-primary'>
